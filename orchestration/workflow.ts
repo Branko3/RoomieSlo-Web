@@ -7,6 +7,7 @@ import { approveAll, CopilotClient } from "@github/copilot-sdk";
 
 const projectRoot = path.resolve(import.meta.dirname, "..");
 const execFileAsync = promisify(execFile);
+const gitExecutable = process.env.GIT_EXECUTABLE ?? "git";
 const agentsDirectory = path.join(projectRoot, ".github", "agents");
 const featureStatusPath = path.join(
   projectRoot,
@@ -199,7 +200,7 @@ function featureBranchName(featureName: string): string {
 
 async function runGit(args: string[]): Promise<string> {
   try {
-    const result = await execFileAsync("git", args, {
+    const result = await execFileAsync(gitExecutable, args, {
       cwd: projectRoot,
       encoding: "utf8",
       windowsHide: true,
@@ -212,7 +213,9 @@ async function runGit(args: string[]): Promise<string> {
         : error instanceof Error
           ? error.message
           : String(error);
-    throw new Error(`git ${args.join(" ")} failed: ${message.trim()}`);
+    throw new Error(
+      `${gitExecutable} ${args.join(" ")} failed: ${message.trim() || "Git could not be started. Set GIT_EXECUTABLE to the full path of git.exe."}`,
+    );
   }
 }
 

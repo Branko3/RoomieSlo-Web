@@ -68,6 +68,13 @@ credential helper once with:
 gh auth setup-git
 ```
 
+If PowerShell can run Git but the workflow reports that Git could not be
+started, provide the full executable path in the workflow's PowerShell session:
+
+```powershell
+$env:GIT_EXECUTABLE = "C:\Program Files\Git\cmd\git.exe"
+```
+
 Set `COPILOT_AUTO_PUSH=false` to keep the feature commit local while testing
 the workflow. Automatic pushing is enabled by default when the variable is
 unset.
