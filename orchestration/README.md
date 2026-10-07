@@ -60,6 +60,10 @@ pushes that branch to the `origin` remote. The runner stops instead of
 creating a partial commit when either agent fails or the working tree is
 unexpectedly clean.
 
+After pushing, the runner opens a non-draft pull request from the feature
+branch into `main`. It requires the GitHub CLI to be installed, authenticated,
+and available to the Node process.
+
 The machine running the workflow must have Git installed, `origin` configured,
 and authenticated push access to the repository. For GitHub, configure the
 credential helper once with:
@@ -73,6 +77,12 @@ started, provide the full executable path in the workflow's PowerShell session:
 
 ```powershell
 $env:GIT_EXECUTABLE = "C:\Program Files\Git\cmd\git.exe"
+```
+
+If the workflow cannot find the GitHub CLI, provide its full executable path:
+
+```powershell
+$env:GH_EXECUTABLE = "C:\Program Files\GitHub CLI\gh.exe"
 ```
 
 Set `COPILOT_AUTO_PUSH=false` to keep the feature commit local while testing
