@@ -66,6 +66,11 @@ After pushing, the runner opens a non-draft pull request from the feature
 branch into `main`. It requires the GitHub CLI to be installed, authenticated,
 and available to the Node process.
 
+When resuming, the runner checks GitHub for an existing pull request for the
+feature branch. Open or already merged pull requests are reported and skipped,
+so existing work is not overwritten. A branch without a pull request still
+stops the workflow for manual review.
+
 The machine running the workflow must have Git installed, `origin` configured,
 and authenticated push access to the repository. For GitHub, configure the
 credential helper once with:

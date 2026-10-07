@@ -28,6 +28,12 @@ interface BacklogFeature {
   notes: string;
 }
 
+interface ExistingPullRequest {
+  number: number;
+  state: "OPEN" | "CLOSED";
+  mergedAt: string | null;
+}
+
 const roleFiles: Record<Role, string> = {
   "product-manager": "roomieslo-product-manager.agent.md",
   developer: "roomieslo-developer.agent.md",
@@ -236,6 +242,7 @@ async function prepareFeatureBranch(featureName: string): Promise<string> {
     "for-each-ref",
     "--format=%(refname:short)",
     `refs/heads/${branch}`,
+    `refs/remotes/origin/${branch}`,
   ]);
   if (existingBranch) {
     throw new Error(
@@ -245,6 +252,45 @@ async function prepareFeatureBranch(featureName: string): Promise<string> {
 
   await runGit(["switch", "-c", branch]);
   return branch;
+}
+
+async function findExistingPullRequest(
+  branch: string,
+): Promise<ExistingPullRequest | undefined> {
+  try {
+    const result = await execFileAsync(
+      ghExecutable,
+      [
+        "pr",
+        "list",
+        "--base",
+        "main",
+        "--head",
+        branch,
+        "--state",
+        "all",
+        "--json",
+        "number,state,mergedAt",
+      ],
+      {
+        cwd: projectRoot,
+        encoding: "utf8",
+        windowsHide: true,
+      },
+    );
+    const pullRequests = JSON.parse(result.stdout) as ExistingPullRequest[];
+    return pullRequests[0];
+  } catch (error: unknown) {
+    const message =
+      error && typeof error === "object" && "stderr" in error
+        ? String(error.stderr)
+        : error instanceof Error
+          ? error.message
+          : String(error);
+    throw new Error(
+      `${ghExecutable} pr list failed: ${message.trim() || "GitHub CLI could not be started. Set GH_EXECUTABLE to the full path of gh.exe."}`,
+    );
+  }
 }
 
 async function commitAndPushFeature(
@@ -359,8 +405,27 @@ async function main(): Promise<void> {
           `Backlog status: ${feature.backlog}; implementation status: ${feature.implemented}\n` +
           `Notes: ${feature.notes}\n`,
       );
-      const branch = await prepareFeatureBranch(feature.name);
-      console.log(`Working on feature branch ${branch}.\n`);
+      const branch = featureBranchName(feature.name);
+      const existingPullRequest = await findExistingPullRequest(branch);
+      if (existingPullRequest) {
+        if (
+          existingPullRequest.state === "OPEN" ||
+          existingPullRequest.mergedAt !== null
+        ) {
+          console.log(
+            `Skipping "${feature.name}": PR #${existingPullRequest.number} already exists for ${branch}.`,
+          );
+          processedFeatures.add(feature.name);
+          continue;
+        }
+
+        throw new Error(
+          `Feature "${feature.name}" has closed PR #${existingPullRequest.number} for ${branch} without being merged. Review it before rerunning the workflow.`,
+        );
+      }
+
+      const preparedBranch = await prepareFeatureBranch(feature.name);
+      console.log(`Working on feature branch ${preparedBranch}.\n`);
       console.log("Product manager is preparing the handoff...\n");
       const handoff = await runAgent(
         client,
@@ -429,7 +494,7 @@ ${featureRecordContents}`,
         );
       }
 
-      await commitAndPushFeature(feature.name, branch);
+      await commitAndPushFeature(feature.name, preparedBranch);
       processedFeatures.add(feature.name);
       completedFeatures += 1;
       console.log(
