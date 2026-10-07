@@ -26,6 +26,7 @@ make the constraint unsafe to install.
 - [x] Existing Android names, status values, nullability, and ownership relationships are preserved.
 - [x] Duplicate favorite protection and canonical duplicate-match protection are represented.
 - [x] Match acceptance is atomic and participant-authorized through `accept_match(uuid)`.
+- [x] Update policies revalidate participant/admin authorization and private Storage paths.
 - [x] Environment setup, migration state inspection, failure recovery, and operator-managed Supabase settings are documented.
 - [ ] Fresh staging application and replay/drift checks have passed.
 - [ ] Android representative-data compatibility has been executed against a disposable project.
@@ -39,6 +40,7 @@ make the constraint unsafe to install.
 | `20261007000001_security_and_storage.sql` | `policies.sql` and `storage_policies.sql`; RLS, private `vpisnice` bucket, and Storage policies |
 | `20261007000002_display_fields.sql` | `migrations/0002_polja_za_prikaz.sql`; listing/profile display columns and partial index |
 | `20261007000003_indexes_and_matching.sql` | `migrations/0001_indeksi.sql` plus web-required canonical match uniqueness and atomic acceptance RPC |
+| `20261007000004_policy_update_hardening.sql` | Forward-only checks for participant, admin, and private Storage updates |
 
 Android `migrations/0003_demo_oglasi.sql` was not copied into production migrations because it
 mutates existing rows and fabricates presentation data. It remains an explicit follow-up seed
@@ -53,11 +55,26 @@ conversion if local demo data is needed.
 
 ## Validation performed
 
-`npm run typecheck`, `npm run lint`, `npm run test`, and `npm run build` are the applicable web
-checks. A Supabase CLI and disposable/staging project were not available in this environment, so
-fresh-project, replay/drift, migration-failure recovery, representative Android-data, RLS, Storage,
-Realtime, and concurrency checks remain unverified. The record is intentionally not marked
-`Implemented`.
+The repository-level checks are `npm run typecheck`, `npm run lint`, `npm run test`, and
+`npm run build`. Database validation must be run from a linked disposable or staging project:
+
+```powershell
+npm run db:push
+npm run db:status
+supabase db diff
+```
+
+For replay validation, use `supabase db reset` only against a disposable local database, then
+rerun `npm run db:status` and compare the schema/resource assertions listed above. For recovery,
+introduce a controlled failure in a disposable copy, preserve the error and failed status, add a
+new forward-fix migration, and rerun `npm run db:push`; the applied migration must remain
+unchanged.
+
+On 2026-10-07 in the repository workspace, `npm run typecheck`, `npm run lint`, `npm run test`,
+and `npm run build` passed; Vitest reported 20 passing tests across three files. The Supabase
+CLI and a disposable/staging project were not available in this environment, so fresh-project,
+replay/drift, migration-failure recovery, representative Android-data, RLS, Storage, Realtime,
+and concurrency checks remain unverified. The record is intentionally not marked `Implemented`.
 
 ## Handoff to testing
 
@@ -67,3 +84,11 @@ surface, confirm `vpisnice` is not public and produces no public URL, subscribe 
 attempt duplicate favorites and reversed match pairs, and race two authenticated acceptance
 requests against the same pending match. Test a deliberate migration failure and document the
 forward-fix result.
+
+## Test status
+
+- Automated status: Partially covered
+- Test files: `tests/reproducible-sql-migrations.test.ts`, `tests/reproducible-sql-migrations.integration.test.ts`
+- Scenarios covered: Offline migration ordering, seed isolation, Android schema and status compatibility, Auth trigger and Realtime declarations, RLS and Storage policy declarations, duplicate protections, atomic match acceptance, setup/recovery documentation, and an opt-in disposable-project suite for demo-row, multi-user authorization, private Storage, Realtime, duplicate, reversed-pair, and concurrent-acceptance checks.
+- Remaining gaps: The opt-in integration suite was skipped because `RUN_SUPABASE_INTEGRATION=1` and disposable `SUPABASE_TEST_*` credentials were unavailable. Fresh-project `db:push`, `db:status`, replay/drift comparison, deliberate migration failure and forward-fix execution, representative Android data, and live policy/Storage/Realtime/concurrency checks therefore remain unverified. The Supabase CLI was not installed.
+- Manual testing: Not run unless explicitly requested

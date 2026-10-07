@@ -44,6 +44,11 @@ retrying. Storage bucket configuration, RLS policies, the Auth profile trigger, 
 SQL (Auth providers, email delivery, API keys, backups, and environment secrets) remain
 operator-managed.
 
+The chain is forward-only, including policy fixes. After a failed apply, capture the CLI error
+and migration status, add a new timestamped migration, and rerun `npm run db:push`; never edit
+an applied migration. For a disposable local replay, use `supabase db reset` and then
+`npm run db:status`. Do not run `db reset` against staging or production.
+
 ## Quality checks
 
 ```text
