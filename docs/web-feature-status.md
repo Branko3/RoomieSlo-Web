@@ -45,7 +45,7 @@ and handtested while still lacking automated coverage.
 | Shared Supabase data contract | Yes | Partial | Partial | No | Deferred: Yes — typed contract, mappers, query boundary, listing-route integration, and `playwright.config.ts` are implemented; final completion is blocked on staging RLS/Storage/Realtime verification, Supabase CLI migration checks, and unavailable local Chromium. |
 | Reproducible SQL migrations | Yes | Partial | No | No | Ordered production migrations, RLS/Storage/Realtime SQL, opt-in seed boundary, and recovery documentation now live in `supabase/`; fresh-project and security validation remain blocked on a disposable/staging project. |
 | Development, staging, and production environments | Yes | No | No | No | `.env.example` documents public browser configuration; environments are not established. |
-| RLS and Storage policy review | Yes | No | No | No | Must include negative-access tests for profiles, listings, matches, messages, reports, and academic documents. |
+| RLS and Storage policy review | Yes | Partial | Partial | No | Migration security contract tests (`tests/supabase-security-contract.test.ts`) pass; the opt-in negative-access suite (`tests/supabase-security.integration.test.ts`) for profiles, listings, matches, messages, reports, and academic documents is blocked on a disposable/staging project. See `docs/features/rls-storage-policy-review.md`. |
 | Account/document deletion and retention rules | Yes | No | No | No | Must be documented before production use. |
 | Responsive breakpoints and accessibility requirements | No | Yes | No | Yes | Desktop sidebar, mobile bottom navigation, skip link, semantic landmarks, and visible focus styling exist. |
 
