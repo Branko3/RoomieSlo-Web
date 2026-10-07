@@ -71,6 +71,11 @@ feature branch. Open or already merged pull requests are reported and skipped,
 so existing work is not overwritten. A branch without a pull request still
 stops the workflow for manual review.
 
+If the developer creates a feature record with `Status: Blocked`, the runner
+does not start the testing handoff. It preserves the blocker, commits and
+pushes the branch, and opens a draft pull request so the incomplete work is
+visible without being presented as ready to merge.
+
 The machine running the workflow must have Git installed, `origin` configured,
 and authenticated push access to the repository. For GitHub, configure the
 credential helper once with:
