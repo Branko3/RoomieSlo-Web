@@ -9,6 +9,22 @@ const sourceFiles = readdirSync(root, { recursive: true })
   .map((file) => join(root, file));
 
 describe("browser Supabase boundary", () => {
+  it("reports an explicit unconfigured state when public variables are absent", () => {
+    const originalUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const originalKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+    delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    expect(getSupabaseConfig()).toEqual({
+      configured: false,
+      url: "",
+      anonKey: "",
+    });
+
+    if (originalUrl !== undefined) process.env.NEXT_PUBLIC_SUPABASE_URL = originalUrl;
+    if (originalKey !== undefined) process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = originalKey;
+  });
+
   it("accepts only the two public browser variables", () => {
     const originalUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const originalKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;

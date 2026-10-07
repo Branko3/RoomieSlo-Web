@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fetchListing, fetchListings } from "../lib/supabase/queries";
+import { fetchListing, fetchListings, fetchProfiles } from "../lib/supabase/queries";
 
 type QueryResult = { data: unknown; error: Error | null };
 
@@ -107,6 +107,49 @@ describe("Supabase listing query boundary", () => {
     const failed = makeClient({ data: null, error: backendError });
     vi.mocked(createSupabaseBrowserClient).mockReturnValue(failed.client as never);
     await expect(fetchListings()).rejects.toBe(backendError);
+  });
+
+  it("rejects an empty listing id before making a backend request", async () => {
+    await expect(fetchListing("")).rejects.toThrow("Listing id is required");
+    expect(createSupabaseBrowserClient).not.toHaveBeenCalled();
+  });
+
+  it("does not add optional filters for blank location or an omitted price", async () => {
+    const mock = makeClient({ data: [listing], error: null });
+    vi.mocked(createSupabaseBrowserClient).mockReturnValue(mock.client as never);
+
+    await expect(fetchListings({ location: "   " })).resolves.toHaveLength(1);
+
+    expect(mock.calls).toEqual([
+      ["select", ["*"]],
+      ["eq", ["is_filled", false]],
+      ["order", ["created_at", { ascending: false }]],
+      ["limit", [24]],
+    ]);
+  });
+
+  it("maps profile rows and preserves profile backend errors", async () => {
+    const profile = {
+      id: "profile-1",
+      display_name: "Ana",
+      academic_status_verified: true,
+      is_available: true,
+      created_at: "2026-01-01T00:00:00Z",
+      age: null,
+      faculty: "FRI",
+      bio: "",
+      avatar_url: "",
+    };
+    const mock = makeClient({ data: [profile], error: null });
+    vi.mocked(createSupabaseBrowserClient).mockReturnValue(mock.client as never);
+
+    await expect(fetchProfiles()).resolves.toEqual([profile]);
+
+    const backendError = new Error("permission denied");
+    vi.mocked(createSupabaseBrowserClient).mockReturnValue(
+      makeClient({ data: null, error: backendError }).client as never,
+    );
+    await expect(fetchProfiles()).rejects.toBe(backendError);
   });
 
   it("does not convert malformed rows into successful listing results", async () => {
