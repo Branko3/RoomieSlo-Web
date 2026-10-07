@@ -44,7 +44,9 @@ feature fails its handoff, so an incomplete feature cannot be silently skipped.
 The runner loads the role instructions from `.github/agents/`, so those files
 remain the source of truth. It stops if the developer does not report a feature
 record or if the record cannot be read. Feature selection is controlled by the
-status table; do not pass a feature request on the command line.
+status table; do not pass a feature request on the command line. A feature row
+whose notes begin with `Deferred: Yes` remains in the backlog but is skipped
+until that marker is removed.
 
 The runner denies permission requests unless `COPILOT_AUTO_APPROVE=true` is set.
 Set that variable only after reviewing the repository and the prompts passed to
