@@ -42,7 +42,7 @@ and handtested while still lacking automated coverage.
 
 | Feature | Backlog | Implemented | Autotested | Handtested | Current web state / acceptance notes |
 | --- | :---: | :---: | :---: | :---: | --- |
-| Shared Supabase data contract | Yes | Partial | Partial | No | Typed contract, mappers, query boundary, and listing-route integration are implemented; final completion is blocked on staging RLS/Storage/Realtime verification and the missing Playwright configuration. |
+| Shared Supabase data contract | Yes | Partial | Partial | No | Typed contract, mappers, query boundary, listing-route integration, and `playwright.config.ts` are implemented; final completion is blocked on staging RLS/Storage/Realtime verification, Supabase CLI migration checks, and unavailable local Chromium. |
 | Reproducible SQL migrations | Yes | Partial | No | No | Ordered production migrations, RLS/Storage/Realtime SQL, opt-in seed boundary, and recovery documentation now live in `supabase/`; fresh-project and security validation remain blocked on a disposable/staging project. |
 | Development, staging, and production environments | Yes | No | No | No | `.env.example` documents public browser configuration; environments are not established. |
 | RLS and Storage policy review | Yes | No | No | No | Must include negative-access tests for profiles, listings, matches, messages, reports, and academic documents. |
@@ -144,8 +144,8 @@ and handtested while still lacking automated coverage.
 | Feature | Backlog | Implemented | Autotested | Handtested | Current web state / acceptance notes |
 | --- | :---: | :---: | :---: | :---: | --- |
 | Auth, RLS, Storage, and Realtime integration tests | Yes | No | No | No | No web integration/security test suite exists. |
-| Unit test suite | Yes | No | No | No | No application-owned Vitest tests currently exist. |
-| Playwright end-to-end suite | Yes | No | No | No | No application-owned Playwright workflows currently exist. |
+| Unit test suite | Partial | Yes | Partial | No | Supabase contract suites cover mappers, queries, and boundary behavior; broader feature coverage remains backlog. |
+| Playwright end-to-end suite | Partial | Yes | Partial | No | `playwright.config.ts` and `e2e/contract.smoke.spec.ts` exist; local browser execution is blocked by the missing Chromium installation and staging scenarios are gated on safe fixtures. |
 | Mobile, tablet, and desktop workflow coverage | Yes | Partial | No | Yes | Core prototype flows were checked in the shared browser; viewport matrix automation is missing. |
 | Keyboard navigation and focus coverage | Partial | Partial | No | Partial | Skip link and focus-visible styling exist; a complete keyboard journey test is missing. |
 | Contrast and accessibility audit | Yes | Partial | No | No | Basic accessible labels and focus styling exist; formal contrast/axe coverage is missing. |
@@ -163,10 +163,14 @@ npm run typecheck
 npm run build
 ```
 
-Both checks pass for the current prototype. The package scripts also define `lint`,
-`format:check`, and `test`, but feature-specific application tests and Playwright flows still
-need to be added. The migration plan's required test cases are therefore recorded as backlog
-until they have executable tests.
+On 2026-10-07, serialized `npm run build`, `npm run typecheck`, `npm run lint`, and
+`npm run test` passed; the Vitest suite reported 16 passing tests across three files. The
+configured `playwright.config.ts` and `e2e/contract.smoke.spec.ts` are present, but
+`npm run test:e2e` cannot launch its two local smoke tests because the Chromium executable is
+not installed, while 12 staging/security tests are intentionally skipped without staging
+fixtures. `npm run db:status` is currently unavailable because the Supabase CLI is not
+installed. The feature remains partial until staging security/resource checks and browser
+execution pass.
 
 ## Hands-on verification completed
 
