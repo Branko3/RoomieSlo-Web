@@ -24,6 +24,7 @@ interface BacklogFeature {
   phase: string;
   backlog: BacklogStatus;
   implemented: BacklogStatus;
+  deferred: boolean;
   notes: string;
 }
 
@@ -80,6 +81,7 @@ function parseFeatureStatus(contents: string): BacklogFeature[] {
       phase,
       backlog: parseStatus(cells[1]),
       implemented: parseStatus(cells[2]),
+      deferred: /^Deferred:\s*Yes\b/i.test(cells[5]),
       notes: cells[5],
     });
   }
@@ -96,6 +98,7 @@ async function findNextFeature(
   return features.find(
     (feature) =>
       !processedFeatures.has(feature.name) &&
+      !feature.deferred &&
       feature.backlog !== "No" && feature.implemented !== "Yes",
   );
 }

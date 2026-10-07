@@ -42,7 +42,7 @@ and handtested while still lacking automated coverage.
 
 | Feature | Backlog | Implemented | Autotested | Handtested | Current web state / acceptance notes |
 | --- | :---: | :---: | :---: | :---: | --- |
-| Shared Supabase data contract | Yes | Partial | Partial | No | Typed contract, mappers, query boundary, and listing-route integration are implemented; final completion is blocked on staging RLS/Storage/Realtime verification and the missing Playwright configuration. |
+| Shared Supabase data contract | Yes | Partial | Partial | No | Deferred: Yes — typed contract, mappers, query boundary, listing-route integration, and `playwright.config.ts` are implemented; final completion is blocked on staging RLS/Storage/Realtime verification, Supabase CLI migration checks, and unavailable local Chromium. |
 | Reproducible SQL migrations | Yes | Partial | No | No | Ordered production migrations, RLS/Storage/Realtime SQL, opt-in seed boundary, and recovery documentation now live in `supabase/`; fresh-project and security validation remain blocked on a disposable/staging project. |
 | Development, staging, and production environments | Yes | No | No | No | `.env.example` documents public browser configuration; environments are not established. |
 | RLS and Storage policy review | Yes | No | No | No | Must include negative-access tests for profiles, listings, matches, messages, reports, and academic documents. |
