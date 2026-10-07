@@ -4,6 +4,13 @@ import fs from "node:fs";
 const baseURL = process.env.E2E_BASE_URL ?? "http://127.0.0.1:3000";
 const authState = process.env.E2E_AUTH_STATE;
 
+if (authState && !fs.existsSync(authState)) {
+  throw new Error(
+    `E2E_AUTH_STATE points to a missing file: ${authState}. ` +
+      "Use disposable staging browser state or unset the variable.",
+  );
+}
+
 export default defineConfig({
   testDir: "./e2e",
   testMatch: "**/*.spec.ts",
@@ -29,7 +36,7 @@ export default defineConfig({
       name: "unauthenticated",
       use: { ...devices["Desktop Chrome"] },
     },
-    ...(authState && fs.existsSync(authState)
+    ...(authState
       ? [
           {
             name: "authenticated",
