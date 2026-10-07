@@ -39,3 +39,6 @@ Update the same `docs/features/<feature-slug>.md` record after adding tests:
 ```
 
 Do not claim `Covered` when a required acceptance criterion is untested or failing. Report the exact test command, results, and any blockers to the product manager.
+
+The orchestration runner owns Git branch creation, commits, and pushes after
+testing succeeds. Do not run Git commands or claim that a feature was pushed.

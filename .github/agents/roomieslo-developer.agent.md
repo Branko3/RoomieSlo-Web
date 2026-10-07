@@ -58,3 +58,6 @@ Use this structure:
 Only mark the record `Implemented` after the feature is actually present and the acceptance criteria are satisfied. If implementation is blocked, do not create a success-shaped record; report the blocker to the product manager instead.
 
 At the end, report the changed files, verification performed, and the path to the feature record.
+
+The orchestration runner owns Git branch creation, commits, and pushes after
+testing succeeds. Do not run Git commands or claim that a feature was pushed.

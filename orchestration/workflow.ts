@@ -1,9 +1,12 @@
 import { mkdir, readdir, readFile, stat } from "node:fs/promises";
+import { execFile } from "node:child_process";
 import path from "node:path";
 import process from "node:process";
+import { promisify } from "node:util";
 import { approveAll, CopilotClient } from "@github/copilot-sdk";
 
 const projectRoot = path.resolve(import.meta.dirname, "..");
+const execFileAsync = promisify(execFile);
 const agentsDirectory = path.join(projectRoot, ".github", "agents");
 const featureStatusPath = path.join(
   projectRoot,
@@ -180,6 +183,93 @@ async function requireFeatureRecordPath(
   );
 }
 
+function featureBranchName(featureName: string): string {
+  const slug = featureName
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 70);
+
+  if (!slug) {
+    throw new Error(`Could not derive a branch name from feature "${featureName}".`);
+  }
+
+  return `agent/${slug}`;
+}
+
+async function runGit(args: string[]): Promise<string> {
+  try {
+    const result = await execFileAsync("git", args, {
+      cwd: projectRoot,
+      encoding: "utf8",
+      windowsHide: true,
+    });
+    return result.stdout.trim();
+  } catch (error: unknown) {
+    const message =
+      error && typeof error === "object" && "stderr" in error
+        ? String(error.stderr)
+        : error instanceof Error
+          ? error.message
+          : String(error);
+    throw new Error(`git ${args.join(" ")} failed: ${message.trim()}`);
+  }
+}
+
+async function prepareFeatureBranch(featureName: string): Promise<string> {
+  const status = await runGit(["status", "--porcelain"]);
+  if (status) {
+    throw new Error(
+      "The working tree is not clean before starting a feature. Commit or stash existing changes before running the workflow.",
+    );
+  }
+
+  const branch = featureBranchName(featureName);
+  const existingBranch = await runGit([
+    "for-each-ref",
+    "--format=%(refname:short)",
+    `refs/heads/${branch}`,
+  ]);
+  if (existingBranch) {
+    throw new Error(
+      `Feature branch "${branch}" already exists. Refusing to overwrite it.`,
+    );
+  }
+
+  await runGit(["switch", "-c", branch]);
+  return branch;
+}
+
+async function commitAndPushFeature(
+  featureName: string,
+  branch: string,
+): Promise<void> {
+  if (process.env.COPILOT_AUTO_PUSH === "false") {
+    console.log(
+      "COPILOT_AUTO_PUSH=false; leaving feature changes committed locally without pushing.",
+    );
+    return;
+  }
+
+  const status = await runGit(["status", "--porcelain"]);
+  if (!status) {
+    throw new Error(
+      `Feature "${featureName}" completed without repository changes to commit.`,
+    );
+  }
+
+  await runGit(["add", "--all"]);
+  await runGit([
+    "commit",
+    "-m",
+    `feat: ${featureName}`,
+    "-m",
+    "Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>",
+  ]);
+  await runGit(["push", "--set-upstream", "origin", branch]);
+  console.log(`Pushed feature branch ${branch} to origin.`);
+}
+
 async function main(): Promise<void> {
   const featureRequest = process.argv.slice(2).join(" ").trim();
   if (featureRequest) {
@@ -214,6 +304,8 @@ async function main(): Promise<void> {
           `Backlog status: ${feature.backlog}; implementation status: ${feature.implemented}\n` +
           `Notes: ${feature.notes}\n`,
       );
+      const branch = await prepareFeatureBranch(feature.name);
+      console.log(`Working on feature branch ${branch}.\n`);
       console.log("Product manager is preparing the handoff...\n");
       const handoff = await runAgent(
         client,
@@ -282,6 +374,7 @@ ${featureRecordContents}`,
         );
       }
 
+      await commitAndPushFeature(feature.name, branch);
       processedFeatures.add(feature.name);
       completedFeatures += 1;
       console.log(

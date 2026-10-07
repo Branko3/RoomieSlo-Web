@@ -50,3 +50,24 @@ The runner denies permission requests unless `COPILOT_AUTO_APPROVE=true` is set.
 Set that variable only after reviewing the repository and the prompts passed to
 the agents. This is required because the SDK runner has no interactive VS Code
 permission UI. Never use unattended approval for a repository you do not trust.
+
+## Automated Git publishing
+
+Before starting each feature, the runner requires a clean working tree and
+creates a new branch named `agent/<feature-slug>`. After the developer and
+testing agents complete successfully, it commits all feature changes and
+pushes that branch to the `origin` remote. The runner stops instead of
+creating a partial commit when either agent fails or the working tree is
+unexpectedly clean.
+
+The machine running the workflow must have Git installed, `origin` configured,
+and authenticated push access to the repository. For GitHub, configure the
+credential helper once with:
+
+```powershell
+gh auth setup-git
+```
+
+Set `COPILOT_AUTO_PUSH=false` to keep the feature commit local while testing
+the workflow. Automatic pushing is enabled by default when the variable is
+unset.
