@@ -194,6 +194,10 @@ async function requireFeatureRecordPath(
   );
 }
 
+function featureRecordIsBlocked(contents: string): boolean {
+  return /^\s*-\s*Status:\s*Blocked\b/im.test(contents);
+}
+
 function featureBranchName(featureName: string): string {
   const slug = featureName
     .toLowerCase()
@@ -296,6 +300,7 @@ async function findExistingPullRequest(
 async function commitAndPushFeature(
   featureName: string,
   branch: string,
+  draftPullRequest = false,
 ): Promise<void> {
   if (process.env.COPILOT_AUTO_PUSH === "false") {
     console.log(
@@ -321,12 +326,13 @@ async function commitAndPushFeature(
   ]);
   await runGit(["push", "--set-upstream", "origin", branch]);
   console.log(`Pushed feature branch ${branch} to origin.`);
-  await createPullRequest(featureName, branch);
+  await createPullRequest(featureName, branch, draftPullRequest);
 }
 
 async function createPullRequest(
   featureName: string,
   branch: string,
+  draft = false,
 ): Promise<void> {
   const title = `Implement ${featureName}`;
   const body = [
@@ -350,6 +356,7 @@ async function createPullRequest(
         title,
         "--body",
         body,
+        ...(draft ? ["--draft"] : []),
       ],
       {
         cwd: projectRoot,
@@ -472,6 +479,19 @@ feature is complete. Do not modify unrelated features.`,
         path.join(projectRoot, featureRecord),
         "utf8",
       );
+
+      if (featureRecordIsBlocked(featureRecordContents)) {
+        console.log(
+          `\nFeature record ${featureRecord} is Blocked. Preserving the blocker without starting testing.\n`,
+        );
+        await commitAndPushFeature(feature.name, preparedBranch, true);
+        processedFeatures.add(feature.name);
+        completedFeatures += 1;
+        console.log(
+          `\nFeature "${feature.name}" was preserved as blocked in a draft PR. Continuing with the next backlog feature.`,
+        );
+        continue;
+      }
 
       console.log(`\nTesting ${featureRecord}...\n`);
       const testingResponse = await runAgent(
