@@ -1,0 +1,3 @@
+-- Opt-in development seed only. Never run this file against staging or production.
+-- The Android 0003_demo_oglasi.sql is intentionally not a production migration.
+-- Use `supabase db reset` locally when this seed is explicitly desired.
