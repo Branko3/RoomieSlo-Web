@@ -8,6 +8,7 @@ import { approveAll, CopilotClient } from "@github/copilot-sdk";
 const projectRoot = path.resolve(import.meta.dirname, "..");
 const execFileAsync = promisify(execFile);
 const gitExecutable = process.env.GIT_EXECUTABLE ?? "git";
+const ghExecutable = process.env.GH_EXECUTABLE ?? "gh";
 const agentsDirectory = path.join(projectRoot, ".github", "agents");
 const featureStatusPath = path.join(
   projectRoot,
@@ -271,6 +272,54 @@ async function commitAndPushFeature(
   ]);
   await runGit(["push", "--set-upstream", "origin", branch]);
   console.log(`Pushed feature branch ${branch} to origin.`);
+  await createPullRequest(featureName, branch);
+}
+
+async function createPullRequest(
+  featureName: string,
+  branch: string,
+): Promise<void> {
+  const title = `Implement ${featureName}`;
+  const body = [
+    `Automated feature delivery for **${featureName}**.`,
+    "",
+    "The product-manager, developer, and testing agents completed this feature.",
+    "Please review the implementation and automated test coverage before merging.",
+  ].join("\n");
+
+  try {
+    const result = await execFileAsync(
+      ghExecutable,
+      [
+        "pr",
+        "create",
+        "--base",
+        "main",
+        "--head",
+        branch,
+        "--title",
+        title,
+        "--body",
+        body,
+      ],
+      {
+        cwd: projectRoot,
+        encoding: "utf8",
+        windowsHide: true,
+      },
+    );
+    console.log(`Created pull request: ${result.stdout.trim()}`);
+  } catch (error: unknown) {
+    const message =
+      error && typeof error === "object" && "stderr" in error
+        ? String(error.stderr)
+        : error instanceof Error
+          ? error.message
+          : String(error);
+    throw new Error(
+      `${ghExecutable} pr create failed: ${message.trim() || "GitHub CLI could not be started. Set GH_EXECUTABLE to the full path of gh.exe."}`,
+    );
+  }
 }
 
 async function main(): Promise<void> {
