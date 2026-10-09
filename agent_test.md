@@ -156,13 +156,13 @@ Testing B: writes tests for Feature B
 
 Example session layout:
 
-| Session | Agent | Work |
-|---|---|---|
-| 1 | Product manager | Coordinates backlog and prepares handoffs |
-| 2 | Developer | Implements Feature A |
-| 3 | Testing | Tests Feature A after implementation |
-| 4 | Developer | Implements Feature B in parallel |
-| 5 | Testing | Tests Feature B after implementation |
+| Session | Agent           | Work                                      |
+| ------- | --------------- | ----------------------------------------- |
+| 1       | Product manager | Coordinates backlog and prepares handoffs |
+| 2       | Developer       | Implements Feature A                      |
+| 3       | Testing         | Tests Feature A after implementation      |
+| 4       | Developer       | Implements Feature B in parallel          |
+| 5       | Testing         | Tests Feature B after implementation      |
 
 Use separate branches or worktrees for parallel feature work. Do not run multiple developers in the same working directory when they may edit overlapping files.
 

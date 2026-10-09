@@ -25,7 +25,9 @@ export function ListingCard({ listing }: { listing: Listing }) {
       <div className="listing-body">
         <div className="chips">
           <span className="chip">{listing.roomType}</span>
-          {!listing.isFilled && <span className="chip chip-green">Na voljo</span>}
+          {!listing.isFilled && (
+            <span className="chip chip-green">Na voljo</span>
+          )}
         </div>
         <Link href={`/listings/${listing.id}`} className="listing-title">
           {listing.title}

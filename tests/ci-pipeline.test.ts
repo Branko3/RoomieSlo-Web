@@ -123,8 +123,8 @@ describe("credential-free smoke-test contract", () => {
     expect(smokeTestSource).toContain(
       'test("preserves search filter state in the URL"',
     );
-    expect(smokeTestSource).toContain("test.skip(!hasStagingContract");
-    expect(smokeTestSource).toContain("test.skip(!hasPublicStaging");
+    expect(smokeTestSource).toMatch(/test\.skip\(\s*!hasStagingContract\b/);
+    expect(smokeTestSource).toMatch(/test\.skip\(\s*!hasPublicStaging\b/);
     expect(smokeTestSource).toContain(
       "Requires disposable staging credentials",
     );

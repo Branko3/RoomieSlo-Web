@@ -7,7 +7,9 @@ import { useFavorites } from "../../components/providers";
 export default function FavoritesPage() {
   const { favorites, toggleFavorite } = useFavorites();
   const { data: listings = [], isLoading, error } = useListings();
-  const favoriteListings = listings.filter((listing) => favorites.includes(listing.id));
+  const favoriteListings = listings.filter((listing) =>
+    favorites.includes(listing.id),
+  );
 
   return (
     <div className="content-wrap">
@@ -17,15 +19,29 @@ export default function FavoritesPage() {
           <h1>Priljubljeni oglasi</h1>
         </div>
       </header>
-      {isLoading ? <div className="page-state"><p>Nalaganje priljubljenih oglasov ...</p></div> : error ? <div className="page-state" role="alert"><h2>Priljubljenih oglasov ni mogoče naložiti</h2><p>Preveri povezavo in prijavo v Supabase.</p></div> : favoriteListings.length > 0 ? (
+      {isLoading ? (
+        <div className="page-state">
+          <p>Nalaganje priljubljenih oglasov ...</p>
+        </div>
+      ) : error ? (
+        <div className="page-state" role="alert">
+          <h2>Priljubljenih oglasov ni mogoče naložiti</h2>
+          <p>Preveri povezavo in prijavo v Supabase.</p>
+        </div>
+      ) : favoriteListings.length > 0 ? (
         <div className="favorite-list">
           {favoriteListings.map((listing) => (
             <div className="favorite-row" key={listing.id}>
-              <Link href={`/listings/${listing.id}`} className="favorite-row-link">
+              <Link
+                href={`/listings/${listing.id}`}
+                className="favorite-row-link"
+              >
                 <span className="favorite-art">{listing.image}</span>
                 <span>
                   <b>{listing.title}</b>
-                  <small>{listing.district} · {listing.price} € / mesec</small>
+                  <small>
+                    {listing.district} · {listing.price} € / mesec
+                  </small>
                 </span>
               </Link>
               <button
@@ -44,7 +60,9 @@ export default function FavoritesPage() {
           <span>♡</span>
           <h2>Še nimaš shranjenih oglasov</h2>
           <p>Ko najdeš zanimiv oglas, ga shrani za pozneje.</p>
-          <Link className="button" href="/search">Razišči oglase</Link>
+          <Link className="button" href="/search">
+            Razišči oglase
+          </Link>
         </div>
       )}
       <div className="tip-card">

@@ -12,7 +12,11 @@ export default function ListingsPage() {
           <p className="eyebrow">Dobrodošel nazaj, Amar 👋</p>
           <h1>Oglasi za sobe</h1>
         </div>
-        <Link className="icon-button" aria-label="Odpri klepete in obvestila" href="/chats">
+        <Link
+          className="icon-button"
+          aria-label="Odpri klepete in obvestila"
+          href="/chats"
+        >
           ♧<span className="notification-dot" />
         </Link>
       </header>
@@ -36,9 +40,23 @@ export default function ListingsPage() {
           Poglej vse →
         </a>
       </div>
-      {isLoading && <div className="page-state" aria-live="polite"><p>Nalaganje oglasov ...</p></div>}
-      {error && <div className="page-state" role="alert"><h2>Oglasov ni mogoče naložiti</h2><p>Preveri povezavo in prijavo v Supabase.</p></div>}
-      {!isLoading && !error && listings?.length === 0 && <div className="empty-state"><h2>Trenutno ni oglasov</h2><p>Ko bodo oglasi na voljo, se bodo prikazali tukaj.</p></div>}
+      {isLoading && (
+        <div className="page-state" aria-live="polite">
+          <p>Nalaganje oglasov ...</p>
+        </div>
+      )}
+      {error && (
+        <div className="page-state" role="alert">
+          <h2>Oglasov ni mogoče naložiti</h2>
+          <p>Preveri povezavo in prijavo v Supabase.</p>
+        </div>
+      )}
+      {!isLoading && !error && listings?.length === 0 && (
+        <div className="empty-state">
+          <h2>Trenutno ni oglasov</h2>
+          <p>Ko bodo oglasi na voljo, se bodo prikazali tukaj.</p>
+        </div>
+      )}
       <div className="listing-grid">
         {listings?.slice(0, 3).map((listing) => (
           <ListingCard listing={listing} key={listing.id} />

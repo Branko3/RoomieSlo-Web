@@ -18,16 +18,16 @@ The prototype currently uses preview data from [`lib/data.ts`](./lib/data.ts), e
 
 ## 2. Functionality reviewed
 
-| Route | Current functionality | Current limitation |
-|---|---|---|
-| `/listings` | Dashboard, recommended listing cards, quick actions, navigation | Notification button has no action; recommended data is static |
-| `/search` | Location text filter, budget slider, live result count, empty state | “Poišči oglase” does not do anything; sort button is not wired; filter state is not reflected in the URL; result copy has a grammar issue for `1` |
-| `/listings/[id]` | Listing detail, price, location, metadata, match CTA, save CTA | Match and save buttons have no handlers; unknown IDs silently show the first listing; detail content is mostly generic |
-| `/favorites` | Displays two favorite-looking rows | It is hard-coded to the first two listings and is not connected to the favorite buttons |
-| `/chats` | Chat list, unread count, match banner | Every row links to `/chats/iva`; no chat detail page exists; overflow button has no action |
-| `/profile` | Profile summary, availability toggle, questionnaire progress, logout-looking CTA | Edit, settings, questionnaire, and logout controls are not wired; progress is static |
-| `/login` | Form-like UI and demo success message | No input validation, authentication, loading/error state, or real submit |
-| `/register` | Form-like UI | Continue button has no action or validation |
+| Route            | Current functionality                                                            | Current limitation                                                                                                                                |
+| ---------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/listings`      | Dashboard, recommended listing cards, quick actions, navigation                  | Notification button has no action; recommended data is static                                                                                     |
+| `/search`        | Location text filter, budget slider, live result count, empty state              | “Poišči oglase” does not do anything; sort button is not wired; filter state is not reflected in the URL; result copy has a grammar issue for `1` |
+| `/listings/[id]` | Listing detail, price, location, metadata, match CTA, save CTA                   | Match and save buttons have no handlers; unknown IDs silently show the first listing; detail content is mostly generic                            |
+| `/favorites`     | Displays two favorite-looking rows                                               | It is hard-coded to the first two listings and is not connected to the favorite buttons                                                           |
+| `/chats`         | Chat list, unread count, match banner                                            | Every row links to `/chats/iva`; no chat detail page exists; overflow button has no action                                                        |
+| `/profile`       | Profile summary, availability toggle, questionnaire progress, logout-looking CTA | Edit, settings, questionnaire, and logout controls are not wired; progress is static                                                              |
+| `/login`         | Form-like UI and demo success message                                            | No input validation, authentication, loading/error state, or real submit                                                                          |
+| `/register`      | Form-like UI                                                                     | Continue button has no action or validation                                                                                                       |
 
 ### Confirmed interaction observations
 
