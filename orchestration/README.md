@@ -43,7 +43,8 @@ in document order, selecting the first row whose `Backlog` value is `Yes` or
 3. **Testing** writes and runs automated tests and fills in the record's
    `Test status` section.
 4. **Product manager (review)** returns `VERDICT: APPROVED` or
-   `VERDICT: CHANGES_REQUESTED` with an `ASSIGNEE` and `FEEDBACK`.
+   `VERDICT: CHANGES_REQUESTED` (or `VERDICT: BLOCKED`, see below) with an
+   `ASSIGNEE` and `FEEDBACK`.
 
 A feature is ready only when the review approves it **and** the record's
 `Automated status` is `Covered`. Otherwise the feedback goes back to the
@@ -52,6 +53,21 @@ review repeats, up to `COPILOT_MAX_FIX_ATTEMPTS` extra rounds (default `2`).
 A feature that is still not approved after that is published as a draft pull
 request so it cannot be merged by mistake. The runner then continues with the
 next feature, and stops on any agent, Git, or GitHub error.
+
+The review can also return `VERDICT: BLOCKED` when the only remaining gaps
+need resources the agents cannot obtain, such as staging credentials or
+browsers that are not installed. The feature is then published as a draft
+immediately instead of spending fix rounds on work that cannot succeed. The
+developer and testing prompts also tell agents not to start long-running
+servers, install browsers, or attempt staging-only scenarios.
+
+Each agent call has a time limit of `COPILOT_AGENT_TIMEOUT_MINUTES` (default
+`30`). When it is reached, the agent session is aborted. If the agents have
+already changed the repository, the work so far is published as a draft pull
+request and the runner continues with the next feature. If a run fails before
+any change was made, the runner deletes the empty feature branch so the next
+run can restart that feature; otherwise it leaves the branch checked out for
+inspection.
 
 The runner loads the role instructions from `.github/agents/`, so those files
 remain the source of truth. The feature record is identified from the records
