@@ -7,12 +7,17 @@ export default function Error({
   reset: () => void;
 }) {
   return (
-    <div className="page-state">
+    <main className="page-state" role="alert">
       <h1>Nekaj je šlo narobe</h1>
       <p>Vsebino lahko poskusiš naložiti znova.</p>
-      <button className="button" onClick={reset}>
-        Poskusi znova
-      </button>
-    </div>
+      <div className="state-actions">
+        <button className="button" onClick={reset}>
+          Poskusi znova
+        </button>
+        <a className="button button-outline" href="/listings">
+          Na oglase
+        </a>
+      </div>
+    </main>
   );
 }
