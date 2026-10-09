@@ -20,6 +20,16 @@ const maxFixAttempts = parseNonNegativeInteger(
   process.env.COPILOT_MAX_FIX_ATTEMPTS ?? "2",
   "COPILOT_MAX_FIX_ATTEMPTS",
 );
+const agentTimeoutMs =
+  parseNonNegativeInteger(
+    process.env.COPILOT_AGENT_TIMEOUT_MINUTES ?? "30",
+    "COPILOT_AGENT_TIMEOUT_MINUTES",
+  ) *
+  60 *
+  1000;
+if (agentTimeoutMs === 0) {
+  throw new Error("COPILOT_AGENT_TIMEOUT_MINUTES must be at least 1.");
+}
 const agentsDirectory = path.join(projectRoot, ".github", "agents");
 const featureStatusPath = path.join(
   projectRoot,
@@ -30,7 +40,7 @@ const featureStatusPath = path.join(
 type Role = "product-manager" | "developer" | "testing";
 type BacklogStatus = "Yes" | "Partial" | "No";
 type TestCoverage = "Covered" | "Partially covered" | "Blocked" | "Missing";
-type FeatureOutcome = "ready" | "blocked" | "unverified";
+type FeatureOutcome = "ready" | "blocked" | "gated" | "unverified";
 
 interface BacklogFeature {
   name: string;
@@ -48,7 +58,7 @@ interface ExistingPullRequest {
 }
 
 interface ProductReview {
-  approved: boolean;
+  verdict: "approved" | "changes-requested" | "blocked";
   assignee: "developer" | "testing";
   feedback: string;
 }
@@ -153,7 +163,8 @@ async function findNextFeature(
     (feature) =>
       !processedFeatures.has(feature.name) &&
       !feature.deferred &&
-      feature.backlog !== "No" && feature.implemented !== "Yes",
+      feature.backlog !== "No" &&
+      feature.implemented !== "Yes",
   );
 }
 
@@ -187,6 +198,15 @@ function permissionHandlerFor(role: Role): PermissionHandler {
   };
 }
 
+class AgentTimeoutError extends Error {
+  constructor(role: Role, timeoutMs: number) {
+    super(
+      `The ${role} agent did not finish within ${timeoutMs / 60000} minutes and was aborted.`,
+    );
+    this.name = "AgentTimeoutError";
+  }
+}
+
 async function runAgent(
   client: CopilotClient,
   role: Role,
@@ -207,7 +227,19 @@ async function runAgent(
   });
 
   try {
-    const response = await session.sendAndWait({ prompt }, 10 * 60 * 1000);
+    let response;
+    try {
+      response = await session.sendAndWait({ prompt }, agentTimeoutMs);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (!/^Timeout after \d+ms/.test(message)) {
+        throw error;
+      }
+      // sendAndWait stops waiting but does not stop the agent, so abort it
+      // before the runner touches the working tree.
+      await session.abort().catch(() => undefined);
+      throw new AgentTimeoutError(role, agentTimeoutMs);
+    }
     if (sessionErrors.length > 0) {
       throw new Error(sessionErrors.join("; "));
     }
@@ -247,7 +279,10 @@ async function changedFeatureRecords(): Promise<string[]> {
 
   return status
     .split(/\r?\n/)
-    .filter((line) => line.length > 3 && !line.startsWith(" D") && !line.startsWith("D "))
+    .filter(
+      (line) =>
+        line.length > 3 && !line.startsWith(" D") && !line.startsWith("D "),
+    )
     .map((line) => line.slice(3).split(" -> ").pop()!.replace(/^"|"$/g, ""))
     .filter((file) => /^docs\/features\/[a-z0-9][a-z0-9-]*\.md$/i.test(file));
 }
@@ -262,7 +297,9 @@ async function requireFeatureRecordPath(
       /docs[\\/]features[\\/]([a-z0-9][a-z0-9-]*)\.md/gi,
     ),
   ].map((match) => normalizeFeatureRecordPath(match[1]));
-  const changed = (await changedFeatureRecords()).map((file) => file.toLowerCase());
+  const changed = (await changedFeatureRecords()).map((file) =>
+    file.toLowerCase(),
+  );
 
   const reportedAndChanged = reported.find((file) => changed.includes(file));
   if (reportedAndChanged) {
@@ -324,13 +361,21 @@ function parseTestCoverage(contents: string): TestCoverage {
 }
 
 function parseProductReview(response: string): ProductReview {
-  const verdict = response.match(/^\s*VERDICT:\s*(APPROVED|CHANGES_REQUESTED)\b/im);
+  const verdict = response.match(
+    /^\s*VERDICT:\s*(APPROVED|CHANGES_REQUESTED|BLOCKED)\b/im,
+  );
   const assignee = response.match(/^\s*ASSIGNEE:\s*(developer|testing)\b/im);
   const feedback = response.match(/^\s*FEEDBACK:\s*([\s\S]*)$/im);
 
   return {
-    approved: verdict?.[1].toUpperCase() === "APPROVED",
-    assignee: assignee?.[1].toLowerCase() === "developer" ? "developer" : "testing",
+    verdict:
+      verdict?.[1].toUpperCase() === "APPROVED"
+        ? "approved"
+        : verdict?.[1].toUpperCase() === "BLOCKED"
+          ? "blocked"
+          : "changes-requested",
+    assignee:
+      assignee?.[1].toLowerCase() === "developer" ? "developer" : "testing",
     feedback: feedback?.[1].trim() || response.trim(),
   };
 }
@@ -343,7 +388,9 @@ function featureBranchName(featureName: string): string {
     .slice(0, 70);
 
   if (!slug) {
-    throw new Error(`Could not derive a branch name from feature "${featureName}".`);
+    throw new Error(
+      `Could not derive a branch name from feature "${featureName}".`,
+    );
   }
 
   return `agent/${slug}`;
@@ -464,7 +511,9 @@ async function stageFeatureChanges(featureName: string): Promise<void> {
   const staged = (await runGit(["diff", "--cached", "--name-only"]))
     .split(/\r?\n/)
     .filter(Boolean);
-  const forbidden = staged.filter((file) => forbiddenStagedPathPattern.test(file));
+  const forbidden = staged.filter((file) =>
+    forbiddenStagedPathPattern.test(file),
+  );
   if (forbidden.length > 0) {
     await runGit(["reset", "--quiet"]);
     throw new Error(
@@ -506,6 +555,8 @@ async function createPullRequest(
       "The product manager approved the implementation and the automated tests cover every acceptance criterion.",
     blocked:
       "The developer marked the feature record as **Blocked**. Testing was not started.",
+    gated:
+      "Implemented and tested as far as the agent environment allows. The remaining acceptance criteria need resources the agents cannot access, such as staging credentials or installed browsers; see the review below.",
     unverified: `The feature did not reach approved, fully covered status after ${maxFixAttempts} fix attempt(s). Review before merging.`,
   };
   const body = [
@@ -537,6 +588,15 @@ async function createPullRequest(
   console.log(`Created ${draft ? "draft " : ""}pull request: ${url}`);
 }
 
+// Agents run unattended with a time limit, so they must not chase work that
+// needs resources only a human can provide.
+const environmentLimits = `ENVIRONMENT LIMITS: every command you run must finish on its own within a
+few minutes. Do not start dev servers or watchers outside Playwright's
+configured webServer, do not install browsers or system dependencies, and do
+not attempt work that needs services or credentials that are not configured
+(for example disposable Supabase staging credentials). Record such work as a
+remaining gap in the feature record instead of attempting it.`;
+
 function testingPrompt(
   featureRecord: string,
   featureRecordContents: string,
@@ -548,6 +608,8 @@ Read the feature record and implementation first. Write automated tests for
 every acceptance criterion and every scenario in the Handoff to testing
 section. Do not perform manual browser testing. Run the relevant test commands
 and update the same feature record's Test status section with the real result.
+
+${environmentLimits}
 ${feedback ? `\nPRODUCT-MANAGER FEEDBACK FROM THE PREVIOUS REVIEW:\n${feedback}\n` : ""}
 FEATURE RECORD:
 ${featureRecordContents}`;
@@ -575,8 +637,15 @@ ${featureRecordContents}
 TESTING AGENT REPORT:
 ${testingResponse}
 
+Use VERDICT: BLOCKED when every remaining gap needs resources the agents
+cannot obtain, such as staging credentials, external services, or browsers and
+system dependencies that are not installed. Do not request that kind of work
+with CHANGES_REQUESTED: another round cannot complete it. Use
+CHANGES_REQUESTED only for corrections the developer or testing agent can make
+in this repository with the tools already available.
+
 End your response with exactly these lines:
-VERDICT: APPROVED or VERDICT: CHANGES_REQUESTED
+VERDICT: APPROVED, VERDICT: CHANGES_REQUESTED, or VERDICT: BLOCKED
 ASSIGNEE: developer or ASSIGNEE: testing
 FEEDBACK: <specific, actionable corrections, or "None">`;
 }
@@ -588,6 +657,28 @@ async function deliverFeature(
   developerResponse: string,
 ): Promise<DeliveryResult> {
   const featureRecord = await requireFeatureRecordPath(developerResponse);
+  try {
+    return await reviewLoop(client, feature, handoff, featureRecord);
+  } catch (error: unknown) {
+    if (!(error instanceof AgentTimeoutError)) {
+      throw error;
+    }
+    console.warn(`\n${error.message} Publishing the work so far as a draft.\n`);
+    return {
+      outcome: "unverified",
+      featureRecord,
+      coverage: parseTestCoverage(await readFeatureRecord(featureRecord)),
+      summary: `${error.message} Changes made before the timeout are included for review.`,
+    };
+  }
+}
+
+async function reviewLoop(
+  client: CopilotClient,
+  feature: BacklogFeature,
+  handoff: string,
+  featureRecord: string,
+): Promise<DeliveryResult> {
   let testingFeedback: string | undefined;
 
   for (let attempt = 0; ; attempt += 1) {
@@ -600,7 +691,8 @@ async function deliverFeature(
         outcome: "blocked",
         featureRecord,
         coverage: parseTestCoverage(contents),
-        summary: "Not reviewed: the developer reported a blocker in the feature record.",
+        summary:
+          "Not reviewed: the developer reported a blocker in the feature record.",
       };
     }
 
@@ -613,25 +705,53 @@ async function deliverFeature(
 
     contents = await readFeatureRecord(featureRecord);
     const coverage = parseTestCoverage(contents);
-    console.log(`\nProduct manager is reviewing (automated status: ${coverage})...\n`);
+    console.log(
+      `\nProduct manager is reviewing (automated status: ${coverage})...\n`,
+    );
     const review = parseProductReview(
       await runAgent(
         client,
         "product-manager",
-        reviewPrompt(feature, featureRecord, contents, coverage, testingResponse),
+        reviewPrompt(
+          feature,
+          featureRecord,
+          contents,
+          coverage,
+          testingResponse,
+        ),
       ),
     );
 
-    if (review.approved && coverage === "Covered") {
-      return { outcome: "ready", featureRecord, coverage, summary: review.feedback };
+    if (review.verdict === "approved" && coverage === "Covered") {
+      return {
+        outcome: "ready",
+        featureRecord,
+        coverage,
+        summary: review.feedback,
+      };
     }
 
-    const reason = review.approved
-      ? `The record's automated status is "${coverage}", not "Covered". ${review.feedback}`
-      : review.feedback;
+    if (review.verdict === "blocked") {
+      return {
+        outcome: "gated",
+        featureRecord,
+        coverage,
+        summary: review.feedback,
+      };
+    }
+
+    const reason =
+      review.verdict === "approved"
+        ? `The record's automated status is "${coverage}", not "Covered". ${review.feedback}`
+        : review.feedback;
 
     if (attempt >= maxFixAttempts) {
-      return { outcome: "unverified", featureRecord, coverage, summary: reason };
+      return {
+        outcome: "unverified",
+        featureRecord,
+        coverage,
+        summary: reason,
+      };
     }
 
     if (review.assignee === "developer") {
@@ -643,6 +763,8 @@ async function deliverFeature(
 below. Keep ${featureRecord} accurate: update acceptance criteria, implementation
 notes, and the Handoff to testing section if they changed. If you are blocked,
 set the record's status to Blocked and explain why.
+
+${environmentLimits}
 
 ORIGINAL PRODUCT-MANAGER HANDOFF:
 ${handoff}
@@ -709,12 +831,69 @@ async function main(): Promise<void> {
       }
 
       const preparedBranch = await prepareFeatureBranch(feature.name);
-      console.log(`Working on feature branch ${preparedBranch} from ${baseBranch}.\n`);
-      console.log("Product manager is preparing the handoff...\n");
-      const handoff = await runAgent(
-        client,
-        "product-manager",
-        `Plan the next backlog feature for RoomieSlo-Web and return a complete developer handoff.
+      console.log(
+        `Working on feature branch ${preparedBranch} from ${baseBranch}.\n`,
+      );
+      let result: DeliveryResult;
+      try {
+        result = await runFeature(client, feature);
+      } catch (error: unknown) {
+        await abandonBranchIfEmpty(preparedBranch);
+        throw error;
+      }
+
+      await commitAndPublishFeature(feature, preparedBranch, result);
+      await returnToBaseBranch();
+      processedFeatures.add(feature.name);
+      completedFeatures += 1;
+      console.log(
+        `\nFeature "${feature.name}" finished with outcome "${result.outcome}". Continuing with the next backlog feature.`,
+      );
+    }
+  } finally {
+    await client.stop();
+  }
+}
+
+// A failed run that changed nothing leaves only an empty branch behind, which
+// would make the next run refuse the feature. Remove it so the run can resume.
+async function abandonBranchIfEmpty(branch: string): Promise<void> {
+  try {
+    const status = await runGit(["status", "--porcelain"]);
+    const commits = await runGit([
+      "log",
+      "--oneline",
+      `${baseBranch}..${branch}`,
+    ]);
+    if (status || commits) {
+      console.error(
+        `\nLeaving ${branch} checked out with the agents' changes for inspection. Commit or discard them, switch to ${baseBranch}, and delete the branch before rerunning.`,
+      );
+      return;
+    }
+    await runGit(["switch", baseBranch]);
+    await runGit(["branch", "-D", branch]);
+    console.error(
+      `\nRemoved empty branch ${branch}; rerunning will restart this feature.`,
+    );
+  } catch (cleanupError: unknown) {
+    const message =
+      cleanupError instanceof Error
+        ? cleanupError.message
+        : String(cleanupError);
+    console.error(`\nCould not clean up ${branch}: ${message}`);
+  }
+}
+
+async function runFeature(
+  client: CopilotClient,
+  feature: BacklogFeature,
+): Promise<DeliveryResult> {
+  console.log("Product manager is preparing the handoff...\n");
+  const handoff = await runAgent(
+    client,
+    "product-manager",
+    `Plan the next backlog feature for RoomieSlo-Web and return a complete developer handoff.
 
 Feature selected from docs/web-feature-status.md:
 - Phase: ${feature.phase}
@@ -728,13 +907,15 @@ docs/web-feature-status.md for scope and status. Do not implement code. Include
 the user outcome, affected routes, acceptance criteria, Android behavior to
 preserve, dependencies, and testing requirements. This branch starts from
 ${baseBranch}; call out any dependency on features that are not merged yet.`,
-      );
+  );
 
-      console.log("\nDeveloper is implementing the approved feature...\n");
-      const developerResponse = await runAgent(
-        client,
-        "developer",
-        `Implement this exact backlog feature in the RoomieSlo-Web project now. You
+  console.log("\nDeveloper is implementing the approved feature...\n");
+  let developerResponse: string;
+  try {
+    developerResponse = await runAgent(
+      client,
+      "developer",
+      `Implement this exact backlog feature in the RoomieSlo-Web project now. You
 have permission to edit the repository; perform the code and documentation
 changes instead of returning a proposed plan.
 
@@ -750,21 +931,26 @@ docs/features/<feature-slug>.md. Create the directory if necessary. The final
 response must include the exact relative path, changed files, and validation
 results. If blocked, set the record's status to Blocked, explain the blocker
 clearly, and do not pretend the feature is complete. Do not modify unrelated
-features.`,
-      );
+features.
 
-      const result = await deliverFeature(client, feature, handoff, developerResponse);
-      await commitAndPublishFeature(feature, preparedBranch, result);
-      await returnToBaseBranch();
-      processedFeatures.add(feature.name);
-      completedFeatures += 1;
-      console.log(
-        `\nFeature "${feature.name}" finished with outcome "${result.outcome}". Continuing with the next backlog feature.`,
-      );
+${environmentLimits}`,
+    );
+  } catch (error: unknown) {
+    const hasChanges = Boolean(await runGit(["status", "--porcelain"]));
+    if (!(error instanceof AgentTimeoutError) || !hasChanges) {
+      throw error;
     }
-  } finally {
-    await client.stop();
+    console.warn(`\n${error.message} Publishing the work so far as a draft.\n`);
+    const [featureRecord = "not created"] = await changedFeatureRecords();
+    return {
+      outcome: "unverified",
+      featureRecord,
+      coverage: "Missing",
+      summary: `${error.message} Implementation is incomplete and untested; changes made before the timeout are included for review.`,
+    };
   }
+
+  return deliverFeature(client, feature, handoff, developerResponse);
 }
 
 main().catch((error: unknown) => {

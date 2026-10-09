@@ -38,10 +38,12 @@ Read the feature record, the implementation, the tests, and the testing report. 
 
 If changes are needed, assign them to `developer` when the implementation is wrong or incomplete, or to `testing` when tests are missing, failing for test reasons, or the Test status section is inaccurate. Give specific, actionable feedback.
 
+Only request changes the agents can make in this repository with the tools already available. When every remaining gap needs resources the agents cannot obtain (staging or production credentials, external services, or browsers and system dependencies that are not installed), return `BLOCKED` instead: another round cannot complete that work, and the runner publishes the feature as a draft pull request for a human to finish.
+
 End every review response with exactly these lines:
 
 ```text
-VERDICT: APPROVED | CHANGES_REQUESTED
+VERDICT: APPROVED | CHANGES_REQUESTED | BLOCKED
 ASSIGNEE: developer | testing
 FEEDBACK: <specific corrections, or None>
 ```
