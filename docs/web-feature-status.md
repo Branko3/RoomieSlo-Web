@@ -46,7 +46,7 @@ and handtested while still lacking automated coverage.
 | Reproducible SQL migrations | Yes | Partial | No | No | Ordered production migrations, RLS/Storage/Realtime SQL, opt-in seed boundary, and recovery documentation now live in `supabase/`; fresh-project and security validation remain blocked on a disposable/staging project. |
 | Development, staging, and production environments | Yes | No | No | No | `.env.example` documents public browser configuration; environments are not established. |
 | RLS and Storage policy review | Yes | No | No | No | Must include negative-access tests for profiles, listings, matches, messages, reports, and academic documents. |
-| Account/document deletion and retention rules | Yes | No | No | No | Must be documented before production use. |
+| Account/document deletion and retention rules | Yes | No | No | No | Blocked: policy approval, isolated environments, authentication/session restoration, RLS/Storage review, reports, backups, and operational procedures are required; see [`docs/features/account-document-deletion-retention-rules.md`](features/account-document-deletion-retention-rules.md). |
 | Responsive breakpoints and accessibility requirements | No | Yes | No | Yes | Desktop sidebar, mobile bottom navigation, skip link, semantic landmarks, and visible focus styling exist. |
 
 ### Phase 1 — web foundation
