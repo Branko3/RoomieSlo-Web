@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "./auth-provider";
+import { getRouteAccess } from "../lib/auth/routes";
 
 const navItems = [
   ["listings", "⌂", "Oglasi"],
@@ -13,6 +15,8 @@ const navItems = [
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { session, signOut } = useAuth();
+  if (getRouteAccess(pathname) === "public") return <>{children}</>;
   const active = pathname.split("/")[1] || "listings";
 
   return (
@@ -44,13 +48,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="mini-profile">
             <span className="avatar avatar-small">AH</span>
             <span>
-              <b>Amar H.</b>
-              <small>Preverjen študent</small>
+              <b>{session?.user.email ?? "Uporabnik"}</b>
+              <small>Prijavljen</small>
             </span>
           </div>
-          <Link href="/profile" aria-label="Nastavitve profila">
-            ⚙
-          </Link>
+          <button
+            type="button"
+            onClick={() => void signOut()}
+            aria-label="Odjava"
+          >
+            ↪
+          </button>
         </div>
       </aside>
       <main id="main-content" className="main-content">

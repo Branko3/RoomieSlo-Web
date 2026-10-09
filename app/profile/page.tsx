@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useAuth } from "../../components/auth-provider";
 
 export default function ProfilePage() {
   const [available, setAvailable] = useState(true);
+  const { signOut } = useAuth();
   return (
     <div className="content-wrap narrow-content">
       <header className="topbar">
@@ -46,7 +48,12 @@ export default function ProfilePage() {
         </div>
         <a href="#">Nadaljuj →</a>
       </section>
-      <button className="button button-outline full-button">Odjava</button>
+      <button
+        className="button button-outline full-button"
+        onClick={() => void signOut()}
+      >
+        Odjava
+      </button>
     </div>
   );
 }
