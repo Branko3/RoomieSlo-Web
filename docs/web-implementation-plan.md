@@ -118,24 +118,24 @@ structure.
 
 ## 4. Feature and route contract
 
-| Capability | Web route/surface | Required behavior |
-| --- | --- | --- |
-| Login | `/login` | Restore Supabase session after refresh and show auth errors. |
-| Registration | `/register` | Preserve display-name metadata and email confirmation. |
-| Academic verification | `/academic-verification` | Validate browser files, show progress, and use protected Storage access. |
-| Profile | `/profile` | Edit name, availability, verification state, and logout. |
-| Questionnaire | `/profile/questionnaire` | Preserve question IDs, values, weights, save behavior, and skip semantics. |
-| Listings feed | `/listings` | Responsive cards, loading/empty/error states, cursor pagination, and stale-cache messaging. |
-| Listing detail | `/listings/[listingId]` | Owner actions, favorite state, filled state, and match request. |
-| Create/edit listing | `/listings/new`, `/listings/[listingId]/edit` | Shared validation and form components. |
-| Search | `/search` | Consistent location and price filtering with URL state where appropriate. |
-| Recommendations | `/recommendations` | Client-side compatibility calculation and deterministic ordering initially. |
-| Match requests | Listing/profile actions | Pending, accepted, rejected, and conflict states. |
-| Chat list | `/chats` | Matched users, previews, unread state, and read state. |
-| Chat | `/chats/[matchId]` | Reconnectable Realtime subscription with cleanup and deduplication. |
-| Favorites | `/favorites` | Shared listing cards and favorite mutations. |
-| Report user | `/report/[userId]` | Validate reason and description before insertion. |
-| Admin reports | `/admin/reports` | UI guard plus server-enforced admin authorization through RLS. |
+| Capability            | Web route/surface                             | Required behavior                                                                           |
+| --------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Login                 | `/login`                                      | Restore Supabase session after refresh and show auth errors.                                |
+| Registration          | `/register`                                   | Preserve display-name metadata and email confirmation.                                      |
+| Academic verification | `/academic-verification`                      | Validate browser files, show progress, and use protected Storage access.                    |
+| Profile               | `/profile`                                    | Edit name, availability, verification state, and logout.                                    |
+| Questionnaire         | `/profile/questionnaire`                      | Preserve question IDs, values, weights, save behavior, and skip semantics.                  |
+| Listings feed         | `/listings`                                   | Responsive cards, loading/empty/error states, cursor pagination, and stale-cache messaging. |
+| Listing detail        | `/listings/[listingId]`                       | Owner actions, favorite state, filled state, and match request.                             |
+| Create/edit listing   | `/listings/new`, `/listings/[listingId]/edit` | Shared validation and form components.                                                      |
+| Search                | `/search`                                     | Consistent location and price filtering with URL state where appropriate.                   |
+| Recommendations       | `/recommendations`                            | Client-side compatibility calculation and deterministic ordering initially.                 |
+| Match requests        | Listing/profile actions                       | Pending, accepted, rejected, and conflict states.                                           |
+| Chat list             | `/chats`                                      | Matched users, previews, unread state, and read state.                                      |
+| Chat                  | `/chats/[matchId]`                            | Reconnectable Realtime subscription with cleanup and deduplication.                         |
+| Favorites             | `/favorites`                                  | Shared listing cards and favorite mutations.                                                |
+| Report user           | `/report/[userId]`                            | Validate reason and description before insertion.                                           |
+| Admin reports         | `/admin/reports`                              | UI guard plus server-enforced admin authorization through RLS.                              |
 
 ## 5. Backend and data contract
 

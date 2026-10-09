@@ -49,7 +49,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!favoritesLoaded) return;
-    window.localStorage.setItem("roomieslo:favorites", JSON.stringify(favorites));
+    window.localStorage.setItem(
+      "roomieslo:favorites",
+      JSON.stringify(favorites),
+    );
   }, [favorites, favoritesLoaded]);
 
   const favoriteValue = useMemo(

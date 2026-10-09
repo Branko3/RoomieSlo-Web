@@ -18,7 +18,9 @@ export type Database = {
           bio: string;
           avatar_url: string;
         };
-        Insert: Partial<Omit<Database["public"]["Tables"]["profiles"]["Row"], "id">> & {
+        Insert: Partial<
+          Omit<Database["public"]["Tables"]["profiles"]["Row"], "id">
+        > & {
           id: string;
         };
         Update: Partial<Database["public"]["Tables"]["profiles"]["Row"]>;
@@ -31,10 +33,15 @@ export type Database = {
           value: number;
           weight: number;
         };
-        Insert: Omit<Database["public"]["Tables"]["questionnaire_answers"]["Row"], "id"> & {
+        Insert: Omit<
+          Database["public"]["Tables"]["questionnaire_answers"]["Row"],
+          "id"
+        > & {
           id?: string;
         };
-        Update: Partial<Database["public"]["Tables"]["questionnaire_answers"]["Insert"]>;
+        Update: Partial<
+          Database["public"]["Tables"]["questionnaire_answers"]["Insert"]
+        >;
       };
       listings: {
         Row: {
@@ -57,7 +64,12 @@ export type Database = {
           flatmates_count: number;
           photo_url: string;
         };
-        Insert: Partial<Omit<Database["public"]["Tables"]["listings"]["Row"], "id" | "owner_id">> & {
+        Insert: Partial<
+          Omit<
+            Database["public"]["Tables"]["listings"]["Row"],
+            "id" | "owner_id"
+          >
+        > & {
           id?: string;
           owner_id: string;
         };
@@ -77,11 +89,21 @@ export type Database = {
           version: number;
           created_at: string;
         };
-        Insert: Partial<Pick<Database["public"]["Tables"]["matches"]["Row"], "id" | "status" | "version" | "created_at">> & {
+        Insert: Partial<
+          Pick<
+            Database["public"]["Tables"]["matches"]["Row"],
+            "id" | "status" | "version" | "created_at"
+          >
+        > & {
           user_id_a: string;
           user_id_b: string;
         };
-        Update: Partial<Pick<Database["public"]["Tables"]["matches"]["Row"], "status" | "version">>;
+        Update: Partial<
+          Pick<
+            Database["public"]["Tables"]["matches"]["Row"],
+            "status" | "version"
+          >
+        >;
       };
       messages: {
         Row: {
@@ -92,12 +114,22 @@ export type Database = {
           delivery_status: MessageDeliveryStatus;
           sent_at: string;
         };
-        Insert: Partial<Pick<Database["public"]["Tables"]["messages"]["Row"], "id" | "delivery_status" | "sent_at">> & {
+        Insert: Partial<
+          Pick<
+            Database["public"]["Tables"]["messages"]["Row"],
+            "id" | "delivery_status" | "sent_at"
+          >
+        > & {
           match_id: string;
           sender_id: string;
           body: string;
         };
-        Update: Partial<Pick<Database["public"]["Tables"]["messages"]["Row"], "body" | "delivery_status">>;
+        Update: Partial<
+          Pick<
+            Database["public"]["Tables"]["messages"]["Row"],
+            "body" | "delivery_status"
+          >
+        >;
       };
       reports: {
         Row: {
@@ -109,13 +141,23 @@ export type Database = {
           status: ReportStatus;
           created_at: string;
         };
-        Insert: Partial<Pick<Database["public"]["Tables"]["reports"]["Row"], "id" | "status" | "created_at">> & {
+        Insert: Partial<
+          Pick<
+            Database["public"]["Tables"]["reports"]["Row"],
+            "id" | "status" | "created_at"
+          >
+        > & {
           reporter_id: string;
           reported_id: string;
           reason: string;
           description?: string;
         };
-        Update: Partial<Pick<Database["public"]["Tables"]["reports"]["Row"], "status" | "description">>;
+        Update: Partial<
+          Pick<
+            Database["public"]["Tables"]["reports"]["Row"],
+            "status" | "description"
+          >
+        >;
       };
       admins: {
         Row: { user_id: string };
@@ -128,8 +170,10 @@ export type Database = {
 
 export type TableName = keyof Database["public"]["Tables"];
 export type Row<T extends TableName> = Database["public"]["Tables"][T]["Row"];
-export type Insert<T extends TableName> = Database["public"]["Tables"][T]["Insert"];
-export type Update<T extends TableName> = Database["public"]["Tables"][T]["Update"];
+export type Insert<T extends TableName> =
+  Database["public"]["Tables"][T]["Insert"];
+export type Update<T extends TableName> =
+  Database["public"]["Tables"][T]["Update"];
 
 export type AuthSession = {
   access_token: string;
