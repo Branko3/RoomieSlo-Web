@@ -11,6 +11,56 @@
   --shadow: 0 12px 35px rgba(38, 68, 57, 0.08);
   --radius: 18px;
 }
+.state-loading,
+.state-empty,
+.state-offline,
+.state-denied,
+.state-auth,
+.state-error {
+  max-width: 620px;
+  margin: 24px auto;
+  text-align: center;
+}
+.state-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.state-spinner {
+  width: 18px;
+  height: 18px;
+  border: 3px solid var(--line);
+  border-top-color: var(--green);
+  border-radius: 50%;
+  animation: state-spin 0.8s linear infinite;
+}
+.state-icon {
+  display: block;
+  color: var(--green);
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.state-offline .state-icon {
+  color: #9a6b13;
+}
+.state-denied .state-icon,
+.state-error .state-icon {
+  color: #a34b4b;
+}
+.state-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}
+@keyframes state-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 .sort-control {
   color: var(--muted);
   font-size: 12px;
