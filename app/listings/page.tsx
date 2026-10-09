@@ -1,3 +1,5 @@
+"use client";
+
 import { useListings } from "../../lib/supabase/hooks";
 import { ListingCard } from "../../components/listing-card";
 export const dynamic = "force-dynamic";

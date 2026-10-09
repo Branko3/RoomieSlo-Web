@@ -24,7 +24,10 @@ test("starts with public Supabase configuration handling", async ({ page }) => {
     !process.env.NEXT_PUBLIC_SUPABASE_URL ||
     !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   ) {
-    await expect(page.getByRole("alert")).toContainText("Supabase");
+    // Scoped to main: Next.js renders its own route-announcer alert.
+    await expect(page.getByRole("main").getByRole("alert")).toContainText(
+      "Supabase",
+    );
   }
 });
 
