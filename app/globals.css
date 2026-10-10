@@ -791,6 +791,38 @@ button {
   width: 100%;
   margin-top: 18px;
 }
+.auth-card form > label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  margin-top: 15px;
+}
+.auth-card form > input {
+  display: block;
+  width: 100%;
+  margin-top: 7px;
+  border: 1px solid #d5dfda;
+  border-radius: 9px;
+  padding: 12px;
+  outline-color: var(--green);
+}
+.auth-card form > input[aria-invalid="true"] {
+  border-color: #b44d4d;
+}
+.field-error,
+.error-message {
+  color: #a53d3d;
+  font-size: 12px;
+  margin: 6px 0 0;
+}
+.form-status {
+  min-height: 18px;
+  margin: 15px 0 0;
+}
+.auth-card button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
 .auth-page {
   min-height: 100vh;
   display: grid;
