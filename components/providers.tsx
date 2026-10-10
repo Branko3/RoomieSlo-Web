@@ -2,6 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { AuthProvider } from "./auth-provider";
 
 type FavoriteContextValue = {
   favorites: string[];
@@ -49,7 +50,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!favoritesLoaded) return;
-    window.localStorage.setItem("roomieslo:favorites", JSON.stringify(favorites));
+    window.localStorage.setItem(
+      "roomieslo:favorites",
+      JSON.stringify(favorites),
+    );
   }, [favorites, favoritesLoaded]);
 
   const favoriteValue = useMemo(
@@ -68,9 +72,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <FavoriteContext.Provider value={favoriteValue}>
-        {children}
-      </FavoriteContext.Provider>
+      <AuthProvider>
+        <FavoriteContext.Provider value={favoriteValue}>
+          {children}
+        </FavoriteContext.Provider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

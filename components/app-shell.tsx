@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { useAuth } from "./auth-provider";
 
 const navItems = [
   ["listings", "⌂", "Oglasi"],
@@ -13,6 +15,30 @@ const navItems = [
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { session, loading } = useAuth();
+  const isPublic = pathname === "/login" || pathname === "/register";
+
+  useEffect(() => {
+    if (loading) return;
+    if (isPublic && session) {
+      router.replace("/listings");
+    } else if (!isPublic && !session) {
+      const query = window.location.search.slice(1);
+      const destination = query ? `${pathname}?${query}` : pathname;
+      router.replace(`/login?next=${encodeURIComponent(destination)}`);
+    }
+  }, [isPublic, loading, pathname, router, session]);
+
+  if (isPublic) return <>{children}</>;
+  if (loading || !session) {
+    return (
+      <main className="page-state" aria-live="polite">
+        {loading ? "Preverjanje seje ..." : "Preusmerjanje na prijavo ..."}
+      </main>
+    );
+  }
+
   const active = pathname.split("/")[1] || "listings";
 
   return (
