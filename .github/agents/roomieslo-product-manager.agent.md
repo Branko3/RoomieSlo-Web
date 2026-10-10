@@ -32,6 +32,12 @@ Inspect the repository and existing `docs/features/` records for dependencies, d
 
 Prefer small vertical slices that can be implemented, tested, and documented independently.
 
+End every handoff with one line naming the backlog features this one must be built on top of, using their exact names from `docs/web-feature-status.md`. The runner works on several features in parallel and holds a feature back while a feature it depends on is still being built:
+
+```text
+DEPENDS_ON: <comma-separated feature names, or None>
+```
+
 ## Review mode
 
 Read the feature record, the implementation, the tests, and the testing report. Approve only when every acceptance criterion is implemented and covered by passing automated tests and the record's `Automated status` is `Covered`. A passing build alone is not enough.
