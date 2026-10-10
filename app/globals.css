@@ -875,6 +875,13 @@ button {
   border-radius: 8px;
   font-size: 12px;
 }
+.error-message {
+  color: #a33d3d;
+  background: #fdeaea;
+  padding: 9px;
+  border-radius: 8px;
+  font-size: 12px;
+}
 .back-link {
   display: inline-block;
   color: var(--muted);
