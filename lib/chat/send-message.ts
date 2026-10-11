@@ -28,7 +28,12 @@ export type SendMessageClient = {
     }>;
   };
   from: (table: "messages") => {
-    insert: (row: { match_id: string; sender_id: string; body: string }) => {
+    insert: (row: {
+      id?: string;
+      match_id: string;
+      sender_id: string;
+      body: string;
+    }) => {
       select: (columns: string) => {
         single: () => PromiseLike<{
           data: Row<"messages"> | null;
@@ -44,13 +49,19 @@ export const sendMessageCopy = {
   offline: "Ni povezave. Sporočilo ni bilo poslano.",
   signedOut: "Za pošiljanje sporočil se moraš prijaviti.",
   notAllowed: "V ta pogovor ne moreš pisati.",
+  alreadySent: "Sporočilo je že bilo poslano.",
   tooLong: `Sporočilo je lahko dolgo največ ${MAX_MESSAGE_LENGTH} znakov.`,
 } as const;
 
 export class SendMessageError extends Error {
   constructor(
     public readonly kind:
-      "signed-out" | "not-allowed" | "too-long" | "offline" | "failed",
+      | "signed-out"
+      | "not-allowed"
+      | "too-long"
+      | "offline"
+      | "failed"
+      | "already-sent",
     message: string,
   ) {
     super(message);
@@ -68,6 +79,8 @@ export async function sendMessage(
   client: SendMessageClient,
   matchId: string,
   draft: string,
+  /** Client-generated UUID, so retries are idempotent and echoes de-duplicate by id. */
+  id?: string,
 ): Promise<Message> {
   const validation = validateDraft(draft);
   if (!validation.ok) {
@@ -82,10 +95,19 @@ export async function sendMessage(
       throw new SendMessageError("signed-out", sendMessageCopy.signedOut);
     const { data, error } = await client
       .from("messages")
-      .insert({ match_id: matchId, sender_id: senderId, body: validation.body })
+      .insert({
+        ...(id ? { id } : {}),
+        match_id: matchId,
+        sender_id: senderId,
+        body: validation.body,
+      })
       .select(MESSAGE_COLUMNS)
       .single();
     if (error) {
+      // A retry of a message that was already stored hits the primary key.
+      if (id && error.code === "23505") {
+        throw new SendMessageError("already-sent", sendMessageCopy.alreadySent);
+      }
       if (error.code === "42501" || error.status === 403) {
         throw new SendMessageError("not-allowed", sendMessageCopy.notAllowed);
       }

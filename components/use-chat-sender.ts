@@ -2,9 +2,9 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
+import { dropLocal, newMessageId, upsertStored } from "../lib/chat/dedupe";
 import {
   addLocal,
-  confirmLocal,
   createLocalMessage,
   failLocal,
   findLocal,
@@ -46,15 +46,28 @@ export function useChatSender(matchId: string) {
           createSupabaseBrowserClient() as unknown as SendMessageClient,
           matchId,
           local.body,
+          local.id,
         );
         if (queryClient.getQueryData(key)) {
-          update((history) => confirmLocal(history, local.localId, stored));
+          // Replaces the local copy by id; a Realtime echo may already have done so.
+          update((history) => upsertStored(history, stored));
         } else {
           // History was not loaded yet: load it, including the new message.
           void queryClient.invalidateQueries({ queryKey: key });
         }
         setError(null);
       } catch (failure) {
+        if (
+          failure instanceof SendMessageError &&
+          failure.kind === "already-sent"
+        ) {
+          // An earlier attempt was stored although its response was lost:
+          // roll back the local copy and show the server's version instead.
+          update((history) => dropLocal(history, local.id));
+          void queryClient.invalidateQueries({ queryKey: key });
+          setError(null);
+          return;
+        }
         update((history) => failLocal(history, local.localId));
         setError(
           failure instanceof SendMessageError
@@ -69,7 +82,14 @@ export function useChatSender(matchId: string) {
   const send = useCallback(
     (body: string) => {
       const history = queryClient.getQueryData<ChatHistory>(key);
-      const local = createLocalMessage(matchId, history?.myUserId ?? "", body);
+      // The final id is chosen here, so every copy of this message shares it.
+      const local = createLocalMessage(
+        matchId,
+        history?.myUserId ?? "",
+        body,
+        new Date(),
+        newMessageId(),
+      );
       update((current) => addLocal(current, local));
       void deliver(local);
     },

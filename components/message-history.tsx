@@ -9,6 +9,7 @@ import {
   needsReadMarker,
   type DeliveryClient,
 } from "../lib/chat/delivery";
+import { mergeServerHistory } from "../lib/chat/dedupe";
 import type { ChatHistory } from "../lib/chat/local-messages";
 import {
   groupByDay,
@@ -38,10 +39,15 @@ export function MessageHistory({
   const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: messagesQueryKey(matchId),
-    queryFn: () =>
-      loadMessages(
-        createSupabaseBrowserClient() as unknown as MessagesClient,
-        matchId,
+    // A refetch (reconnect, focus) keeps local messages that are still
+    // sending or failed and drops those the server already has.
+    queryFn: async () =>
+      mergeServerHistory(
+        queryClient.getQueryData<ChatHistory>(messagesQueryKey(matchId)),
+        await loadMessages(
+          createSupabaseBrowserClient() as unknown as MessagesClient,
+          matchId,
+        ),
       ),
     // Coming back to the tab refreshes the delivery state of my messages.
     refetchOnWindowFocus: true,
