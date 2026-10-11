@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { profileSummary } from "../lib/auth/session";
+import { useSession } from "./session-provider";
 
 const navItems = [
   ["listings", "⌂", "Oglasi"],
@@ -14,6 +16,7 @@ const navItems = [
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const active = pathname.split("/")[1] || "listings";
+  const profile = profileSummary(useSession());
 
   return (
     <div className="app-shell">
@@ -41,12 +44,36 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
         <div className="sidebar-bottom">
-          <div className="mini-profile">
-            <span className="avatar avatar-small">AH</span>
-            <span>
-              <b>Amar H.</b>
-              <small>Preverjen študent</small>
-            </span>
+          <div className="mini-profile" aria-live="polite">
+            {profile.kind === "loading" && (
+              <span role="status">
+                <small>Obnavljanje seje …</small>
+              </span>
+            )}
+            {profile.kind === "signed-in" && (
+              <>
+                <span className="avatar avatar-small">{profile.initials}</span>
+                <span>
+                  <b>{profile.name}</b>
+                  <small>Prijavljen</small>
+                </span>
+              </>
+            )}
+            {profile.kind === "signed-out" && (
+              <span>
+                {profile.error && <small role="alert">{profile.error}</small>}
+                <Link href="/login">Prijava</Link>
+              </span>
+            )}
+            {profile.kind === "preview" && (
+              <>
+                <span className="avatar avatar-small">AH</span>
+                <span>
+                  <b>Amar H.</b>
+                  <small>Preverjen študent</small>
+                </span>
+              </>
+            )}
           </div>
           <Link href="/profile" aria-label="Nastavitve profila">
             ⚙

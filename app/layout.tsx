@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { AppShell } from "../components/app-shell";
 import { Providers } from "../components/providers";
+import { SessionProvider } from "../components/session-provider";
 
 export const metadata: Metadata = {
   title: "RoomieSlo — najdi svoj dom",
@@ -15,7 +16,9 @@ export default function RootLayout({
     <html lang="sl">
       <body>
         <Providers>
-          <AppShell>{children}</AppShell>
+          <SessionProvider>
+            <AppShell>{children}</AppShell>
+          </SessionProvider>
         </Providers>
       </body>
     </html>
