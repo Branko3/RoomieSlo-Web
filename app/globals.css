@@ -1088,3 +1088,54 @@ button {
     margin-top: -19px;
   }
 }
+.match-requests {
+  margin-bottom: 22px;
+}
+.match-requests h2 {
+  font-size: 16px;
+  margin: 0 0 10px;
+}
+.match-request-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 10px;
+}
+.match-request {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+.match-request-text {
+  flex: 1;
+  min-width: 140px;
+  display: grid;
+  gap: 2px;
+}
+.match-request-text small {
+  color: var(--muted);
+}
+.match-pending .match-request-text small {
+  color: var(--green-dark);
+  font-weight: 700;
+}
+.match-rejected {
+  opacity: 0.75;
+}
+.match-request-actions {
+  display: flex;
+  gap: 8px;
+}
+.error-message {
+  color: #a12a1f;
+  background: #fdecea;
+  padding: 9px;
+  border-radius: 8px;
+  font-size: 12px;
+}
