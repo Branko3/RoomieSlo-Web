@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useFavorites } from "../../../components/providers";
+import { listingReportHref } from "../../../lib/reports/report";
 import { useListing } from "../../../lib/supabase/hooks";
 
 export default function ListingDetail({ params }: { params: { id: string } }) {
@@ -12,14 +13,30 @@ export default function ListingDetail({ params }: { params: { id: string } }) {
   const [requestState, setRequestState] = useState<"idle" | "success">("idle");
   const [message, setMessage] = useState("");
 
-  if (isLoading) return <div className="page-state"><p>Nalaganje oglasa ...</p></div>;
-  if (error) return <div className="page-state" role="alert"><h1>Oglasa ni mogoče naložiti</h1><p>Preveri povezavo in prijavo v Supabase.</p><Link className="button" href="/listings">Na oglase</Link></div>;
+  if (isLoading)
+    return (
+      <div className="page-state">
+        <p>Nalaganje oglasa ...</p>
+      </div>
+    );
+  if (error)
+    return (
+      <div className="page-state" role="alert">
+        <h1>Oglasa ni mogoče naložiti</h1>
+        <p>Preveri povezavo in prijavo v Supabase.</p>
+        <Link className="button" href="/listings">
+          Na oglase
+        </Link>
+      </div>
+    );
   if (!listing) {
     return (
       <div className="page-state">
         <h1>Oglas ni več na voljo</h1>
         <p>Ta oglas ne obstaja ali je bil odstranjen.</p>
-        <Link className="button" href="/listings">Na oglase</Link>
+        <Link className="button" href="/listings">
+          Na oglase
+        </Link>
       </div>
     );
   }
@@ -97,6 +114,12 @@ export default function ListingDetail({ params }: { params: { id: string } }) {
           >
             {favorite ? "♥ Odstrani iz priljubljenih" : "♡ Shrani oglas"}
           </button>
+          <Link
+            className="text-link report-link"
+            href={listingReportHref(listing.ownerId, listing.id)}
+          >
+            Prijavi oglas
+          </Link>
         </div>
       </div>
     </div>
