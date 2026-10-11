@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 export default function ProfilePage() {
@@ -44,7 +45,7 @@ export default function ProfilePage() {
             <span />
           </div>
         </div>
-        <a href="#">Nadaljuj →</a>
+        <Link href="/profile/questionnaire">Nadaljuj →</Link>
       </section>
       <button className="button button-outline full-button">Odjava</button>
     </div>
