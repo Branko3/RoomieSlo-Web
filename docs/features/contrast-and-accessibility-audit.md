@@ -42,7 +42,7 @@ Not changed: the decorative notification dot (no information on its own), and th
 ## Implementation
 
 - `lib/a11y/contrast.ts`: `parseHex`, `luminance`, `contrastRatio` (the WCAG formula), `MIN_RATIO`, `readTokens`, `resolveColor`.
-- `tests/contrast.test.ts` (36 tests): the formula against known values, color parsing and resolution, the token pair table read directly from `globals.css`, the focus-ring rule, and a ban on the old colors.
+- `tests/contrast.test.ts` (32 tests): the formula against known values, color parsing and resolution, the token pair table read directly from `globals.css`, the focus-ring rule, and a ban on the old colors.
 - `e2e/accessibility.spec.ts` (9 tests) uses `@axe-core/playwright@4.10.1` with the `wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa` and `wcag22aa` tags, and lists violation ids and targets on failure.
 
 ## Testing contract
@@ -58,7 +58,7 @@ Install Chromium, then run `npx playwright test e2e/accessibility.spec.ts`. Fix 
 ## Test status
 
 - Automated status: Partially covered
-- Test files: `tests/contrast.test.ts` (36 tests, passing with `npm run test`); `e2e/accessibility.spec.ts` (9 tests, collected, not executed)
+- Test files: `tests/contrast.test.ts` (32 tests, passing with `npm run test`); `e2e/accessibility.spec.ts` (9 tests, collected, not executed)
 - Scenarios covered: all contrast checks. The axe scans are written but not run.
 - Remaining gaps: no browser run; no assistive-technology audit; pages from open PRs are not scanned.
 - Manual testing: Not run unless explicitly requested
