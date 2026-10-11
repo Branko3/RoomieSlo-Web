@@ -5,7 +5,10 @@ import Link from "next/link";
 import { MessageComposer } from "../../../components/message-composer";
 import { MessageHistory } from "../../../components/message-history";
 import { useChatSender } from "../../../components/use-chat-sender";
-import { useMessageRealtime } from "../../../components/use-message-realtime";
+import {
+  liveNotice,
+  useMessageRealtime,
+} from "../../../components/use-message-realtime";
 import { getSupabaseConfig } from "../../../lib/config";
 import {
   ConversationError,
@@ -188,10 +191,9 @@ export default function ConversationPage({
               onDiscard={sender.discard}
             />
           </section>
-          {liveStatus === "disconnected" && (
+          {liveNotice(liveStatus) && (
             <p className="live-status" role="status">
-              Povezava v živo je prekinjena. Nova sporočila se prikažejo, ko se
-              povezava obnovi.
+              {liveNotice(liveStatus)}
             </p>
           )}
           <MessageComposer onSend={sender.send} error={sender.error} />
