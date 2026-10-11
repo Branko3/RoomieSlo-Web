@@ -83,9 +83,7 @@ export type ConversationClient = {
             column: "created_at",
             options: { ascending: boolean },
           ) => {
-            limit: (
-              count: number,
-            ) => PromiseLike<{
+            limit: (count: number) => PromiseLike<{
               data: Row<"listings">[] | null;
               error: DbError;
             }>;
