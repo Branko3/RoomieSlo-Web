@@ -38,7 +38,7 @@
 
 ## Testing contract
 
-- **Unit (`tests/seo.test.ts`, 13 tests):**
+- **Unit (`tests/seo.test.ts`, 11 tests):**
   - private and public path classification, including look-alike paths;
   - robots rules and the optional host, and that `app/robots.ts` serves them;
   - every top-level route has an indexing decision;
