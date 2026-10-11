@@ -12,6 +12,11 @@ import {
   type RequestState,
   type SendRequestClient,
 } from "../lib/matching/send-request";
+import {
+  ACCEPTANCE_POLL_MS,
+  chatLinkFor,
+  shouldWatchForAcceptance,
+} from "../lib/matching/chat-link";
 import { createSupabaseBrowserClient } from "../lib/supabase/browser";
 
 function client() {
@@ -36,6 +41,10 @@ export function MatchRequestButton({
     queryKey: key,
     enabled: configured,
     queryFn: () => loadRequestState(client(), ownerId),
+    // While my request waits for an answer, re-check so the chat link appears once accepted.
+    refetchInterval: (query) =>
+      shouldWatchForAcceptance(query.state.data) ? ACCEPTANCE_POLL_MS : false,
+    refetchOnWindowFocus: (query) => shouldWatchForAcceptance(query.state.data),
   });
   const send = useMutation({
     mutationFn: () => sendMatchRequest(client(), ownerId),
@@ -87,7 +96,11 @@ export function MatchRequestButton({
     );
   }
   if (current.kind === "exists") {
-    const justSent = send.isSuccess && send.data.created;
+    const justSent =
+      send.isSuccess &&
+      send.data.created &&
+      current.request.status === "pending";
+    const link = chatLinkFor(current.request);
     return (
       <div
         className="success-message full-button"
@@ -97,7 +110,7 @@ export function MatchRequestButton({
         {justSent
           ? "Zahteva je poslana."
           : existingRequestMessage(current.request)}{" "}
-        <Link href="/chats">Odpri klepete →</Link>
+        <Link href={link.href}>{link.label}</Link>
       </div>
     );
   }
