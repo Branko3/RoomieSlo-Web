@@ -6,6 +6,9 @@ import { Providers } from "../components/providers";
 export const metadata: Metadata = {
   title: "RoomieSlo — najdi svoj dom",
   description: "Poišči sostanovalca, ki mu res ustrezaš.",
+  // Private by default; only public pages opt in (see lib/seo.ts).
+  robots: { index: false, follow: false },
+  formatDetection: { telephone: false, email: false, address: false },
 };
 
 export default function RootLayout({
