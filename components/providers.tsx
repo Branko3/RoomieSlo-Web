@@ -2,6 +2,12 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import {
+  FAVORITES_KEY,
+  parseFavorites,
+  serializeFavorites,
+  toggleFavoriteId,
+} from "../lib/favorites";
 
 type FavoriteContextValue = {
   favorites: string[];
@@ -36,20 +42,15 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const [favoritesLoaded, setFavoritesLoaded] = useState(false);
 
   useEffect(() => {
-    const saved = window.localStorage.getItem("roomieslo:favorites");
-    if (saved) {
-      try {
-        setFavorites(JSON.parse(saved));
-      } catch {
-        window.localStorage.removeItem("roomieslo:favorites");
-      }
-    }
+    const saved = parseFavorites(window.localStorage.getItem(FAVORITES_KEY));
+    if (saved) setFavorites(saved);
+    else window.localStorage.removeItem(FAVORITES_KEY);
     setFavoritesLoaded(true);
   }, []);
 
   useEffect(() => {
     if (!favoritesLoaded) return;
-    window.localStorage.setItem("roomieslo:favorites", JSON.stringify(favorites));
+    window.localStorage.setItem(FAVORITES_KEY, serializeFavorites(favorites));
   }, [favorites, favoritesLoaded]);
 
   const favoriteValue = useMemo(
@@ -57,11 +58,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       favorites,
       isFavorite: (listingId: string) => favorites.includes(listingId),
       toggleFavorite: (listingId: string) =>
-        setFavorites((current) =>
-          current.includes(listingId)
-            ? current.filter((id) => id !== listingId)
-            : [...current, listingId],
-        ),
+        setFavorites((current) => toggleFavoriteId(current, listingId)),
     }),
     [favorites],
   );

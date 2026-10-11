@@ -2,18 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-
-const navItems = [
-  ["listings", "⌂", "Oglasi"],
-  ["search", "⌕", "Iskanje"],
-  ["chats", "▢", "Klepeti"],
-  ["favorites", "♡", "Priljubljene"],
-  ["profile", "◉", "Profil"],
-];
+import { activeSection, NAV_ITEMS as navItems } from "../lib/navigation";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const active = pathname.split("/")[1] || "listings";
+  const active = activeSection(pathname);
 
   return (
     <div className="app-shell">
