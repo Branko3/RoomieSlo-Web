@@ -12,9 +12,17 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "perf:budget": "node scripts/bundle-budget.mjs",
     "db:push": "supabase db push",
     "db:status": "supabase migration list"
   },
+  "browserslist": [
+    "chrome 64",
+    "edge 79",
+    "firefox 67",
+    "opera 51",
+    "safari 12"
+  ],
   "dependencies": {
     "@tanstack/react-query": "^5.59.0",
     "@supabase/ssr": "^0.5.2",

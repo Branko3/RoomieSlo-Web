@@ -1,5 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 import fs from "node:fs";
+import { crossBrowserProjects } from "./e2e/browsers";
 
 // Agent worktrees (where .git is a file) run in parallel, so each derives its
 // own dev-server port instead of sharing and reusing a server on port 3000.
@@ -52,5 +53,7 @@ export default defineConfig({
           },
         ]
       : []),
+    // Opt-in: E2E_BROWSERS=firefox,webkit,mobile-chrome,mobile-safari
+    ...crossBrowserProjects(process.env.E2E_BROWSERS),
   ],
 });
