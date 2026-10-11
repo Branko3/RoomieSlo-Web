@@ -825,7 +825,8 @@ button {
 .auth-card > .muted {
   margin-bottom: 28px;
 }
-.auth-card > label {
+.auth-card > label,
+.auth-card > form > label {
   display: block;
   font-size: 12px;
   font-weight: 700;
@@ -1087,4 +1088,18 @@ button {
     margin-left: 72px;
     margin-top: -19px;
   }
+}
+.auth-card > form > .button {
+  margin-top: 18px;
+}
+.auth-card > .error-message,
+.auth-card > .success-message {
+  margin-top: 15px;
+}
+.error-message {
+  color: #a12a1f;
+  background: #fdecea;
+  padding: 9px;
+  border-radius: 8px;
+  font-size: 12px;
 }
