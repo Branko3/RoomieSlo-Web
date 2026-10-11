@@ -1088,3 +1088,54 @@ button {
     margin-top: -19px;
   }
 }
+.conversation-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.conversation-header h1 {
+  font-size: 22px;
+  margin: 0;
+}
+.conversation-header p {
+  margin: 2px 0 0;
+  font-size: 13px;
+}
+.conversation-context {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.context-card {
+  display: grid;
+  gap: 2px;
+  background: var(--green-light);
+  border-radius: 12px;
+  padding: 10px 14px;
+  color: inherit;
+}
+.context-card small {
+  color: var(--muted);
+}
+.conversation-notice {
+  background: #fff6e0;
+  border: 1px solid #f0d58f;
+  color: #5c4511;
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 13px;
+}
+.conversation-body {
+  min-height: 240px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+}
+.error-message {
+  color: #a12a1f;
+  background: #fdecea;
+  padding: 9px;
+  border-radius: 8px;
+  font-size: 12px;
+}
