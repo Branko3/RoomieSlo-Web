@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
+import { MessageHistory } from "../../../components/message-history";
 import { getSupabaseConfig } from "../../../lib/config";
 import {
   ConversationError,
@@ -170,7 +171,9 @@ export default function ConversationPage({
           className="conversation-body"
           aria-label={`Pogovor z osebo ${peer.name}`}
           data-match-id={conversation.matchId}
-        />
+        >
+          <MessageHistory matchId={conversation.matchId} peerName={peer.name} />
+        </section>
       )}
     </div>
   );
