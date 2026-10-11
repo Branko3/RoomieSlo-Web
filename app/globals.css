@@ -1088,3 +1088,16 @@ button {
     margin-top: -19px;
   }
 }
+.field-hint {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  margin: 6px 0 0;
+}
+.error-message {
+  color: #a12a1f;
+  background: #fdecea;
+  padding: 9px;
+  border-radius: 8px;
+  font-size: 12px;
+}
