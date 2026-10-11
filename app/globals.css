@@ -1088,3 +1088,68 @@ button {
     margin-top: -19px;
   }
 }
+.profile-bio {
+  color: var(--muted);
+  font-size: 13px;
+  margin: -12px 0 20px;
+  white-space: pre-line;
+}
+.profile-form {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  padding: 19px;
+  margin-bottom: 14px;
+}
+.profile-form h2 {
+  margin: 0 0 6px;
+  font-size: 18px;
+}
+.profile-form label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  margin-top: 14px;
+}
+.profile-form input,
+.profile-form textarea {
+  display: block;
+  width: 100%;
+  margin-top: 7px;
+  border: 1px solid #d5dfda;
+  border-radius: 9px;
+  padding: 11px;
+  font: inherit;
+  font-weight: 400;
+  outline-color: var(--green);
+}
+.profile-form [aria-invalid="true"] {
+  border-color: #a12a1f;
+}
+.field-error,
+.field-hint {
+  display: block;
+  margin-top: 5px;
+  font-weight: 400;
+}
+.field-error {
+  color: #a12a1f;
+}
+.field-hint {
+  color: var(--muted);
+  text-align: right;
+}
+.profile-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+}
+.error-message {
+  color: #a12a1f;
+  background: #fdecea;
+  padding: 9px;
+  border-radius: 8px;
+  font-size: 12px;
+  margin-top: 14px;
+}
