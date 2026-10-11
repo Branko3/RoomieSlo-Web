@@ -1,10 +1,18 @@
-import { useListings } from "../../lib/supabase/hooks";
+"use client";
+
+import { CacheNotice } from "../../components/cache-notice";
 import { ListingCard } from "../../components/listing-card";
-export const dynamic = "force-dynamic";
+import { useOfflineListings } from "../../lib/listings/use-offline-listings";
 import Link from "next/link";
 
 export default function ListingsPage() {
-  const { data: listings, isLoading, error } = useListings();
+  const {
+    data: listings,
+    isLoading,
+    error,
+    view,
+    retry,
+  } = useOfflineListings();
   return (
     <div className="content-wrap">
       <header className="topbar">
@@ -12,7 +20,11 @@ export default function ListingsPage() {
           <p className="eyebrow">Dobrodošel nazaj, Amar 👋</p>
           <h1>Oglasi za sobe</h1>
         </div>
-        <Link className="icon-button" aria-label="Odpri klepete in obvestila" href="/chats">
+        <Link
+          className="icon-button"
+          aria-label="Odpri klepete in obvestila"
+          href="/chats"
+        >
           ♧<span className="notification-dot" />
         </Link>
       </header>
@@ -36,9 +48,31 @@ export default function ListingsPage() {
           Poglej vse →
         </a>
       </div>
-      {isLoading && <div className="page-state" aria-live="polite"><p>Nalaganje oglasov ...</p></div>}
-      {error && <div className="page-state" role="alert"><h2>Oglasov ni mogoče naložiti</h2><p>Preveri povezavo in prijavo v Supabase.</p></div>}
-      {!isLoading && !error && listings?.length === 0 && <div className="empty-state"><h2>Trenutno ni oglasov</h2><p>Ko bodo oglasi na voljo, se bodo prikazali tukaj.</p></div>}
+      <CacheNotice view={view} onRetry={retry} />
+      {isLoading && (
+        <div className="page-state" aria-live="polite">
+          <p>Nalaganje oglasov ...</p>
+        </div>
+      )}
+      {error && (
+        <div className="page-state" role="alert">
+          <h2>Oglasov ni mogoče naložiti</h2>
+          <p>
+            {view?.source === "error" && view.offline
+              ? "Brez povezave in brez shranjenih oglasov. Poveži se z internetom in poskusi znova."
+              : "Preveri povezavo in prijavo v Supabase."}
+          </p>
+          <button className="button" type="button" onClick={retry}>
+            Poskusi znova
+          </button>
+        </div>
+      )}
+      {!isLoading && !error && listings?.length === 0 && (
+        <div className="empty-state">
+          <h2>Trenutno ni oglasov</h2>
+          <p>Ko bodo oglasi na voljo, se bodo prikazali tukaj.</p>
+        </div>
+      )}
       <div className="listing-grid">
         {listings?.slice(0, 3).map((listing) => (
           <ListingCard listing={listing} key={listing.id} />

@@ -1088,3 +1088,17 @@ button {
     margin-top: -19px;
   }
 }
+.cache-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 14px;
+  background: #fff6e0;
+  border: 1px solid #f0d58f;
+  color: #5c4511;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
