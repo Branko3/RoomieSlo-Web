@@ -1088,3 +1088,19 @@ button {
     margin-top: -19px;
   }
 }
+
+.privacy-section {
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.privacy-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.privacy-error {
+  color: #b42318;
+}
