@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { LogoutButton } from "../../components/logout-button";
 
 export default function ProfilePage() {
   const [available, setAvailable] = useState(true);
@@ -46,7 +47,7 @@ export default function ProfilePage() {
         </div>
         <a href="#">Nadaljuj →</a>
       </section>
-      <button className="button button-outline full-button">Odjava</button>
+      <LogoutButton />
     </div>
   );
 }

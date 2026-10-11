@@ -7,6 +7,7 @@ type FavoriteContextValue = {
   favorites: string[];
   isFavorite: (listingId: string) => boolean;
   toggleFavorite: (listingId: string) => void;
+  resetFavorites: () => void;
 };
 
 const FavoriteContext = createContext<FavoriteContextValue | null>(null);
@@ -49,7 +50,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!favoritesLoaded) return;
-    window.localStorage.setItem("roomieslo:favorites", JSON.stringify(favorites));
+    window.localStorage.setItem(
+      "roomieslo:favorites",
+      JSON.stringify(favorites),
+    );
   }, [favorites, favoritesLoaded]);
 
   const favoriteValue = useMemo(
@@ -62,6 +66,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
             ? current.filter((id) => id !== listingId)
             : [...current, listingId],
         ),
+      resetFavorites: () => setFavorites([]),
     }),
     [favorites],
   );

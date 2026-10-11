@@ -1088,3 +1088,11 @@ button {
     margin-top: -19px;
   }
 }
+.error-message {
+  color: #a12a1f;
+  background: #fdecea;
+  padding: 9px;
+  border-radius: 8px;
+  font-size: 12px;
+  margin-bottom: 12px;
+}
