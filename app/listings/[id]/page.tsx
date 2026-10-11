@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { OwnerListingActions } from "../../../components/owner-listing-actions";
 import { useFavorites } from "../../../components/providers";
 import { useListing } from "../../../lib/supabase/hooks";
 
@@ -12,14 +13,30 @@ export default function ListingDetail({ params }: { params: { id: string } }) {
   const [requestState, setRequestState] = useState<"idle" | "success">("idle");
   const [message, setMessage] = useState("");
 
-  if (isLoading) return <div className="page-state"><p>Nalaganje oglasa ...</p></div>;
-  if (error) return <div className="page-state" role="alert"><h1>Oglasa ni mogoče naložiti</h1><p>Preveri povezavo in prijavo v Supabase.</p><Link className="button" href="/listings">Na oglase</Link></div>;
+  if (isLoading)
+    return (
+      <div className="page-state">
+        <p>Nalaganje oglasa ...</p>
+      </div>
+    );
+  if (error)
+    return (
+      <div className="page-state" role="alert">
+        <h1>Oglasa ni mogoče naložiti</h1>
+        <p>Preveri povezavo in prijavo v Supabase.</p>
+        <Link className="button" href="/listings">
+          Na oglase
+        </Link>
+      </div>
+    );
   if (!listing) {
     return (
       <div className="page-state">
         <h1>Oglas ni več na voljo</h1>
         <p>Ta oglas ne obstaja ali je bil odstranjen.</p>
-        <Link className="button" href="/listings">Na oglase</Link>
+        <Link className="button" href="/listings">
+          Na oglase
+        </Link>
       </div>
     );
   }
@@ -42,6 +59,10 @@ export default function ListingDetail({ params }: { params: { id: string } }) {
           <div className="price-large">
             {listing.price} € <small>/ mesec</small>
           </div>
+          <OwnerListingActions
+            listingId={listing.id}
+            ownerId={listing.ownerId}
+          />
           <p className="detail-description">
             Svetla in prijetna nastanitev za študenta. Stanovanje je urejeno,
             skupni prostori pa so dobro vzdrževani. Piši lastniku za več
