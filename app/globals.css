@@ -1088,3 +1088,30 @@ button {
     margin-top: -19px;
   }
 }
+.chip-available {
+  background: var(--green-light);
+  color: var(--green-dark);
+}
+.chip-filled {
+  background: #ececec;
+  color: #4a4a4a;
+}
+.listing-status-control {
+  margin: 4px 0 14px;
+}
+.listing-status-control .error-message {
+  margin-top: 8px;
+}
+.field-hint {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  margin: 6px 0 0;
+}
+.error-message {
+  color: #a12a1f;
+  background: #fdecea;
+  padding: 9px;
+  border-radius: 8px;
+  font-size: 12px;
+}

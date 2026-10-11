@@ -2,7 +2,12 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { ListingStatusControl } from "../../../components/listing-status-control";
 import { useFavorites } from "../../../components/providers";
+import {
+  canRequestMatch,
+  listingStatusLabel,
+} from "../../../lib/listings/listing-status";
 import { useListing } from "../../../lib/supabase/hooks";
 
 export default function ListingDetail({ params }: { params: { id: string } }) {
@@ -11,20 +16,38 @@ export default function ListingDetail({ params }: { params: { id: string } }) {
   const { isFavorite, toggleFavorite } = useFavorites();
   const [requestState, setRequestState] = useState<"idle" | "success">("idle");
   const [message, setMessage] = useState("");
+  const [filledOverride, setFilledOverride] = useState<boolean | null>(null);
 
-  if (isLoading) return <div className="page-state"><p>Nalaganje oglasa ...</p></div>;
-  if (error) return <div className="page-state" role="alert"><h1>Oglasa ni mogoče naložiti</h1><p>Preveri povezavo in prijavo v Supabase.</p><Link className="button" href="/listings">Na oglase</Link></div>;
+  if (isLoading)
+    return (
+      <div className="page-state">
+        <p>Nalaganje oglasa ...</p>
+      </div>
+    );
+  if (error)
+    return (
+      <div className="page-state" role="alert">
+        <h1>Oglasa ni mogoče naložiti</h1>
+        <p>Preveri povezavo in prijavo v Supabase.</p>
+        <Link className="button" href="/listings">
+          Na oglase
+        </Link>
+      </div>
+    );
   if (!listing) {
     return (
       <div className="page-state">
         <h1>Oglas ni več na voljo</h1>
         <p>Ta oglas ne obstaja ali je bil odstranjen.</p>
-        <Link className="button" href="/listings">Na oglase</Link>
+        <Link className="button" href="/listings">
+          Na oglase
+        </Link>
       </div>
     );
   }
 
   const favorite = isFavorite(listing.id);
+  const isFilled = filledOverride ?? listing.isFilled;
   return (
     <div className="content-wrap">
       <Link className="back-link" href="/listings">
@@ -36,7 +59,19 @@ export default function ListingDetail({ params }: { params: { id: string } }) {
           <div className="chips">
             <span className="chip">{listing.roomType}</span>
             <span className="chip chip-green">Preverjen oglas</span>
+            <span
+              className={`chip ${isFilled ? "chip-filled" : "chip-available"}`}
+              aria-live="polite"
+            >
+              {listingStatusLabel(isFilled)}
+            </span>
           </div>
+          <ListingStatusControl
+            listingId={listing.id}
+            ownerId={listing.ownerId}
+            isFilled={isFilled}
+            onChange={setFilledOverride}
+          />
           <h1>{listing.title}</h1>
           <p className="muted">⌖ {listing.district}</p>
           <div className="price-large">
@@ -70,6 +105,7 @@ export default function ListingDetail({ params }: { params: { id: string } }) {
               <form
                 onSubmit={(event) => {
                   event.preventDefault();
+                  if (!canRequestMatch(isFilled)) return;
                   setRequestState("success");
                 }}
               >
@@ -84,9 +120,21 @@ export default function ListingDetail({ params }: { params: { id: string } }) {
                   placeholder="Dodaj kratko sporočilo (neobvezno)"
                   rows={3}
                 />
-                <button className="button full-button" type="submit">
+                <button
+                  className="button full-button"
+                  type="submit"
+                  disabled={!canRequestMatch(isFilled)}
+                  aria-describedby={
+                    isFilled ? "listing-filled-note" : undefined
+                  }
+                >
                   Pošlji zahtevo za ujemanje
                 </button>
+                {isFilled && (
+                  <p className="field-hint" id="listing-filled-note">
+                    Oglas je zapolnjen, zato zahteve za ujemanje niso mogoče.
+                  </p>
+                )}
               </form>
             </>
           )}
