@@ -1088,3 +1088,57 @@ button {
     margin-top: -19px;
   }
 }
+.recommendation-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 14px;
+}
+.recommendation-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  padding: 16px 19px;
+}
+.recommendation-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+.recommendation-head h2 {
+  font-size: 17px;
+  margin: 0 0 4px;
+}
+.recommendation-head p {
+  margin: 0;
+  font-size: 12px;
+}
+.compatibility-badge {
+  flex: none;
+  background: var(--green-light);
+  color: var(--green-dark);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-weight: 700;
+}
+.recommendation-card .chips {
+  margin-top: 10px;
+}
+.recommendation-bio {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 10px 0 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.error-message {
+  color: #a12a1f;
+  background: #fdecea;
+  padding: 9px;
+  border-radius: 8px;
+  font-size: 12px;
+}
