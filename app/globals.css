@@ -1088,3 +1088,24 @@ button {
     margin-top: -19px;
   }
 }
+.listing-art,
+.detail-image {
+  overflow: hidden;
+}
+.detail-image {
+  position: relative;
+}
+.listing-photo {
+  object-fit: cover;
+}
+.listing-art .listing-placeholder {
+  font-size: 70px;
+  filter: drop-shadow(0 7px 7px rgba(40, 70, 55, 0.1));
+}
+.listing-art .heart-button {
+  z-index: 1;
+}
+.favorite-art {
+  position: relative;
+  overflow: hidden;
+}
