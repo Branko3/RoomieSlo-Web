@@ -2,7 +2,12 @@
 
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
+import {
+  ChatSafetyControls,
+  useBlockState,
+} from "../../../components/chat-safety-controls";
 import { MessageComposer } from "../../../components/message-composer";
+import { blockCopy } from "../../../lib/chat/blocking";
 import { MessageHistory } from "../../../components/message-history";
 import { useChatSender } from "../../../components/use-chat-sender";
 import {
@@ -49,6 +54,13 @@ export default function ConversationPage({
     params.matchId,
     query.data?.status === "accepted",
   );
+  const peerId =
+    query.data &&
+    query.data.status !== "signed-out" &&
+    query.data.status !== "not-found"
+      ? query.data.peer.id
+      : null;
+  const blockState = useBlockState(peerId);
 
   const back = (
     <Link className="back-link" href="/chats">
@@ -152,6 +164,11 @@ export default function ConversationPage({
           {peer.faculty && <p className="muted">{peer.faculty}</p>}
         </div>
       </header>
+      <ChatSafetyControls
+        peerId={peer.id}
+        matchId={conversation.matchId}
+        state={blockState}
+      />
 
       {conversation.peerListings.length > 0 && (
         <section className="conversation-context" aria-label="Oglasi te osebe">
@@ -196,7 +213,13 @@ export default function ConversationPage({
               {liveNotice(liveStatus)}
             </p>
           )}
-          <MessageComposer onSend={sender.send} error={sender.error} />
+          {blockState.blocked ? (
+            <p className="conversation-notice" role="status">
+              {blockCopy.blocked}
+            </p>
+          ) : (
+            <MessageComposer onSend={sender.send} error={sender.error} />
+          )}
         </>
       )}
     </div>

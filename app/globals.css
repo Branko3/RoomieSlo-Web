@@ -1270,3 +1270,36 @@ button {
   border-radius: 8px;
   padding: 6px 10px;
 }
+.chat-safety {
+  margin: -6px 0 14px;
+}
+.chat-safety-actions {
+  display: flex;
+  gap: 16px;
+  font-size: 13px;
+}
+.danger-link {
+  color: #a12a1f;
+}
+.confirm-panel {
+  margin-top: 10px;
+  border: 1px solid #f1c4bf;
+  background: #fff7f6;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 13px;
+}
+.confirm-panel p {
+  margin: 0 0 10px;
+}
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.button-danger {
+  background: #a12a1f;
+  border-color: #a12a1f;
+  color: #fff;
+}
