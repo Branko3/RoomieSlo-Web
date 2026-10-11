@@ -32,7 +32,9 @@ export default function ChatsPage() {
           <p className="eyebrow">POVEŽI SE</p>
           <h1>Ujemanja in klepeti</h1>
         </div>
-        <button className="icon-button">⋯</button>
+        <button className="icon-button" type="button" aria-label="Več možnosti">
+          ⋯
+        </button>
       </header>
       <div className="match-banner">
         <span className="match-icon">✦</span>

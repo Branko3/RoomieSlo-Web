@@ -11,7 +11,13 @@ export default function ProfilePage() {
           <p className="eyebrow">TVOJ PROSTOR</p>
           <h1>Profil</h1>
         </div>
-        <button className="icon-button">⚙</button>
+        <button
+          className="icon-button"
+          type="button"
+          aria-label="Nastavitve profila"
+        >
+          ⚙
+        </button>
       </header>
       <section className="profile-header">
         <span className="avatar avatar-large">AH</span>
@@ -29,8 +35,10 @@ export default function ProfilePage() {
         </div>
         <button
           className={`toggle ${available ? "on" : ""}`}
+          type="button"
           onClick={() => setAvailable(!available)}
           aria-label="Preklopi razpoložljivost"
+          aria-pressed={available}
         >
           <span />
         </button>
