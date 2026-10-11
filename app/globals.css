@@ -1226,3 +1226,27 @@ button {
 .field-hint.field-error {
   color: #a12a1f;
 }
+.message-status {
+  font-size: 10px;
+  opacity: 0.85;
+  justify-self: end;
+}
+.message-sending {
+  opacity: 0.7;
+}
+.message-failed {
+  background: #fdecea;
+  color: #5d1a12;
+  border: 1px solid #f1c4bf;
+}
+.message-failed-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  justify-content: flex-end;
+  align-items: center;
+}
+.message-failed-actions .text-link {
+  font-size: 12px;
+  color: #a12a1f;
+}
