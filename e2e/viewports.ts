@@ -26,6 +26,12 @@ export const PAGES = [
   { path: "/chats", heading: "Ujemanja in klepeti" },
   { path: "/favorites", heading: "Priljubljeni oglasi" },
   { path: "/profile", heading: "Profil" },
+  { path: "/recommendations", heading: "Priporočeni profili" },
+  {
+    path: "/academic-verification",
+    heading: "Preverjanje akademskega statusa",
+  },
+  { path: "/auth-error", heading: "Prijava ni na voljo" },
   { path: "/login", heading: "Prijavi se v svoj račun" },
   { path: "/register", heading: "Ustvari svoj račun" },
   { path: "/ne-obstaja", heading: "Stran ne obstaja" },

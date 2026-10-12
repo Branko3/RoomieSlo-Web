@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { BREAKPOINTS, PAGES, VIEWPORTS } from "../e2e/viewports";
@@ -42,7 +42,12 @@ describe("viewport matrix", () => {
     const routes = readdirSync(join(process.cwd(), "app"), {
       withFileTypes: true,
     })
-      .filter((entry) => entry.isDirectory())
+      // Directories without their own page.tsx (e.g. /admin, /report) only hold nested routes.
+      .filter(
+        (entry) =>
+          entry.isDirectory() &&
+          existsSync(join(process.cwd(), "app", entry.name, "page.tsx")),
+      )
       .map((entry) => `/${entry.name}`)
       .filter((route) => !route.includes("["));
     const covered = PAGES.map((page) => page.path);
