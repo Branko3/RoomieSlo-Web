@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { OwnProfileSection } from "../../components/own-profile-section";
 import { getSupabaseConfig } from "../../lib/config";
@@ -39,7 +40,7 @@ export default function ProfilePage() {
             <span />
           </div>
         </div>
-        <a href="#">Nadaljuj →</a>
+        <Link href="/profile/questionnaire">Nadaljuj →</Link>
       </section>
       <LogoutButton />
     </div>
