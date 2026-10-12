@@ -15,7 +15,13 @@ export default function ProfilePage() {
           <p className="eyebrow">TVOJ PROSTOR</p>
           <h1>Profil</h1>
         </div>
-        <button className="icon-button">⚙</button>
+        <button
+          className="icon-button"
+          type="button"
+          aria-label="Nastavitve profila"
+        >
+          ⚙
+        </button>
       </header>
       <OwnProfileSection configured={getSupabaseConfig().configured} />
       <section className="profile-card">
@@ -25,8 +31,10 @@ export default function ProfilePage() {
         </div>
         <button
           className={`toggle ${available ? "on" : ""}`}
+          type="button"
           onClick={() => setAvailable(!available)}
           aria-label="Preklopi razpoložljivost"
+          aria-pressed={available}
         >
           <span />
         </button>
