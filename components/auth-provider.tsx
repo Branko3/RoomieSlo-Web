@@ -1,18 +1,75 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
-import type { Session } from "@supabase/supabase-js";
+import type { AuthError, Session } from "@supabase/supabase-js";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "../lib/supabase/browser";
-import { getRouteAccess } from "../lib/auth/routes";
+import {
+  createLoginRedirect,
+  getRouteAccess,
+  getSafeReturnPath,
+} from "../lib/auth/routes";
 
 type AuthContextValue = {
   session: Session | null;
   pending: boolean;
   error: string | null;
-  signOut: () => Promise<void>;
+  signIn: (
+    email: string,
+    password: string,
+  ) => Promise<{ error: AuthError | null }>;
+  signOut: () => Promise<{ error: AuthError | null }>;
 };
+
 const AuthContext = createContext<AuthContextValue | null>(null);
+
+type AuthClient = ReturnType<typeof createSupabaseBrowserClient>;
+type SessionCallbacks = {
+  setSession: (session: Session | null) => void;
+  setLoading: (loading: boolean) => void;
+  setError: (error: string | null) => void;
+  onSignedOut?: () => void;
+};
+
+const SESSION_ERROR = "Seje ni mogoče preveriti. Poskusite znova.";
+
+export function initializeAuthSession(
+  client: AuthClient,
+  callbacks: SessionCallbacks,
+) {
+  let active = true;
+  const sessionRequest = client.auth
+    .getSession()
+    .then(({ data, error: sessionError }) => {
+      if (!active) return;
+      callbacks.setSession(data.session);
+      if (sessionError) callbacks.setError(SESSION_ERROR);
+      callbacks.setLoading(false);
+    })
+    .catch(() => {
+      if (!active) return;
+      callbacks.setError(SESSION_ERROR);
+      callbacks.setLoading(false);
+    });
+
+  const {
+    data: { subscription },
+  } = client.auth.onAuthStateChange((event, nextSession) => {
+    if (!active) return;
+    callbacks.setSession(nextSession);
+    callbacks.setLoading(false);
+    callbacks.setError(null);
+    if (event === "SIGNED_OUT") callbacks.onSignedOut?.();
+  });
+
+  return {
+    sessionRequest,
+    unsubscribe: () => {
+      active = false;
+      subscription.unsubscribe();
+    },
+  };
+}
 
 export function useAuth() {
   const value = useContext(AuthContext);
@@ -26,62 +83,64 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [pending, setPending] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const client = useMemo(() => {
+    try {
+      return createSupabaseBrowserClient();
+    } catch {
+      return null;
+    }
+  }, []);
 
   useEffect(() => {
-    let active = true;
-    let client: ReturnType<typeof createSupabaseBrowserClient>;
-    try {
-      client = createSupabaseBrowserClient();
-    } catch (cause) {
-      if (active) {
-        setError(
-          cause instanceof Error
-            ? cause.message
-            : "Supabase configuration failed.",
-        );
-        setPending(false);
-      }
+    if (!client) {
+      setError("Supabase configuration failed. Prijava trenutno ni na voljo.");
+      setPending(false);
       return;
     }
-    client.auth.getSession().then(({ data, error: sessionError }) => {
-      if (!active) return;
-      if (sessionError) setError(sessionError.message);
-      setSession(data.session);
-      setPending(false);
-    });
-    const { data } = client.auth.onAuthStateChange((event, nextSession) => {
-      if (!active) return;
-      setSession(nextSession);
-      setPending(false);
-      if (event === "SIGNED_OUT") router.replace("/login");
-    });
-    return () => {
-      active = false;
-      data.subscription.unsubscribe();
-    };
-  }, [router]);
+    return initializeAuthSession(client, {
+      setSession,
+      setLoading: setPending,
+      setError,
+      onSignedOut: () => router.replace("/login"),
+    }).unsubscribe;
+  }, [client, router]);
 
   useEffect(() => {
     if (pending || error) return;
     const access = getRouteAccess(pathname);
     if (access !== "public" && !session) {
-      router.replace(
-        `/login?returnTo=${encodeURIComponent(`${pathname}${window.location.search}`)}`,
-      );
+      router.replace(createLoginRedirect(pathname, window.location.search));
     } else if (access === "public" && session) {
-      router.replace("/listings");
+      // Honour the requested destination after signing in on /login.
+      const returnTo = new URLSearchParams(window.location.search).get(
+        "returnTo",
+      );
+      router.replace(getSafeReturnPath(returnTo));
     }
   }, [error, pathname, pending, router, session]);
 
-  async function signOut() {
-    const client = createSupabaseBrowserClient();
-    const { error: signOutError } = await client.auth.signOut();
-    if (signOutError) setError(signOutError.message);
-    else router.replace("/login");
-  }
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      session,
+      pending,
+      error,
+      signIn: async (email, password) => {
+        if (!client) throw new Error("Supabase is not configured");
+        return client.auth.signInWithPassword({ email, password });
+      },
+      signOut: async () => {
+        if (!client) throw new Error("Supabase is not configured");
+        const result = await client.auth.signOut();
+        if (result.error) setError("Odjava ni uspela. Poskusite znova.");
+        return result;
+      },
+    }),
+    [client, error, pending, session],
+  );
 
   const access = getRouteAccess(pathname);
-  if (error) {
+  // Public pages (login, register) show the error next to their own form.
+  if (error && access !== "public") {
     return (
       <div className="page-state" role="alert">
         <h1>Prijava ni na voljo</h1>
@@ -89,16 +148,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
-  if (pending || (access !== "public" && !session)) {
+  if (access !== "public" && (pending || !session)) {
     return (
       <div className="page-state" aria-live="polite">
         <p>Preverjanje prijave ...</p>
       </div>
     );
   }
-  return (
-    <AuthContext.Provider value={{ session, pending, error, signOut }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

@@ -31,10 +31,10 @@ describe("route guard implementation contract", () => {
   it("restores sessions, listens for auth changes, and blocks protected flashes", () => {
     const provider = read("components/auth-provider.tsx");
 
-    expect(provider).toContain("client.auth.getSession()");
-    expect(provider).toContain("client.auth.onAuthStateChange");
-    expect(provider).toContain("data.subscription.unsubscribe()");
-    expect(provider).toContain("setPending(false)");
+    // Session restore and auth-change wiring is unit-tested through initializeAuthSession
+    // in tests/email-password-login.test.ts.
+    expect(provider).toContain("initializeAuthSession(client, {");
+    expect(provider).toContain("setLoading: setPending");
     expect(provider).toContain("if (pending || error) return");
     expect(provider).toContain('if (event === "SIGNED_OUT")');
     expect(provider).toContain("Preverjanje prijave ...");
@@ -46,9 +46,10 @@ describe("route guard implementation contract", () => {
     const register = read("app/register/page.tsx");
 
     expect(provider).toContain('access === "public" && session');
-    expect(provider).toContain('router.replace("/listings")');
-    expect(provider).toContain('router.replace("/login")');
-    expect(login).toContain("client.auth.signInWithPassword");
+    expect(provider).toContain("router.replace(getSafeReturnPath(returnTo))");
+    expect(provider).toContain('onSignedOut: () => router.replace("/login")');
+    expect(provider).toContain("client.auth.signInWithPassword");
+    expect(login).toContain("signIn(validation.email, password)");
     expect(register).toMatch(/\.auth\.signUp\(/);
   });
 
@@ -56,8 +57,9 @@ describe("route guard implementation contract", () => {
     expect(read("components/auth-provider.tsx")).toContain(
       "Supabase configuration failed.",
     );
+    // Raw Supabase messages are not shown; a fixed Slovenian message is.
     expect(read("components/auth-provider.tsx")).toContain(
-      "sessionError.message",
+      "Seje ni mogoče preveriti.",
     );
     expect(read("app/login/page.tsx")).toContain('role="alert"');
     expect(read("app/register/page.tsx")).toContain('role="alert"');
