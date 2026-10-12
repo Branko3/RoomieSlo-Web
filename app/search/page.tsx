@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ListingCard } from "../../components/listing-card";
-import { useListings } from "../../lib/supabase/hooks";
+import { useListingPages } from "../../lib/listings/use-listing-pages";
 import {
   DataState,
   EmptyState,
@@ -20,11 +20,19 @@ export default function SearchPage() {
   );
   const [sort, setSort] = useState(params.get("sort") ?? "relevance");
   const {
-    data: listings = [],
-    isLoading,
-    error,
-    retry,
-  } = useListings({ location, maxPrice });
+    listings,
+    isPending: isLoading,
+    isError,
+    error: queryError,
+    refetch,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+    isFetchNextPageError,
+  } = useListingPages({ location, maxPrice });
+  // A failed "load more" keeps the loaded results; only a failed first page is a page error.
+  const error = isError && !isFetchNextPageError ? queryError : null;
+  const retry = () => void refetch();
   useEffect(() => {
     setLocation(params.get("location") ?? "");
     setMaxPrice(Number(params.get("maxPrice") ?? 600));
@@ -182,7 +190,25 @@ export default function SearchPage() {
             <ListingCard listing={listing} key={listing.id} />
           ))}
       </div>
-      {!isLoading && !error && results.length === 0 && (
+      {!isLoading && !error && (hasNextPage || isFetchNextPageError) && (
+        <div className="load-more">
+          {isFetchNextPageError && (
+            <p className="error-message" role="alert">
+              Več oglasov ni bilo mogoče naložiti. Poskusi znova.
+            </p>
+          )}
+          <button
+            className="button button-outline"
+            type="button"
+            onClick={() => fetchNextPage()}
+            disabled={isFetchingNextPage}
+            aria-busy={isFetchingNextPage || undefined}
+          >
+            {isFetchingNextPage ? "Nalaganje …" : "Naloži več oglasov"}
+          </button>
+        </div>
+      )}
+      {!isLoading && !error && results.length === 0 && !hasNextPage && (
         <EmptyState
           title="Ni zadetkov"
           description="Poskusi razširiti lokacijo ali povečati proračun."

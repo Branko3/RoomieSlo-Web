@@ -1454,3 +1454,10 @@ button {
 .listing-status-control .error-message {
   margin-top: 8px;
 }
+.load-more {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin: 24px 0 8px;
+}
