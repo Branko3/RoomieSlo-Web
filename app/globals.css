@@ -1714,3 +1714,36 @@ button {
   background: #f1f4f2;
   border-bottom-left-radius: 4px;
 }
+.message-composer {
+  margin-top: 10px;
+  display: grid;
+  gap: 6px;
+}
+.composer-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+.composer-row textarea {
+  flex: 1;
+  min-height: 44px;
+  max-height: 160px;
+  resize: vertical;
+  border: 1px solid #d5dfda;
+  border-radius: 12px;
+  padding: 11px 12px;
+  font: inherit;
+  outline-color: var(--green);
+}
+.composer-row textarea[aria-invalid="true"] {
+  border-color: #a12a1f;
+}
+.field-hint {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: right;
+}
+.field-hint.field-error {
+  color: #a12a1f;
+}
