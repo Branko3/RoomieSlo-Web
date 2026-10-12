@@ -28,7 +28,8 @@ create policy blocks_delete_own on public.blocks for delete to authenticated
     using (auth.uid() = blocker_id);
 
 -- Security definer so policies can check both directions without exposing
--- other users' block rows through `blocks_select_own`.
+-- other users' block rows through `blocks_select_own`. It only answers for pairs
+-- that include the caller, so it cannot be used to probe blocks between other users.
 create or replace function public.is_blocked_between(a uuid, b uuid)
 returns boolean
 language sql
@@ -36,7 +37,7 @@ stable
 security definer
 set search_path = public
 as $$
-    select exists (
+    select auth.uid() in (a, b) and exists (
         select 1 from public.blocks
         where (blocker_id = a and blocked_id = b)
            or (blocker_id = b and blocked_id = a)

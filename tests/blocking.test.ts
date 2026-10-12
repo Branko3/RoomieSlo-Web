@@ -194,6 +194,13 @@ describe("blocks migration (static checks; not executed without a Supabase proje
     );
   });
 
+  it("only answers block checks for pairs that include the caller", () => {
+    // Otherwise any signed-in user could probe blocks between other users via RPC.
+    expect(sql).toMatch(
+      /function public\.is_blocked_between[\s\S]*select auth\.uid\(\) in \(a, b\) and exists/,
+    );
+  });
+
   it("refuses messages and new match requests between blocked users", () => {
     expect(sql).toMatch(
       /create policy messages_insert[\s\S]*not public\.is_blocked_between/,
