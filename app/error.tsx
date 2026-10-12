@@ -7,7 +7,7 @@ export default function Error({
   reset: () => void;
 }) {
   return (
-    <main className="page-state" role="alert">
+    <div className="page-state" role="alert">
       <h1>Nekaj je šlo narobe</h1>
       <p>Vsebino lahko poskusiš naložiti znova.</p>
       <div className="state-actions">
@@ -18,6 +18,6 @@ export default function Error({
           Na oglase
         </a>
       </div>
-    </main>
+    </div>
   );
 }
