@@ -1,4 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
+import { requireSignedIn } from "./env";
+
+// Only the auth pages render signed out; the rest are behind the route guard.
+const PUBLIC_TEST = new RegExp("^/(login|register):|login form");
 
 const PAGES = [
   "/listings",
@@ -55,6 +59,10 @@ async function tabOrder(page: Page, max = 40) {
 }
 
 test.describe("keyboard journey", () => {
+  test.beforeEach(({}, testInfo) => {
+    if (!PUBLIC_TEST.test(testInfo.title)) requireSignedIn(testInfo);
+  });
+
   test("the first Tab reaches the skip link, which jumps to the content", async ({
     page,
   }) => {

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { MatchRequestsPanel } from "../../components/match-requests-panel";
 
 const chats = [
   {
@@ -44,6 +45,7 @@ export default function ChatsPage() {
         </div>
         <a href="/search">Poglej →</a>
       </div>
+      <MatchRequestsPanel />
       <div className="chat-list">
         {chats.map((chat) => (
           <Link href="/chats/iva" className="chat-row" key={chat.name}>
