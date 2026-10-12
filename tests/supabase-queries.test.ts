@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fetchListing, fetchListings, fetchProfiles } from "../lib/supabase/queries";
+import {
+  fetchListing,
+  fetchListings,
+  fetchProfiles,
+} from "../lib/supabase/queries";
 
 type QueryResult = { data: unknown; error: Error | null };
 
@@ -38,7 +42,8 @@ function makeClient(result: QueryResult) {
       calls.push(["maybeSingle", args]);
       return builder;
     },
-    then: (resolve: (value: QueryResult) => unknown) => Promise.resolve(resolve(result)),
+    then: (resolve: (value: QueryResult) => unknown) =>
+      Promise.resolve(resolve(result)),
   };
   return {
     client: { from: vi.fn(() => builder) },
@@ -78,14 +83,18 @@ describe("Supabase listing query boundary", () => {
 
   it("translates location, price, sort order, cursor, and limit filters", async () => {
     const mock = makeClient({ data: [listing], error: null });
-    vi.mocked(createSupabaseBrowserClient).mockReturnValue(mock.client as never);
+    vi.mocked(createSupabaseBrowserClient).mockReturnValue(
+      mock.client as never,
+    );
 
-    await expect(fetchListings({
-      location: " Ljubljana ",
-      maxPrice: 500,
-      cursor: "2026-01-03T00:00:00Z",
-      limit: 12,
-    })).resolves.toHaveLength(1);
+    await expect(
+      fetchListings({
+        location: " Ljubljana ",
+        maxPrice: 500,
+        cursor: "2026-01-03T00:00:00Z",
+        limit: 12,
+      }),
+    ).resolves.toHaveLength(1);
 
     expect(mock.calls).toEqual([
       ["select", ["*"]],
@@ -100,12 +109,16 @@ describe("Supabase listing query boundary", () => {
 
   it("returns an unknown id as null and preserves backend errors", async () => {
     const missing = makeClient({ data: null, error: null });
-    vi.mocked(createSupabaseBrowserClient).mockReturnValue(missing.client as never);
+    vi.mocked(createSupabaseBrowserClient).mockReturnValue(
+      missing.client as never,
+    );
     await expect(fetchListing("missing")).resolves.toBeNull();
 
     const backendError = new Error("offline");
     const failed = makeClient({ data: null, error: backendError });
-    vi.mocked(createSupabaseBrowserClient).mockReturnValue(failed.client as never);
+    vi.mocked(createSupabaseBrowserClient).mockReturnValue(
+      failed.client as never,
+    );
     await expect(fetchListings()).rejects.toBe(backendError);
   });
 
@@ -116,7 +129,9 @@ describe("Supabase listing query boundary", () => {
 
   it("does not add optional filters for blank location or an omitted price", async () => {
     const mock = makeClient({ data: [listing], error: null });
-    vi.mocked(createSupabaseBrowserClient).mockReturnValue(mock.client as never);
+    vi.mocked(createSupabaseBrowserClient).mockReturnValue(
+      mock.client as never,
+    );
 
     await expect(fetchListings({ location: "   " })).resolves.toHaveLength(1);
 
@@ -141,9 +156,20 @@ describe("Supabase listing query boundary", () => {
       avatar_url: "",
     };
     const mock = makeClient({ data: [profile], error: null });
-    vi.mocked(createSupabaseBrowserClient).mockReturnValue(mock.client as never);
+    vi.mocked(createSupabaseBrowserClient).mockReturnValue(
+      mock.client as never,
+    );
 
     await expect(fetchProfiles()).resolves.toEqual([profile]);
+    expect(mock.client.from).toHaveBeenCalledWith("profiles");
+
+    vi.mocked(createSupabaseBrowserClient).mockReturnValue(
+      makeClient({ data: [{ ...profile, is_available: "yes" }], error: null })
+        .client as never,
+    );
+    await expect(fetchProfiles()).rejects.toThrow(
+      "Invalid profiles boolean field",
+    );
 
     const backendError = new Error("permission denied");
     vi.mocked(createSupabaseBrowserClient).mockReturnValue(
@@ -153,8 +179,13 @@ describe("Supabase listing query boundary", () => {
   });
 
   it("does not convert malformed rows into successful listing results", async () => {
-    const malformed = makeClient({ data: [{ ...listing, created_at: "" }], error: null });
-    vi.mocked(createSupabaseBrowserClient).mockReturnValue(malformed.client as never);
+    const malformed = makeClient({
+      data: [{ ...listing, created_at: "" }],
+      error: null,
+    });
+    vi.mocked(createSupabaseBrowserClient).mockReturnValue(
+      malformed.client as never,
+    );
 
     await expect(fetchListings()).rejects.toThrow("listings.created_at");
   });
@@ -162,7 +193,9 @@ describe("Supabase listing query boundary", () => {
   it("preserves detail-query backend errors", async () => {
     const backendError = new Error("permission denied");
     const failed = makeClient({ data: null, error: backendError });
-    vi.mocked(createSupabaseBrowserClient).mockReturnValue(failed.client as never);
+    vi.mocked(createSupabaseBrowserClient).mockReturnValue(
+      failed.client as never,
+    );
 
     await expect(fetchListing("listing-1")).rejects.toBe(backendError);
   });
