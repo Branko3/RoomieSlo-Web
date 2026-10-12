@@ -1,8 +1,28 @@
 import { defineConfig, devices } from "@playwright/test";
 import fs from "node:fs";
+import { crossBrowserProjects } from "./e2e/browsers";
 
-const baseURL = process.env.E2E_BASE_URL ?? "http://127.0.0.1:3000";
+// Agent worktrees (where .git is a file) run in parallel, so each derives its
+// own dev-server port instead of sharing and reusing a server on port 3000.
+function devServerPort(): number {
+  if (process.env.E2E_PORT) return Number(process.env.E2E_PORT);
+  if (!fs.existsSync(".git") || !fs.statSync(".git").isFile()) return 3000;
+  let hash = 0;
+  for (const char of process.cwd())
+    hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  return 3100 + (hash % 800);
+}
+
+const port = devServerPort();
+const baseURL = process.env.E2E_BASE_URL ?? `http://127.0.0.1:${port}`;
 const authState = process.env.E2E_AUTH_STATE;
+
+if (authState && !fs.existsSync(authState)) {
+  throw new Error(
+    `E2E_AUTH_STATE points to a missing file: ${authState}. ` +
+      "Use disposable staging browser state or unset the variable.",
+  );
+}
 
 export default defineConfig({
   testDir: "./e2e",
@@ -19,7 +39,7 @@ export default defineConfig({
   webServer: process.env.E2E_BASE_URL
     ? undefined
     : {
-        command: "npm run dev",
+        command: `npm run dev -- --port ${port}`,
         url: baseURL,
         reuseExistingServer: !process.env.CI,
         timeout: 120_000,
@@ -29,7 +49,7 @@ export default defineConfig({
       name: "unauthenticated",
       use: { ...devices["Desktop Chrome"] },
     },
-    ...(authState && fs.existsSync(authState)
+    ...(authState
       ? [
           {
             name: "authenticated",
@@ -40,5 +60,7 @@ export default defineConfig({
           },
         ]
       : []),
+    // Opt-in: E2E_BROWSERS=firefox,webkit,mobile-chrome,mobile-safari
+    ...crossBrowserProjects(process.env.E2E_BROWSERS),
   ],
 });

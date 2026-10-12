@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ListingPhoto } from "./listing-photo";
 import { useFavorites } from "./providers";
 import type { Listing } from "../lib/supabase/mappers";
 
@@ -10,7 +11,10 @@ export function ListingCard({ listing }: { listing: Listing }) {
   return (
     <article className="listing-card">
       <div className="listing-art">
-        <span>{listing.image}</span>
+        <ListingPhoto
+          listing={listing}
+          sizes="(max-width: 700px) 100vw, (max-width: 1100px) 50vw, 33vw"
+        />
         <button
           className={`heart-button ${favorite ? "liked" : ""}`}
           onClick={() => toggleFavorite(listing.id)}

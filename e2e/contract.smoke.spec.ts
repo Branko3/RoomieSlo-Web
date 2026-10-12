@@ -16,22 +16,26 @@ const skipReason =
 
 test("starts with public Supabase configuration handling", async ({ page }) => {
   await page.goto("/listings");
-  await expect(
-    page.getByRole("heading", { name: "Oglasi za sobe" }),
-  ).toBeVisible();
 
   if (
     !process.env.NEXT_PUBLIC_SUPABASE_URL ||
     !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   ) {
-    // Scoped to main: Next.js renders its own route-announcer alert.
-    await expect(page.getByRole("main").getByRole("alert")).toContainText(
-      "Supabase",
-    );
+    // Protected routes explain the missing configuration instead of rendering data.
+    await expect(page).toHaveURL(/\/auth-error\?reason=configuration$/);
+    await expect(page.getByRole("alert")).toContainText("Supabase");
+  } else {
+    // Signed-out visitors are sent to login with the original destination preserved.
+    await expect(page).toHaveURL(/\/login\?returnTo=%2Flistings$/);
   }
 });
 
-test("preserves search filter state in the URL", async ({ page }) => {
+test("preserves search filter state in the URL", async ({ page }, testInfo) => {
+  // /search is a protected route, so it needs a signed-in session.
+  test.skip(
+    !hasStagingContract || testInfo.project.name !== "authenticated",
+    "Requires the authenticated Playwright project.",
+  );
   await page.goto("/search?location=Be%C5%BEigrad&maxPrice=450&sort=price-asc");
   await expect(page.getByLabel("Lokacija")).toHaveValue("Bežigrad");
   await expect(page.getByLabel("Največji proračun")).toHaveValue("450");
