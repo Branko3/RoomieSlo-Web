@@ -23,7 +23,11 @@ const feature = readFileSync(
 
 describe("reproducible SQL migration contract", () => {
   it("keeps the production chain ordered and separate from the development seed", () => {
-    expect(migrationNames).toEqual([
+    // Forward-only: later migrations are appended after this chain with newer timestamps.
+    const timestamps = migrationNames.map((name) => name.split("_")[0]);
+    expect([...timestamps].sort()).toEqual(timestamps);
+    expect(new Set(timestamps).size).toBe(timestamps.length);
+    expect(migrationNames.slice(0, 5)).toEqual([
       "20261007000000_android_baseline.sql",
       "20261007000001_security_and_storage.sql",
       "20261007000002_display_fields.sql",
