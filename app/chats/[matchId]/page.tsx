@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { MessageComposer } from "../../../components/message-composer";
 import { MessageHistory } from "../../../components/message-history";
+import { useChatSender } from "../../../components/use-chat-sender";
 import { getSupabaseConfig } from "../../../lib/config";
 import {
   ConversationError,
@@ -39,6 +40,7 @@ export default function ConversationPage({
         params.matchId,
       ),
   });
+  const sender = useChatSender(params.matchId);
 
   const back = (
     <Link className="back-link" href="/chats">
@@ -177,9 +179,11 @@ export default function ConversationPage({
             <MessageHistory
               matchId={conversation.matchId}
               peerName={peer.name}
+              onRetry={sender.retry}
+              onDiscard={sender.discard}
             />
           </section>
-          <MessageComposer matchId={conversation.matchId} />
+          <MessageComposer onSend={sender.send} error={sender.error} />
         </>
       )}
     </div>

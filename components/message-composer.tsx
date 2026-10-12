@@ -1,55 +1,31 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
-import type { Message } from "../lib/supabase/mappers";
-import {
-  appendMessage,
-  MAX_MESSAGE_LENGTH,
-  sendMessage,
-  sendMessageCopy,
-  SendMessageError,
-  validateDraft,
-  type SendMessageClient,
-} from "../lib/chat/send-message";
-import { createSupabaseBrowserClient } from "../lib/supabase/browser";
-import { messagesQueryKey } from "./message-history";
+import { MAX_MESSAGE_LENGTH, validateDraft } from "../lib/chat/send-message";
 
 /**
  * Message input for an accepted conversation. Enter sends, Shift+Enter adds a
- * line break. The draft is cleared when sending starts (Android) and restored
- * if sending fails, so a failed message is never lost.
+ * line break. Sending is handed to `onSend`, which shows the message in the
+ * conversation immediately; the draft is cleared at once (Android), and a
+ * failed message stays in the conversation with retry, so nothing is lost.
  */
-export function MessageComposer({ matchId }: { matchId: string }) {
-  const queryClient = useQueryClient();
+export function MessageComposer({
+  onSend,
+  error,
+}: {
+  onSend: (body: string) => void;
+  error: string | null;
+}) {
   const [draft, setDraft] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const send = useMutation({
-    mutationFn: (body: string) =>
-      sendMessage(
-        createSupabaseBrowserClient() as unknown as SendMessageClient,
-        matchId,
-        body,
-      ),
-    onSuccess: (message) => {
-      queryClient.setQueryData<{ myUserId: string; messages: Message[] }>(
-        messagesQueryKey(matchId),
-        (history) => appendMessage(history, message),
-      );
-    },
-    onError: (_error, body) => {
-      // Give the text back unless the user already started a new one.
-      setDraft((current) => (current ? current : body));
-    },
-  });
 
   const validation = validateDraft(draft);
   const tooLong = !validation.ok && validation.reason === "too-long";
 
   function submit() {
-    if (!validation.ok || send.isPending) return;
+    if (!validation.ok) return;
     setDraft("");
-    send.mutate(validation.body);
+    onSend(validation.body);
     inputRef.current?.focus();
   }
 
@@ -61,11 +37,9 @@ export function MessageComposer({ matchId }: { matchId: string }) {
         submit();
       }}
     >
-      {send.isError && (
+      {error && (
         <p className="error-message" role="alert">
-          {send.error instanceof SendMessageError
-            ? send.error.message
-            : sendMessageCopy.failed}
+          {error}
         </p>
       )}
       <div className="composer-row">
@@ -92,13 +66,8 @@ export function MessageComposer({ matchId }: { matchId: string }) {
             }
           }}
         />
-        <button
-          className="button"
-          type="submit"
-          disabled={!validation.ok || send.isPending}
-          aria-busy={send.isPending || undefined}
-        >
-          {send.isPending ? "Pošiljanje …" : "Pošlji"}
+        <button className="button" type="submit" disabled={!validation.ok}>
+          Pošlji
         </button>
       </div>
       {draft.length > MAX_MESSAGE_LENGTH * 0.9 && (

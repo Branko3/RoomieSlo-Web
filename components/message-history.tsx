@@ -9,6 +9,7 @@ import {
   MessagesError,
   type MessagesClient,
 } from "../lib/chat/messages";
+import { isLocal } from "../lib/chat/local-messages";
 import { createSupabaseBrowserClient } from "../lib/supabase/browser";
 
 export const messagesQueryKey = (matchId: string) =>
@@ -18,9 +19,13 @@ export const messagesQueryKey = (matchId: string) =>
 export function MessageHistory({
   matchId,
   peerName,
+  onRetry = () => undefined,
+  onDiscard = () => undefined,
 }: {
   matchId: string;
   peerName: string;
+  onRetry?: (localId: string) => void;
+  onDiscard?: (localId: string) => void;
 }) {
   const query = useQuery({
     queryKey: messagesQueryKey(matchId),
@@ -85,17 +90,45 @@ export function MessageHistory({
           <p className="message-day">{day.label}</p>
           <ul>
             {day.messages.map((message) => {
-              const mine = message.sender_id === myUserId;
+              const local = isLocal(message) ? message : null;
+              // Local messages are always mine, even before the user id is known.
+              const mine = local !== null || message.sender_id === myUserId;
               return (
                 <li
-                  key={message.id}
-                  className={`message ${mine ? "message-mine" : "message-theirs"}`}
+                  key={local ? local.localId : message.id}
+                  className={`message ${mine ? "message-mine" : "message-theirs"}${
+                    local ? ` message-${local.localState}` : ""
+                  }`}
                 >
                   <span className="sr-only">{mine ? "Ti" : peerName}: </span>
                   <span className="message-body">{message.body}</span>
-                  <time dateTime={message.sent_at}>
-                    {messageTime(message.sent_at)}
-                  </time>
+                  {local?.localState === "sending" && (
+                    <small className="message-status">Pošiljanje …</small>
+                  )}
+                  {local?.localState === "failed" && (
+                    <span className="message-failed-actions">
+                      <small className="message-status">Ni poslano</small>
+                      <button
+                        type="button"
+                        className="text-link"
+                        onClick={() => onRetry(local.localId)}
+                      >
+                        Poskusi znova
+                      </button>
+                      <button
+                        type="button"
+                        className="text-link"
+                        onClick={() => onDiscard(local.localId)}
+                      >
+                        Zavrzi
+                      </button>
+                    </span>
+                  )}
+                  {!local && (
+                    <time dateTime={message.sent_at}>
+                      {messageTime(message.sent_at)}
+                    </time>
+                  )}
                 </li>
               );
             })}
