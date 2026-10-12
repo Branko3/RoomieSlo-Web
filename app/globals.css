@@ -1250,3 +1250,48 @@ button {
   font-size: 12px;
   margin-top: 14px;
 }
+.upload-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  padding: 19px;
+  margin-top: 20px;
+}
+.upload-picker {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+}
+.upload-picker input {
+  display: block;
+  width: 100%;
+  margin-top: 9px;
+  font: inherit;
+  font-weight: 400;
+}
+.upload-file {
+  font-size: 13px;
+  margin: 12px 0 0;
+  overflow-wrap: anywhere;
+}
+.upload-progress span {
+  transition: width 0.2s ease;
+}
+.upload-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin-top: 18px;
+}
+.upload-card .success-message,
+.upload-card .error-message {
+  margin: 12px 0 0;
+}
+.upload-card .field-hint {
+  display: block;
+  text-align: left;
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 6px;
+}
