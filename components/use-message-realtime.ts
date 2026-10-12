@@ -3,8 +3,8 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import type { ChatHistory } from "../lib/chat/local-messages";
+import { upsertStored } from "../lib/chat/dedupe";
 import {
-  applyRealtimeInsert,
   applyRealtimeUpdate,
   subscribeToMessages,
   type RealtimeClient,
@@ -42,9 +42,10 @@ export function useMessageRealtime(
     const subscription = createReconnectingSubscription({
       connect: (onStatus) =>
         subscribeToMessages(client, matchId, {
+          // Replaces my own pending copy by id, or adds the other person's message.
           onInsert: (message) =>
             queryClient.setQueryData<ChatHistory>(key, (history) =>
-              applyRealtimeInsert(history, message),
+              upsertStored(history, message),
             ),
           onUpdate: (update) =>
             queryClient.setQueryData<ChatHistory>(key, (history) =>
