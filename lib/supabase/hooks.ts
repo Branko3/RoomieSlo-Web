@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { fetchListing, fetchListings, type ListingQuery } from "./queries";
 import type { Listing } from "./mappers";
 import { createSupabaseBrowserClient } from "./browser";
@@ -18,9 +18,14 @@ export function useListings(query: ListingQuery = {}) {
     isLoading: boolean;
     error: Error | null;
   }>({ isLoading: true, error: null });
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let active = true;
-    setState({ isLoading: true, error: null });
+    setState((current) => ({
+      data: current.data,
+      isLoading: true,
+      error: null,
+    }));
     fetchListings({
       location: query.location,
       maxPrice: query.maxPrice,
@@ -37,19 +42,23 @@ export function useListings(query: ListingQuery = {}) {
       })
       .catch((error: unknown) => {
         if (active)
-          setState({
+          setState((current) => ({
+            data: current.data,
             isLoading: false,
             error:
               error instanceof Error
                 ? error
                 : new Error("Listing query failed"),
-          });
+          }));
       });
     return () => {
       active = false;
     };
-  }, [query.location, query.maxPrice, query.cursor, query.limit]);
-  return state;
+  }, [query.location, query.maxPrice, query.cursor, query.limit, attempt]);
+  return {
+    ...state,
+    retry: useCallback(() => setAttempt((value) => value + 1), []),
+  };
 }
 
 export function useListing(id: string) {
@@ -58,27 +67,36 @@ export function useListing(id: string) {
     isLoading: boolean;
     error: Error | null;
   }>({ isLoading: Boolean(id), error: null });
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     if (!id) return;
     let active = true;
-    setState({ isLoading: true, error: null });
+    setState((current) => ({
+      data: current.data,
+      isLoading: true,
+      error: null,
+    }));
     fetchListing(id)
       .then(
         (data) => active && setState({ data, isLoading: false, error: null }),
       )
       .catch((error: unknown) => {
         if (active)
-          setState({
+          setState((current) => ({
+            data: current.data,
             isLoading: false,
             error:
               error instanceof Error
                 ? error
                 : new Error("Listing query failed"),
-          });
+          }));
       });
     return () => {
       active = false;
     };
-  }, [id]);
-  return state;
+  }, [id, attempt]);
+  return {
+    ...state,
+    retry: useCallback(() => setAttempt((value) => value + 1), []),
+  };
 }
