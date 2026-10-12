@@ -1,7 +1,11 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { getSupabaseConfig } from "./lib/config";
-import { createLoginRedirect, getRouteAccess } from "./lib/auth/routes";
+import {
+  createLoginRedirect,
+  getRouteAccess,
+  requiresSession,
+} from "./lib/auth/routes";
 
 export async function middleware(request: NextRequest) {
   const access = getRouteAccess(request.nextUrl.pathname);
@@ -9,7 +13,7 @@ export async function middleware(request: NextRequest) {
 
   if (!config.configured) {
     // Public routes (including /auth-error itself) stay reachable; redirecting them would loop.
-    if (access === "public") return NextResponse.next();
+    if (!requiresSession(access)) return NextResponse.next();
     const errorUrl = request.nextUrl.clone();
     errorUrl.pathname = "/auth-error";
     errorUrl.search = "";
@@ -42,7 +46,7 @@ export async function middleware(request: NextRequest) {
   const isMissingSession =
     error?.name === "AuthSessionMissingError" ||
     error?.message.toLowerCase().includes("auth session missing");
-  if (error && !isMissingSession && access !== "public") {
+  if (error && !isMissingSession && requiresSession(access)) {
     const errorUrl = request.nextUrl.clone();
     errorUrl.pathname = "/auth-error";
     errorUrl.search = "";
@@ -57,7 +61,7 @@ export async function middleware(request: NextRequest) {
     destination.search = "";
     return NextResponse.redirect(destination);
   }
-  if (access !== "public" && !hasSession) {
+  if (requiresSession(access) && !hasSession) {
     return NextResponse.redirect(
       new URL(
         createLoginRedirect(request.nextUrl.pathname, request.nextUrl.search),

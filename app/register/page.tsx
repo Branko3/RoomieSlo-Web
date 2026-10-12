@@ -11,6 +11,7 @@ import {
   RegistrationValues,
   validateRegistration,
 } from "../../lib/auth/registration";
+import { emailRedirectUrl } from "../../lib/auth/confirmation";
 
 const initialValues: RegistrationValues = {
   displayName: "",
@@ -46,7 +47,10 @@ export default function RegisterPage() {
     setIsSubmitting(true);
     try {
       const supabase = createSupabaseBrowserClient();
-      const signUpInput = buildSignUpInput(values);
+      const signUpInput = buildSignUpInput(
+        values,
+        emailRedirectUrl(window.location.origin),
+      );
       const { data, error } = await supabase.auth.signUp(signUpInput);
 
       if (error) {

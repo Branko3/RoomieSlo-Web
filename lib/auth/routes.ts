@@ -1,6 +1,12 @@
-export type RouteAccess = "public" | "auth" | "admin";
+/**
+ * public: signed-out entry pages (signed-in users are sent on);
+ * open: reachable signed in or out, e.g. e-mail confirmation and e-mail change links;
+ * auth/admin: require a session.
+ */
+export type RouteAccess = "public" | "open" | "auth" | "admin";
 
 const publicRoutes = ["/login", "/register", "/auth-error"];
+const openRoutes = ["/auth/confirm", "/auth/confirmation"];
 const adminRoutes = ["/admin/reports"];
 
 export function getRouteAccess(pathname: string): RouteAccess {
@@ -15,7 +21,16 @@ export function getRouteAccess(pathname: string): RouteAccess {
   ) {
     return "public";
   }
+  if (
+    openRoutes.some((route) => path === route || path.startsWith(`${route}/`))
+  ) {
+    return "open";
+  }
   return "auth";
+}
+
+export function requiresSession(access: RouteAccess): boolean {
+  return access === "auth" || access === "admin";
 }
 
 export function normalizePath(pathname: string): string {

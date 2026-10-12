@@ -39,12 +39,18 @@ export function validateRegistration(
   return errors;
 }
 
-export function buildSignUpInput(values: RegistrationValues) {
+export function buildSignUpInput(
+  values: RegistrationValues,
+  emailRedirectTo?: string,
+) {
   const normalized = normalizeRegistrationValues(values);
   return {
     email: normalized.email,
     password: normalized.password,
-    options: { data: { display_name: normalized.displayName } },
+    options: {
+      data: { display_name: normalized.displayName },
+      ...(emailRedirectTo ? { emailRedirectTo } : {}),
+    },
   };
 }
 

@@ -49,6 +49,19 @@ describe("registration validation", () => {
     });
   });
 
+  it("sends the confirmation link back to /auth/confirm when a redirect is given", () => {
+    expect(
+      buildSignUpInput(
+        { displayName: "Ana", email: "ana@example.com", password: "password" },
+        "https://roomieslo.example/auth/confirm?next=%2Flistings",
+      ).options,
+    ).toEqual({
+      data: { display_name: "Ana" },
+      emailRedirectTo:
+        "https://roomieslo.example/auth/confirm?next=%2Flistings",
+    });
+  });
+
   it("maps duplicate and unexpected auth errors without exposing details", () => {
     expect(
       getRegistrationErrorMessage({
