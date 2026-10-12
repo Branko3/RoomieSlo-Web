@@ -1440,3 +1440,17 @@ button {
   border-color: #a12a1f;
   color: #fff;
 }
+.chip-available {
+  background: var(--green-light);
+  color: var(--green-dark);
+}
+.chip-filled {
+  background: #ececec;
+  color: #4a4a4a;
+}
+.listing-status-control {
+  margin: 4px 0 14px;
+}
+.listing-status-control .error-message {
+  margin-top: 8px;
+}
