@@ -5,10 +5,31 @@ import { getSupabaseConfig } from "../lib/config";
 
 const root = join(process.cwd(), "lib");
 const sourceFiles = readdirSync(root, { recursive: true })
-  .filter((file): file is string => typeof file === "string" && /\.(ts|tsx)$/.test(file))
+  .filter(
+    (file): file is string =>
+      typeof file === "string" && /\.(ts|tsx)$/.test(file),
+  )
   .map((file) => join(root, file));
 
 describe("browser Supabase boundary", () => {
+  it("reports an explicit unconfigured state when public variables are absent", () => {
+    const originalUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const originalKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+    delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    expect(getSupabaseConfig()).toEqual({
+      configured: false,
+      url: "",
+      anonKey: "",
+    });
+
+    if (originalUrl !== undefined)
+      process.env.NEXT_PUBLIC_SUPABASE_URL = originalUrl;
+    if (originalKey !== undefined)
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = originalKey;
+  });
+
   it("accepts only the two public browser variables", () => {
     const originalUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const originalKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -21,7 +42,8 @@ describe("browser Supabase boundary", () => {
     });
     if (originalUrl === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_URL;
     else process.env.NEXT_PUBLIC_SUPABASE_URL = originalUrl;
-    if (originalKey === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (originalKey === undefined)
+      delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     else process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = originalKey;
   });
 
@@ -41,22 +63,31 @@ describe("browser Supabase boundary", () => {
 
     if (originalUrl === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_URL;
     else process.env.NEXT_PUBLIC_SUPABASE_URL = originalUrl;
-    if (originalKey === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (originalKey === undefined)
+      delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     else process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = originalKey;
-    if (originalServiceKey === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (originalServiceKey === undefined)
+      delete process.env.SUPABASE_SERVICE_ROLE_KEY;
     else process.env.SUPABASE_SERVICE_ROLE_KEY = originalServiceKey;
   });
 
   it("does not expose a service-role credential in browser source", () => {
-    const source = sourceFiles.map((file) => readFileSync(file, "utf8")).join("\n");
+    const source = sourceFiles
+      .map((file) => readFileSync(file, "utf8"))
+      .join("\n");
     expect(source).not.toMatch(/SERVICE_ROLE|service_role|SUPABASE_SERVICE/);
 
     const staticDir = join(process.cwd(), ".next", "static");
     if (existsSync(staticDir)) {
       const bundleFiles = readdirSync(staticDir, { recursive: true })
-        .filter((file): file is string => typeof file === "string" && file.endsWith(".js"))
+        .filter(
+          (file): file is string =>
+            typeof file === "string" && file.endsWith(".js"),
+        )
         .map((file) => join(staticDir, file));
-      const bundles = bundleFiles.map((file) => readFileSync(file, "utf8")).join("\n");
+      const bundles = bundleFiles
+        .map((file) => readFileSync(file, "utf8"))
+        .join("\n");
       expect(bundles).not.toMatch(/SUPABASE_SERVICE_ROLE_KEY|service_role/);
     }
   });
@@ -70,7 +101,9 @@ describe("in-scope listing surfaces", () => {
       "app/listings/[id]/page.tsx",
       "app/favorites/page.tsx",
     ]) {
-      expect(readFileSync(join(process.cwd(), file), "utf8")).not.toContain("lib/data");
+      expect(readFileSync(join(process.cwd(), file), "utf8")).not.toContain(
+        "lib/data",
+      );
     }
   });
 });

@@ -59,3 +59,9 @@
 - Scenarios covered: all logic scenarios above (7 tests, passing with `npm run test`).
 - Remaining gaps: the button's pending/disabled/alert rendering and router redirect are not component-tested (no React Testing Library/jsdom in the repo); no Playwright run (no installed browsers); real Supabase sign-out needs staging credentials.
 - Manual testing: Not run unless explicitly requested
+
+## Merge note (2026-10-12)
+
+`AuthProvider.signOut` (from #11/#16) now delegates to `performLogout`, so every logout path
+(profile `LogoutButton` and the sidebar ↪ button) uses local scope and clears the query cache,
+favorites and `roomieslo:` storage. `LogoutButton` calls `useAuth().signOut()`.

@@ -1,17 +1,12 @@
 "use client";
 
-import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { performLogout } from "../lib/auth/logout";
-import { getSupabaseConfig } from "../lib/config";
-import { createSupabaseBrowserClient } from "../lib/supabase/browser";
-import { useFavorites } from "./providers";
+import { useAuth } from "./auth-provider";
 
 export function LogoutButton() {
   const router = useRouter();
-  const queryClient = useQueryClient();
-  const { resetFavorites } = useFavorites();
+  const { signOut } = useAuth();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,14 +14,7 @@ export function LogoutButton() {
     if (pending) return;
     setPending(true);
     setError(null);
-    const result = await performLogout({
-      client: getSupabaseConfig().configured
-        ? createSupabaseBrowserClient()
-        : null,
-      clearServerState: () => queryClient.clear(),
-      resetUserState: resetFavorites,
-      storage: window.localStorage,
-    });
+    const result = await signOut();
     if (result.ok) {
       router.replace(result.redirectTo);
       router.refresh();
