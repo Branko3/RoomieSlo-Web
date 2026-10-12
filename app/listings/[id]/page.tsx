@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { OwnerListingActions } from "../../../components/owner-listing-actions";
 import { useFavorites } from "../../../components/providers";
 import { useListing } from "../../../lib/supabase/hooks";
 import { DataState, LoadingState } from "../../../components/data-states";
@@ -50,6 +51,10 @@ export default function ListingDetail({ params }: { params: { id: string } }) {
           <div className="price-large">
             {listing.price} € <small>/ mesec</small>
           </div>
+          <OwnerListingActions
+            listingId={listing.id}
+            ownerId={listing.ownerId}
+          />
           <p className="detail-description">
             Svetla in prijetna nastanitev za študenta. Stanovanje je urejeno,
             skupni prostori pa so dobro vzdrževani. Piši lastniku za več
