@@ -9,10 +9,16 @@
 
 The application uses configuration injection rather than environment-specific route or
 authorization code. Browser code receives only `NEXT_PUBLIC_SUPABASE_URL` and
-`NEXT_PUBLIC_SUPABASE_ANON_KEY`. `ROOMIESLO_ENV` is deployment-managed and is never required by
-the browser client. `lib/config.ts` rejects missing public configuration, local/insecure staging
-or production endpoints, and a JWT whose role is `service_role`. Missing browser configuration
-continues to produce the existing actionable Supabase error.
+`NEXT_PUBLIC_SUPABASE_ANON_KEY`. Next.js inlines these values at build time, so each environment
+gets its own build of the same source revision; a built artifact must not be promoted to an
+environment with different Supabase values. `ROOMIESLO_ENV` is deployment-managed and is never
+required by the browser client. `lib/environment-validation.mjs` (used by `lib/config.ts`,
+`npm run validate:env` and `prebuild`) rejects missing public configuration, URLs with embedded
+credentials, local/insecure staging or production endpoints (including any loopback address),
+and privileged keys (`sb_secret_…` or a JWT whose role is `service_role`). `getSupabaseConfig`
+also refuses a privileged key, so it can never reach the browser client. `npm run build` runs the
+validator through `prebuild` when `ROOMIESLO_ENV` is staging or production. Missing browser
+configuration continues to produce the existing actionable Supabase error.
 
 The intended matrix is:
 
@@ -32,7 +38,7 @@ configured separately by the Supabase/hosting operators. They are intentionally 
 - [x] Local/test secrets, environment files, and Playwright auth state are ignored by Git.
 - [x] Browser Supabase setup uses only the two public variables and fails explicitly when absent.
 - [x] Environment validation rejects missing configuration and unsafe staging/production endpoints.
-- [x] The same source/build can be promoted by injecting deployment configuration.
+- [x] The same source revision is built per environment with injected deployment configuration (`NEXT_PUBLIC_*` values are inlined at build time).
 - [x] Ordered migrations and the local-only seed boundary are preserved.
 - [ ] Dedicated development, staging, and production Supabase projects are provisioned and references recorded by an operator.
 - [ ] Separate hosting targets, approved domains, redirects, Auth providers, email, Storage, Realtime, backups, and recovery ownership are configured and verified.
@@ -40,7 +46,8 @@ configured separately by the Supabase/hosting operators. They are intentionally 
 
 ## Implementation
 
-Use one deployment artifact and set the variables at process/deployment start:
+Build once per environment from the same revision, with that environment's variables set before
+`npm run build`:
 
 ```powershell
 $env:ROOMIESLO_ENV = "development" # staging or production on the corresponding target
@@ -75,12 +82,12 @@ Development seed data is applied only through the explicit local `supabase db re
 
 1. Run `npm run typecheck`, `npm run lint`, `npm run test`, `npm run build`, and
    `npm run validate:env` with development configuration.
-2. Promote the unchanged build to staging, apply migrations in order, inspect
+2. Build the same revision with staging configuration, deploy it, apply migrations in order, inspect
    `npm run db:status`, and run `npm run test:e2e` with disposable staging fixtures.
 3. Verify negative RLS/Storage cases, Auth redirects/session restoration, private `vpisnice`,
    Realtime messages, and staging/production project isolation.
-4. Back up production, inspect its migration state, apply forward-only migrations, and deploy
-   the same artifact with production-injected configuration.
+4. Back up production, inspect its migration state, apply forward-only migrations, and build and deploy
+   the same revision with production configuration.
 5. If deployment fails, roll back the application artifact only; do not roll back the database by
    editing or resetting migrations. Recovery ownership and any forward corrective migration must
    be recorded by the operators.

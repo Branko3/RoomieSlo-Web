@@ -1,52 +1,34 @@
-const environment = process.env.ROOMIESLO_ENV ?? "development";
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
-const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
-const errors = [];
+import { existsSync, readFileSync } from "node:fs";
+import { validateEnvironment } from "../lib/environment-validation.mjs";
 
-if (!url) errors.push("NEXT_PUBLIC_SUPABASE_URL is required.");
-if (!anonKey) errors.push("NEXT_PUBLIC_SUPABASE_ANON_KEY is required.");
-if (!["development", "staging", "production"].includes(environment)) {
-  errors.push("ROOMIESLO_ENV must be development, staging, or production.");
-}
-if (url) {
-  try {
-    const parsed = new URL(url);
-    if (!["http:", "https:"].includes(parsed.protocol)) {
-      errors.push("NEXT_PUBLIC_SUPABASE_URL must use http or https.");
-    }
-    if (
-      environment !== "development" &&
-      (parsed.protocol !== "https:" ||
-        parsed.hostname === "localhost" ||
-        parsed.hostname === "127.0.0.1")
-    ) {
-      errors.push(
-        `${environment} Supabase configuration must use a non-local HTTPS URL.`,
-      );
-    }
-  } catch {
-    errors.push("NEXT_PUBLIC_SUPABASE_URL must be a valid URL.");
-  }
-}
-if (anonKey) {
-  const parts = anonKey.split(".");
-  if (parts.length === 3) {
-    try {
-      const payload = JSON.parse(
-        Buffer.from(parts[1], "base64url").toString("utf8"),
-      );
-      if (payload.role === ["service", "role"].join("_")) {
-        errors.push(
-          "NEXT_PUBLIC_SUPABASE_ANON_KEY must never contain a privileged service-role key.",
-        );
-      }
-    } catch {
-      // Supabase project keys are not required to be JWTs.
-    }
+// Usage: node scripts/validate-environment.mjs [--deployment-only]
+// --deployment-only (used by prebuild) validates only staging and production builds, so local
+// builds without Supabase credentials keep working with preview data.
+
+function loadEnvLocal() {
+  if (!existsSync(".env.local")) return;
+  for (const line of readFileSync(".env.local", "utf8").split(/\r?\n/)) {
+    const match = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/.exec(line);
+    if (!match) continue;
+    const [, key, raw] = match;
+    // Deployment-provided variables take precedence over the local file.
+    if (process.env[key] !== undefined) continue;
+    process.env[key] = raw.replace(/^(["'])(.*)\1$/, "$2");
   }
 }
 
-const result = { valid: errors.length === 0, errors };
+loadEnvLocal();
+
+const deploymentOnly = process.argv.includes("--deployment-only");
+const environment = process.env.ROOMIESLO_ENV;
+if (
+  deploymentOnly &&
+  (environment === undefined || environment === "development")
+) {
+  process.exit(0);
+}
+
+const result = validateEnvironment(process.env);
 if (!result.valid) {
   console.error("Invalid RoomieSlo environment configuration:");
   for (const error of result.errors) console.error(`- ${error}`);

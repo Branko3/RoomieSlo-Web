@@ -10,7 +10,7 @@ and the same Slovenian navigation labels.
 2. Run `npm install`.
 3. Copy `.env.example` to `.env.local`, set `ROOMIESLO_ENV=development`, and add the isolated
    development project's public Supabase URL and anon key.
-4. Run `npm run validate:env`, then `npm run dev` and open `http://localhost:3000`.
+4. Run `npm run validate:env` (it reads `.env.local`), then `npm run dev` and open `http://localhost:3000`.
 
 The current UI uses the Android app's preview data in `lib/data.ts`, so it can be explored
 without credentials. The browser Supabase client is ready in `lib/supabase/browser.ts` and
@@ -36,8 +36,10 @@ db reset` applies migrations and then the seed file. Never use `db reset` on a s
 
 Environment promotion, project ownership, deployment variables, Auth/Storage/Realtime settings,
 backup requirements, and the staging fixture boundary are documented in
-`docs/features/development-staging-production-environments.md`. The same build is promoted by
-injecting environment variables at deployment time; no route or authorization code changes per
+`docs/features/development-staging-production-environments.md`. Next.js inlines
+`NEXT_PUBLIC_*` values at build time, so the same source revision is built once per environment
+with that environment's variables (`npm run build` validates them through `prebuild` when
+`ROOMIESLO_ENV` is staging or production); no route or authorization code changes per
 environment.
 
 Migrations are forward-only. If an apply fails, preserve the error and migration state, fix the
