@@ -104,6 +104,14 @@ export default function ListingsPage() {
           </span>
           <strong>→</strong>
         </a>
+        <a href="/recommendations" className="action-card">
+          <span className="action-icon green">♥</span>
+          <span>
+            <b>Priporočeni sostanovalci</b>
+            <small>Razvrščeni po združljivosti</small>
+          </span>
+          <strong>→</strong>
+        </a>
       </div>
     </div>
   );
