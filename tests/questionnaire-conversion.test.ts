@@ -151,6 +151,21 @@ describe("conversion to rows for saving", () => {
   it("ignores answers for ids that are not statements", () => {
     const rows = rowsForSave(USER, { q_unknown: "agree" } as Answers);
     expect(rows.map((r) => r.question_id)).not.toContain("q_unknown");
+    expect(rows.map((r) => r.question_id)).toEqual(STATEMENTS.map((s) => s.id));
+    expect(rows.every((r) => r.value === 0.5 && r.weight === 0)).toBe(true);
+  });
+
+  it("treats non-finite stored values as unanswered", () => {
+    expect(levelFromStored(Number.NaN, 0.1)).toBe("no_answer");
+    expect(levelFromStored(Number.POSITIVE_INFINITY, 0.1)).toBe("no_answer");
+    expect(levelFromStored(0.75, Number.POSITIVE_INFINITY)).toBe("no_answer");
+  });
+
+  it("keeps the statement definitions immutable", () => {
+    expect(Object.isFrozen(STATEMENTS)).toBe(true);
+    expect(STATEMENTS.every((statement) => Object.isFrozen(statement))).toBe(
+      true,
+    );
   });
 });
 
@@ -174,6 +189,13 @@ describe("skip semantics", () => {
       "q_smoking",
     ]);
     expect(rows.filter((r) => r.weight === 0)).toHaveLength(8);
+    for (const [id, key] of Object.entries(answers)) {
+      const row = rows.find((r) => r.question_id === id)!;
+      const level = likertLevel(key!);
+      const statement = STATEMENTS.find((s) => s.id === id)!;
+      expect(row.value).toBe(level.value);
+      expect(row.weight).toBe(statement.weight * level.multiplier);
+    }
     expect(expressedCount(answers)).toBe(3);
   });
 
