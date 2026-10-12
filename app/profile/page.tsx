@@ -1,6 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
+import { OwnProfileSection } from "../../components/own-profile-section";
+import { getSupabaseConfig } from "../../lib/config";
+import { LogoutButton } from "../../components/logout-button";
 
 export default function ProfilePage() {
   const [available, setAvailable] = useState(true);
@@ -11,17 +15,15 @@ export default function ProfilePage() {
           <p className="eyebrow">TVOJ PROSTOR</p>
           <h1>Profil</h1>
         </div>
-        <button className="icon-button">⚙</button>
+        <button
+          className="icon-button"
+          type="button"
+          aria-label="Nastavitve profila"
+        >
+          ⚙
+        </button>
       </header>
-      <section className="profile-header">
-        <span className="avatar avatar-large">AH</span>
-        <div>
-          <h2>Amar H.</h2>
-          <p>FRI, Univerza v Ljubljani · 22 let</p>
-          <span className="verified-badge">✓ Preverjen študent</span>
-        </div>
-        <button className="text-link">Uredi</button>
-      </section>
+      <OwnProfileSection configured={getSupabaseConfig().configured} />
       <section className="profile-card">
         <div>
           <b>Iščem sostanovalca / sobo</b>
@@ -29,8 +31,10 @@ export default function ProfilePage() {
         </div>
         <button
           className={`toggle ${available ? "on" : ""}`}
+          type="button"
           onClick={() => setAvailable(!available)}
           aria-label="Preklopi razpoložljivost"
+          aria-pressed={available}
         >
           <span />
         </button>
@@ -44,9 +48,9 @@ export default function ProfilePage() {
             <span />
           </div>
         </div>
-        <a href="#">Nadaljuj →</a>
+        <Link href="/profile/questionnaire">Nadaljuj →</Link>
       </section>
-      <button className="button button-outline full-button">Odjava</button>
+      <LogoutButton />
     </div>
   );
 }
