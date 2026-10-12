@@ -9,12 +9,12 @@ export default function GlobalError({
   return (
     <html lang="sl">
       <body>
-        <div className="page-state">
+        <main className="page-state" role="alert">
           <h1>RoomieSlo trenutno ni na voljo</h1>
           <button className="button" onClick={reset}>
             Osveži stran
           </button>
-        </div>
+        </main>
       </body>
     </html>
   );
