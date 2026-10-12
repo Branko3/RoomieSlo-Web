@@ -1,17 +1,23 @@
 "use client";
 
-import { useListings } from "../../lib/supabase/hooks";
+import { CacheNotice } from "../../components/cache-notice";
 import {
   DataState,
   EmptyState,
   LoadingState,
 } from "../../components/data-states";
 import { ListingCard } from "../../components/listing-card";
-export const dynamic = "force-dynamic";
+import { useOfflineListings } from "../../lib/listings/use-offline-listings";
 import Link from "next/link";
 
 export default function ListingsPage() {
-  const { data: listings, isLoading, error, retry } = useListings();
+  const {
+    data: listings,
+    isLoading,
+    error,
+    view,
+    retry,
+  } = useOfflineListings();
   return (
     <div className="content-wrap">
       <header className="topbar">
@@ -52,6 +58,7 @@ export default function ListingsPage() {
           </a>
         </div>
       </div>
+      <CacheNotice view={view} onRetry={retry} />
       {isLoading && <LoadingState label="Nalaganje oglasov ..." />}
       {!isLoading && error && (
         <DataState error={error} onRetry={retry}>

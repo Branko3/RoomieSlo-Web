@@ -4,11 +4,16 @@ import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ListingCard } from "../../components/listing-card";
 import { useListingPages } from "../../lib/listings/use-listing-pages";
+import { useCachedListingsFallback } from "../../lib/listings/use-offline-listings";
+import { CacheNotice } from "../../components/cache-notice";
 import {
   DataState,
   EmptyState,
   LoadingState,
+  useOnlineStatus,
 } from "../../components/data-states";
+
+const OFFLINE_ERROR = new Error("Brez povezave");
 
 export default function SearchPage() {
   const router = useRouter();
@@ -21,7 +26,7 @@ export default function SearchPage() {
   const [sort, setSort] = useState(params.get("sort") ?? "relevance");
   const {
     listings,
-    isPending: isLoading,
+    isPending,
     isError,
     error: queryError,
     refetch,
@@ -31,8 +36,22 @@ export default function SearchPage() {
     isFetchNextPageError,
   } = useListingPages({ location, maxPrice });
   // A failed "load more" keeps the loaded results; only a failed first page is a page error.
-  const error = isError && !isFetchNextPageError ? queryError : null;
+  const firstPageError = isError && !isFetchNextPageError ? queryError : null;
   const retry = () => void refetch();
+  // Offline or failed first page: show the signed-in user's cached listings (stale view).
+  const online = useOnlineStatus();
+  const fallback = useCachedListingsFallback(
+    { location, maxPrice },
+    firstPageError ? "error" : !online ? "offline" : null,
+  );
+  const cachedListings =
+    fallback?.source === "cache" ? fallback.listings : null;
+  // TanStack Query pauses while offline; without cached data show the offline state, not a spinner.
+  const offlineWithoutData = !online && isPending && !cachedListings;
+  const isLoading = isPending && !cachedListings && !offlineWithoutData;
+  const error = cachedListings
+    ? null
+    : (firstPageError ?? (offlineWithoutData ? OFFLINE_ERROR : null));
   useEffect(() => {
     setLocation(params.get("location") ?? "");
     setMaxPrice(Number(params.get("maxPrice") ?? 600));
@@ -51,7 +70,7 @@ export default function SearchPage() {
     router.replace(`${pathname}?${nextParams.toString()}`);
   };
   const results = useMemo(() => {
-    const filtered = listings.filter(
+    const filtered = (cachedListings ?? listings).filter(
       (listing) =>
         listing.price <= maxPrice &&
         listing.district.toLowerCase().includes(location.toLowerCase()),
@@ -65,7 +84,7 @@ export default function SearchPage() {
             ? b.createdAt.localeCompare(a.createdAt)
             : 0,
     );
-  }, [listings, location, maxPrice, sort]);
+  }, [cachedListings, listings, location, maxPrice, sort]);
   const resultLabel =
     results.length === 1
       ? "oglas"
@@ -177,6 +196,7 @@ export default function SearchPage() {
           </button>
         </div>
       )}
+      <CacheNotice view={cachedListings ? fallback : null} onRetry={retry} />
       <div className="listing-grid">
         {isLoading && <LoadingState label="Nalaganje oglasov ..." />}
         {!isLoading && error && (
@@ -190,30 +210,36 @@ export default function SearchPage() {
             <ListingCard listing={listing} key={listing.id} />
           ))}
       </div>
-      {!isLoading && !error && (hasNextPage || isFetchNextPageError) && (
-        <div className="load-more">
-          {isFetchNextPageError && (
-            <p className="error-message" role="alert">
-              Več oglasov ni bilo mogoče naložiti. Poskusi znova.
-            </p>
-          )}
-          <button
-            className="button button-outline"
-            type="button"
-            onClick={() => fetchNextPage()}
-            disabled={isFetchingNextPage}
-            aria-busy={isFetchingNextPage || undefined}
-          >
-            {isFetchingNextPage ? "Nalaganje …" : "Naloži več oglasov"}
-          </button>
-        </div>
-      )}
-      {!isLoading && !error && results.length === 0 && !hasNextPage && (
-        <EmptyState
-          title="Ni zadetkov"
-          description="Poskusi razširiti lokacijo ali povečati proračun."
-        />
-      )}
+      {!isLoading &&
+        !error &&
+        !cachedListings &&
+        (hasNextPage || isFetchNextPageError) && (
+          <div className="load-more">
+            {isFetchNextPageError && (
+              <p className="error-message" role="alert">
+                Več oglasov ni bilo mogoče naložiti. Poskusi znova.
+              </p>
+            )}
+            <button
+              className="button button-outline"
+              type="button"
+              onClick={() => fetchNextPage()}
+              disabled={isFetchingNextPage}
+              aria-busy={isFetchingNextPage || undefined}
+            >
+              {isFetchingNextPage ? "Nalaganje …" : "Naloži več oglasov"}
+            </button>
+          </div>
+        )}
+      {!isLoading &&
+        !error &&
+        results.length === 0 &&
+        (cachedListings !== null || !hasNextPage) && (
+          <EmptyState
+            title="Ni zadetkov"
+            description="Poskusi razširiti lokacijo ali povečati proračun."
+          />
+        )}
     </div>
   );
 }
