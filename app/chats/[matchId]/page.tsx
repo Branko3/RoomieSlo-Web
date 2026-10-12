@@ -5,6 +5,7 @@ import Link from "next/link";
 import { MessageComposer } from "../../../components/message-composer";
 import { MessageHistory } from "../../../components/message-history";
 import { useChatSender } from "../../../components/use-chat-sender";
+import { useMessageRealtime } from "../../../components/use-message-realtime";
 import { getSupabaseConfig } from "../../../lib/config";
 import {
   ConversationError,
@@ -41,6 +42,10 @@ export default function ConversationPage({
       ),
   });
   const sender = useChatSender(params.matchId);
+  const liveStatus = useMessageRealtime(
+    params.matchId,
+    query.data?.status === "accepted",
+  );
 
   const back = (
     <Link className="back-link" href="/chats">
@@ -183,6 +188,12 @@ export default function ConversationPage({
               onDiscard={sender.discard}
             />
           </section>
+          {liveStatus === "disconnected" && (
+            <p className="live-status" role="status">
+              Povezava v živo je prekinjena. Nova sporočila se prikažejo, ko se
+              povezava obnovi.
+            </p>
+          )}
           <MessageComposer onSend={sender.send} error={sender.error} />
         </>
       )}
