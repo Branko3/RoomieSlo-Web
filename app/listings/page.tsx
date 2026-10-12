@@ -43,9 +43,14 @@ export default function ListingsPage() {
           <h2>Priporočeni oglasi</h2>
           <p className="muted">Izbrano glede na tvoje preference</p>
         </div>
-        <a className="text-link" href="/search">
-          Poglej vse →
-        </a>
+        <div className="section-actions">
+          <Link className="button button-outline" href="/listings/new">
+            + Objavi oglas
+          </Link>
+          <a className="text-link" href="/search">
+            Poglej vse →
+          </a>
+        </div>
       </div>
       {isLoading && <LoadingState label="Nalaganje oglasov ..." />}
       {!isLoading && error && (
