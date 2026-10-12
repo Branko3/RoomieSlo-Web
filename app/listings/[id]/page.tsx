@@ -9,6 +9,7 @@ import { ListingStatusControl } from "../../../components/listing-status-control
 import { DeleteListingButton } from "../../../components/delete-listing-button";
 import { OwnerListingActions } from "../../../components/owner-listing-actions";
 import { useFavorites } from "../../../components/providers";
+import { listingReportHref } from "../../../lib/reports/report";
 import {
   canRequestMatch,
   listingStatusLabel,
@@ -164,6 +165,12 @@ export default function ListingDetail({ params }: { params: { id: string } }) {
           >
             {favorite ? "♥ Odstrani iz priljubljenih" : "♡ Shrani oglas"}
           </button>
+          <Link
+            className="text-link report-link"
+            href={listingReportHref(listing.ownerId, listing.id)}
+          >
+            Prijavi oglas
+          </Link>
           <DeleteListingButton
             listingId={listing.id}
             ownerId={listing.ownerId}

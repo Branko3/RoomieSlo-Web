@@ -1824,3 +1824,47 @@ button {
   border-color: #a12a1f;
   color: #fff;
 }
+.report-page {
+  max-width: 560px;
+}
+.report-form {
+  display: grid;
+  gap: 16px;
+  margin-top: 16px;
+}
+.report-reasons {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 16px;
+}
+.report-reasons legend {
+  font-weight: 600;
+  padding: 0 4px;
+}
+.report-reason {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.report-description {
+  display: grid;
+  gap: 6px;
+}
+.report-description textarea {
+  width: 100%;
+  font: inherit;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  resize: vertical;
+}
+.report-error {
+  color: #b42318;
+  margin: 0;
+}
+.report-link {
+  display: inline-block;
+  margin-top: 12px;
+}
