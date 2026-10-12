@@ -4,6 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ListingCard } from "../../components/listing-card";
 import { useListingPages } from "../../lib/listings/use-listing-pages";
+import {
+  DataState,
+  EmptyState,
+  LoadingState,
+} from "../../components/data-states";
 
 export default function SearchPage() {
   const router = useRouter();
@@ -18,14 +23,16 @@ export default function SearchPage() {
     listings,
     isPending: isLoading,
     isError,
-    error,
+    error: queryError,
+    refetch,
     hasNextPage,
     fetchNextPage,
     isFetchingNextPage,
     isFetchNextPageError,
   } = useListingPages({ location, maxPrice });
   // A failed "load more" keeps the loaded results; only a failed first page is a page error.
-  const firstPageError = isError && !isFetchNextPageError ? error : null;
+  const error = isError && !isFetchNextPageError ? queryError : null;
+  const retry = () => void refetch();
   useEffect(() => {
     setLocation(params.get("location") ?? "");
     setMaxPrice(Number(params.get("maxPrice") ?? 600));
@@ -171,53 +178,42 @@ export default function SearchPage() {
         </div>
       )}
       <div className="listing-grid">
-        {isLoading && (
-          <div className="page-state" aria-live="polite">
-            <p>Nalaganje oglasov ...</p>
-          </div>
-        )}
-        {firstPageError && (
-          <div className="page-state" role="alert">
-            <h2>Iskanja ni mogoče izvesti</h2>
-            <p>Preveri povezavo in prijavo v Supabase.</p>
-          </div>
+        {isLoading && <LoadingState label="Nalaganje oglasov ..." />}
+        {!isLoading && error && (
+          <DataState error={error} onRetry={retry}>
+            <span />
+          </DataState>
         )}
         {!isLoading &&
-          !firstPageError &&
+          !error &&
           results.map((listing) => (
             <ListingCard listing={listing} key={listing.id} />
           ))}
       </div>
-      {!isLoading &&
-        !firstPageError &&
-        (hasNextPage || isFetchNextPageError) && (
-          <div className="load-more">
-            {isFetchNextPageError && (
-              <p className="error-message" role="alert">
-                Več oglasov ni bilo mogoče naložiti. Poskusi znova.
-              </p>
-            )}
-            <button
-              className="button button-outline"
-              type="button"
-              onClick={() => fetchNextPage()}
-              disabled={isFetchingNextPage}
-              aria-busy={isFetchingNextPage || undefined}
-            >
-              {isFetchingNextPage ? "Nalaganje …" : "Naloži več oglasov"}
-            </button>
-          </div>
-        )}
-      {!isLoading &&
-        !firstPageError &&
-        results.length === 0 &&
-        !hasNextPage && (
-          <div className="empty-state">
-            <span>⌕</span>
-            <h2>Ni zadetkov</h2>
-            <p>Poskusi razširiti lokacijo ali povečati proračun.</p>
-          </div>
-        )}
+      {!isLoading && !error && (hasNextPage || isFetchNextPageError) && (
+        <div className="load-more">
+          {isFetchNextPageError && (
+            <p className="error-message" role="alert">
+              Več oglasov ni bilo mogoče naložiti. Poskusi znova.
+            </p>
+          )}
+          <button
+            className="button button-outline"
+            type="button"
+            onClick={() => fetchNextPage()}
+            disabled={isFetchingNextPage}
+            aria-busy={isFetchingNextPage || undefined}
+          >
+            {isFetchingNextPage ? "Nalaganje …" : "Naloži več oglasov"}
+          </button>
+        </div>
+      )}
+      {!isLoading && !error && results.length === 0 && !hasNextPage && (
+        <EmptyState
+          title="Ni zadetkov"
+          description="Poskusi razširiti lokacijo ali povečati proračun."
+        />
+      )}
     </div>
   );
 }
