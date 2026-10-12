@@ -34,13 +34,13 @@ make the constraint unsafe to install.
 
 ## Implementation
 
-| Migration | Android source / responsibility |
-| --- | --- |
-| `20261007000000_android_baseline.sql` | `schema.sql` and `auth_trigger.sql`; core tables, checks, trigger, and Realtime publication |
-| `20261007000001_security_and_storage.sql` | `policies.sql` and `storage_policies.sql`; RLS, private `vpisnice` bucket, and Storage policies |
-| `20261007000002_display_fields.sql` | `migrations/0002_polja_za_prikaz.sql`; listing/profile display columns and partial index |
-| `20261007000003_indexes_and_matching.sql` | `migrations/0001_indeksi.sql` plus web-required canonical match uniqueness and atomic acceptance RPC |
-| `20261007000004_policy_update_hardening.sql` | Forward-only checks for participant, admin, and private Storage updates |
+| Migration                                    | Android source / responsibility                                                                      |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `20261007000000_android_baseline.sql`        | `schema.sql` and `auth_trigger.sql`; core tables, checks, trigger, and Realtime publication          |
+| `20261007000001_security_and_storage.sql`    | `policies.sql` and `storage_policies.sql`; RLS, private `vpisnice` bucket, and Storage policies      |
+| `20261007000002_display_fields.sql`          | `migrations/0002_polja_za_prikaz.sql`; listing/profile display columns and partial index             |
+| `20261007000003_indexes_and_matching.sql`    | `migrations/0001_indeksi.sql` plus web-required canonical match uniqueness and atomic acceptance RPC |
+| `20261007000004_policy_update_hardening.sql` | Forward-only checks for participant, admin, and private Storage updates                              |
 
 Android `migrations/0003_demo_oglasi.sql` was not copied into production migrations because it
 mutates existing rows and fabricates presentation data. It remains an explicit follow-up seed
