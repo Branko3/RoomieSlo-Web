@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { MatchRequestButton } from "../../../components/match-request-button";
+import { getSupabaseConfig } from "../../../lib/config";
 import { ListingPhoto } from "../../../components/listing-photo";
 import { ListingStatusControl } from "../../../components/listing-status-control";
 import { DeleteListingButton } from "../../../components/delete-listing-button";
@@ -101,7 +103,19 @@ export default function ListingDetail({ params }: { params: { id: string } }) {
               <small>varščina</small>
             </span>
           </div>
-          {requestState === "success" ? (
+          {getSupabaseConfig().configured ? (
+            <>
+              <MatchRequestButton
+                ownerId={listing.ownerId}
+                disabled={!canRequestMatch(isFilled)}
+              />
+              {isFilled && (
+                <p className="field-hint" id="listing-filled-note">
+                  Oglas je zapolnjen, zato zahteve za ujemanje niso mogoče.
+                </p>
+              )}
+            </>
+          ) : requestState === "success" ? (
             <div className="success-message full-button" aria-live="polite">
               Zahteva je poslana. <Link href="/chats">Odpri klepete →</Link>
             </div>
