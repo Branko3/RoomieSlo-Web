@@ -1413,3 +1413,30 @@ button {
   color: var(--muted);
   text-align: left;
 }
+.delete-listing {
+  margin-top: 18px;
+}
+.danger-link {
+  color: #a12a1f;
+}
+.confirm-panel {
+  border: 1px solid #f1c4bf;
+  background: #fff7f6;
+  border-radius: 12px;
+  padding: 14px;
+}
+.confirm-panel p {
+  margin: 6px 0 12px;
+  font-size: 13px;
+}
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.button-danger {
+  background: #a12a1f;
+  border-color: #a12a1f;
+  color: #fff;
+}

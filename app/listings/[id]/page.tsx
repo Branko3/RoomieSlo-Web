@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { DeleteListingButton } from "../../../components/delete-listing-button";
 import { OwnerListingActions } from "../../../components/owner-listing-actions";
 import { useFavorites } from "../../../components/providers";
 import { useListing } from "../../../lib/supabase/hooks";
@@ -110,6 +111,10 @@ export default function ListingDetail({ params }: { params: { id: string } }) {
           >
             {favorite ? "♥ Odstrani iz priljubljenih" : "♡ Shrani oglas"}
           </button>
+          <DeleteListingButton
+            listingId={listing.id}
+            ownerId={listing.ownerId}
+          />
         </div>
       </div>
     </div>
