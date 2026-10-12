@@ -1,24 +1,51 @@
 # Account/document deletion and retention rules
 
-- Status: Blocked
-- Date: 2026-10-09
+- Status: Approved policy (implementation pending)
+- Date: 2026-10-09 (policy approved 2026-10-12)
 - Automated status: Not covered
 - Web surfaces: `/profile`, `/academic-verification`, `/admin/reports`, Supabase Auth, Postgres, Storage bucket `vpisnice`, backups and operational runbooks
 - Android behavior preserved: Existing Auth user IDs, profile relationships, table names, nullable values, ownership rules, and private `vpisnice` Storage semantics remain the compatibility contract. Android currently has no confirmed account-deletion flow in this web repository; that behavior must be verified from the Android source before implementation. Android remains supported during the transition unless a separate approved decision changes that boundary.
 
-## Blocker
+## Policy approval
 
-Production implementation is blocked pending explicit product, privacy, legal, and
-operations approval of the retention matrix and the dependent backend controls. The
-repository currently has a prototype profile surface, no authenticated session
-implementation, no academic-document upload flow, no reports/admin surface, no
-development/staging/production Supabase environments, and no validated migration,
-RLS/Storage, backup, monitoring, or restoration procedures. No retention period or
-deletion behavior has been invented in code.
+The retention policy below was approved on 2026-10-12 by Branko (project owner and data
+controller for this thesis project). Legal basis: GDPR art. 17 (erasure) for the account
+holder's data, and art. 6(1)(f) (legitimate interest in user safety) for the limited
+retention of report evidence. It is effective from 2026-10-12 for development, staging and
+production. Changes require a new approval recorded in this file (change control: pull
+request against this record).
 
-The existing relational `on delete cascade` behavior is an implementation constraint
-to review, not an approved deletion policy. It does not delete Storage objects and
-may conflict with report, message, safety, or legal retention requirements.
+This record approves the **policy**. It is the single policy source for
+`docs/operations/privacy-procedures.md` and `docs/operations/runbook.md`. The self-service
+deletion flow, the schema changes and the admin message view described below are **not
+implemented yet**; they are follow-up work (see "Implementation status").
+
+## Implementation status
+
+Already on main: authentication and session restoration, route guards, the profile and
+academic-document upload (`vpisnice`), reports and the admin report dashboard, the admin
+authorization boundary, the `/privacy` page with self-service data export and manual
+deletion procedures, and the operations runbook.
+
+Still to build (follow-up PR, in this order):
+
+1. **Migration: reconcile cascades with this policy.** Today `auth.users` deletion cascades
+   to the user's messages, matches and every report involving them, which contradicts rows
+   6–8. Change `messages.sender_id`, `matches.user_id_a/b` and `reports.reporter_id/
+reported_id` so the rows survive with the deleted user anonymized (nullable reference
+   or a fixed "deleted user" sentinel), and add the 12-month report-evidence retention.
+2. **Report evidence.** When a report is filed from a chat, keep the reported conversation
+   (snapshot or a hold that blocks its deletion) until the report's retention ends.
+3. **Admin message access (approved option 1).** In-app admins can read only conversations
+   linked to a report, through a security-definer function or policy, and every read is
+   recorded in an append-only audit table (admin id, conversation, time).
+4. **Self-service deletion** on `/profile` through a trusted server operation (Edge
+   Function), following the flow and contracts below.
+5. **Retention jobs**: purge closed-report evidence after 12 months, conversations whose
+   participants have all deleted their accounts, and logs after 90 days.
+
+Until step 1 lands, operators must not delete accounts that have reports or messages
+another user may need (see `docs/operations/privacy-procedures.md`).
 
 ## Behavior
 
@@ -50,28 +77,22 @@ public URLs.
 
 ## Approved retention matrix
 
-**Approval status: Pending product/privacy/legal/operations decision.** The entries
-below are the required decision points, not implementation defaults. No production
-code may select a retention period or silently convert a pending decision into
-deletion or anonymization.
+**Approval status: Approved 2026-10-12 (Branko, project owner).**
 
-| Data category | Default deletion behavior | Required policy detail | Approval |
-| --- | --- | --- | --- |
-| Supabase Auth user | Permanently delete | Decide whether recent-session verification or re-authentication is required; define expired-session and already-deleted responses. | Pending |
-| `profiles` | Delete or anonymize according to approved policy | Confirm interaction with the existing `auth.users` to `profiles` cascade and define whether any non-identifying operational record remains. | Pending |
-| `questionnaire_answers` | Delete | Must not survive account deletion unless a documented legal basis explicitly justifies it. | Pending |
-| Owned listings | Delete, anonymize, or transfer | Decide treatment of active listings, ownership transfer, public display fields, and references from favorites/matches. | Pending |
-| Favorites | Delete | Confirm existing foreign-key cascade and post-deletion behavior for other users’ saved-list views. | Pending |
-| Matches | Cascade, anonymize, or preserve an operational record | Decide whether match state is retained, how both participants see it, and whether messages remain reachable. | Pending |
-| Messages | Define recipient-visible and legal-retention behavior | Prevent misleading chat state and define identity redaction, recipient visibility, safety holds, and any legal exception. | Pending |
-| User reports | Define safety/legal retention period and anonymization | Existing reporter/reported foreign keys cascade; decide whether schema/policy changes are required to retain an anonymized report. | Pending |
-| Academic documents in `vpisnice` | Explicitly delete all user-owned Storage objects | Enumerate the UUID-prefixed folder; confirm private bucket policies, orphan cleanup, admin access, and post-deletion verification. | Pending |
-| Backups | Define deletion propagation and restoration handling | Approve backup retention, expected deletion lag, restore-time reprocessing, and operator evidence that deleted data is not silently recreated. | Pending |
-| Logs/analytics | Remove or redact personal data | Never retain passwords, tokens, document contents, or unnecessary identifiers; define approved event fields and retention period. | Pending |
-
-The approval record must identify the decision owner, legal/privacy basis, effective
-date, environment scope (development, staging, production), and change-control
-reference for every row. Until then, `Automated status` remains `Not covered`.
+| Data category                    | Approved behavior                                | Detail                                                                                                                                                                                                                                                                                                                                                       | Approval |
+| -------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- |
+| Supabase Auth user               | Permanently delete                               | Re-authentication is required when the last sign-in is older than 10 minutes. An expired session returns "sign in again"; an already-deleted account returns a clear already-deleted result.                                                                                                                                                                 | Approved |
+| `profiles`                       | Delete                                           | No identifying record remains. Other users see "Izbrisan uporabnik" wherever the profile was referenced.                                                                                                                                                                                                                                                     | Approved |
+| `questionnaire_answers`          | Delete                                           | Nothing is retained.                                                                                                                                                                                                                                                                                                                                         | Approved |
+| Owned listings                   | Delete                                           | Deleting a listing also removes it from other users' favorites (existing cascade).                                                                                                                                                                                                                                                                           | Approved |
+| Favorites                        | Delete                                           | The user's own favorites rows are deleted.                                                                                                                                                                                                                                                                                                                   | Approved |
+| Matches                          | Keep, anonymized                                 | The match stays for the other participant, with the deleted user shown as "Izbrisan uporabnik".                                                                                                                                                                                                                                                              | Approved |
+| Messages                         | Keep in the other participant's chat, anonymized | Messages linked to a report are retained, anonymized, for 12 months after the report is closed. Unreported conversations are deleted once all participants have deleted their accounts. The database owner (project owner, via Supabase) can read all messages. In-app admins can read only conversations linked to a report, and every such read is logged. | Approved |
+| User reports                     | Keep, anonymized                                 | Reports made by or about the user are kept, anonymized, for 12 months after the report is closed, then deleted.                                                                                                                                                                                                                                              | Approved |
+| Academic documents in `vpisnice` | Delete immediately                               | Every object under the user's UUID folder is enumerated and deleted, then verified.                                                                                                                                                                                                                                                                          | Approved |
+| Backups                          | Expire after 30 days                             | Deleted data can remain in backups for up to 30 days. If a backup is restored, every deletion recorded since the backup date is re-applied before the service reopens.                                                                                                                                                                                       | Approved |
+| Logs/analytics                   | Minimal fields, 90 days                          | Keep only the request id, date and outcome; never passwords, tokens, document contents or message text. Deleted after 90 days.                                                                                                                                                                                                                               | Approved |
+| Admin access to messages         | Reported conversations only                      | Database owner: full access through Supabase for operations and abuse handling. In-app admins: only conversations linked to a report, with an audit record for every read. The privacy notice discloses this.                                                                                                                                                | Approved |
 
 ## User flow and authorization contract
 
@@ -103,8 +124,8 @@ are not security controls.
 ## Backend operation and implementation record
 
 No schema, migration, RPC, Edge Function, Storage, or client implementation has
-been added because the required policy and environments are not approved. The
-future implementation record must identify:
+been added yet; the policy is approved and the work is listed under "Implementation
+status". The implementation record must identify:
 
 - the trusted deletion operation and its recent-session/re-authentication rule;
 - every migration or schema change needed to reconcile cascades with retained
@@ -180,9 +201,8 @@ record as the single policy source instead of duplicating retention periods.
 
 ## Handoff to testing
 
-Testing must wait until policy approvals and an isolated Supabase environment are
-available. Then turn every scenario in the Testing contract into automated
+The policy is approved; testing waits for the follow-up implementation and an
+isolated Supabase environment. Then turn every scenario in the Testing contract into automated
 coverage, including cross-user and admin negative cases, Storage object
 enumeration, report/message retention, redacted failures, retry/idempotency,
 backup deletion lag, restore cleanup, and browser-bundle credential scans.
-
