@@ -71,15 +71,19 @@ describe("route guard implementation contract", () => {
 
 describe("admin and indexing contract", () => {
   it("uses the RLS-backed admins query and renders denied and error states", () => {
+    // The admin check lives in lib/admin/reports.ts (admin dashboard, #50).
     const admin = read("app/admin/reports/page.tsx");
+    const lib = read("lib/admin/reports.ts");
 
-    expect(admin).toContain('from("admins")');
-    expect(admin).toContain('.select("user_id")');
-    expect(admin).toContain('.eq("user_id", session.user.id)');
-    expect(admin).toContain("maybeSingle()");
-    expect(admin).toContain("Dostop zavrnjen");
+    expect(lib).toContain('.from("admins")');
+    expect(lib).toContain('.select("user_id")');
+    expect(lib).toContain('.eq("user_id", auth.user.id)');
+    expect(lib).toContain("maybeSingle()");
+    expect(admin).toContain("isAdmin(");
     expect(admin).toContain('role="alert"');
-    expect(admin).toContain("queryError.message");
+    expect(read("app/admin/layout.tsx")).toContain(
+      "robots: { index: false, follow: false }",
+    );
   });
 
   it("marks authenticated application and auth-error content noindex", () => {

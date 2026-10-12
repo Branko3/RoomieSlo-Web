@@ -1868,3 +1868,84 @@ button {
   display: inline-block;
   margin-top: 12px;
 }
+.admin-page {
+  max-width: 860px;
+}
+.admin-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0;
+}
+.admin-filter {
+  border: 1px solid var(--line);
+  cursor: pointer;
+  font: inherit;
+}
+.admin-filter.is-active {
+  background: var(--green);
+  border-color: var(--green);
+  color: #fff;
+}
+.admin-reports {
+  display: grid;
+  gap: 10px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.admin-report {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+.admin-report-body {
+  display: grid;
+  gap: 6px;
+  flex: 1 1 320px;
+  min-width: 0;
+}
+.admin-report-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.admin-report-description {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.admin-report-body small {
+  overflow-wrap: anywhere;
+}
+.admin-report-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.admin-status {
+  border-radius: 999px;
+  font-size: 0.8rem;
+  padding: 2px 10px;
+  background: var(--green-light);
+  color: var(--green-dark);
+}
+.admin-status-open {
+  background: #fde8e7;
+  color: #b42318;
+}
+.admin-status-dismissed {
+  background: #eef1f0;
+  color: var(--muted);
+}
+.admin-error {
+  color: #b42318;
+}
+.admin-footnote {
+  margin-top: 16px;
+}
