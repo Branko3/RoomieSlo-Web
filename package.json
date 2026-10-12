@@ -16,6 +16,7 @@
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "validate:env": "node scripts/validate-environment.mjs",
     "test:e2e": "playwright test",
+    "test:e2e:list": "playwright test --list",
     "db:push": "supabase db push",
     "db:status": "supabase migration list"
   },
