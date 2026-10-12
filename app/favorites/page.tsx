@@ -3,12 +3,18 @@
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useListings } from "../../lib/supabase/hooks";
+import { ListingPhoto } from "../../components/listing-photo";
 import { useFavorites } from "../../components/providers";
 import {
   fetchFavoriteListings,
   type FavoritesClient,
 } from "../../lib/favorites/favorites-api";
 import { createSupabaseBrowserClient } from "../../lib/supabase/browser";
+import {
+  DataState,
+  EmptyState,
+  LoadingState,
+} from "../../components/data-states";
 
 export default function FavoritesPage() {
   const { favorites, toggleFavorite, userId } = useFavorites();
@@ -27,6 +33,7 @@ export default function FavoritesPage() {
   const listings = userId ? (remote.data ?? []) : (local.data ?? []);
   const isLoading = userId ? remote.isPending : local.isLoading;
   const error = userId ? remote.error : local.error;
+  const retry = () => (userId ? void remote.refetch() : local.retry());
   // Filtering by the live favorite ids makes removals disappear immediately.
   const favoriteListings = listings.filter((listing) =>
     favorites.includes(listing.id),
@@ -41,14 +48,11 @@ export default function FavoritesPage() {
         </div>
       </header>
       {isLoading ? (
-        <div className="page-state">
-          <p>Nalaganje priljubljenih oglasov ...</p>
-        </div>
+        <LoadingState label="Nalaganje priljubljenih oglasov ..." />
       ) : error ? (
-        <div className="page-state" role="alert">
-          <h2>Priljubljenih oglasov ni mogoče naložiti</h2>
-          <p>Preveri povezavo in prijavo v Supabase.</p>
-        </div>
+        <DataState error={error} onRetry={retry}>
+          <span />
+        </DataState>
       ) : favoriteListings.length > 0 ? (
         <div className="favorite-list">
           {favoriteListings.map((listing) => (
@@ -57,7 +61,9 @@ export default function FavoritesPage() {
                 href={`/listings/${listing.id}`}
                 className="favorite-row-link"
               >
-                <span className="favorite-art">{listing.image}</span>
+                <span className="favorite-art">
+                  <ListingPhoto listing={listing} sizes="65px" />
+                </span>
                 <span>
                   <b>{listing.title}</b>
                   <small>
@@ -77,14 +83,15 @@ export default function FavoritesPage() {
           ))}
         </div>
       ) : (
-        <div className="empty-state">
-          <span>♡</span>
-          <h2>Še nimaš shranjenih oglasov</h2>
-          <p>Ko najdeš zanimiv oglas, ga shrani za pozneje.</p>
-          <Link className="button" href="/search">
-            Razišči oglase
-          </Link>
-        </div>
+        <EmptyState
+          title="Še nimaš shranjenih oglasov"
+          description="Ko najdeš zanimiv oglas, ga shrani za pozneje."
+          action={
+            <Link className="button" href="/search">
+              Razišči oglase
+            </Link>
+          }
+        />
       )}
       <div className="tip-card">
         <span>✦</span>

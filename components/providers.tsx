@@ -29,6 +29,8 @@ type FavoriteContextValue = {
   favorites: string[];
   isFavorite: (listingId: string) => boolean;
   toggleFavorite: (listingId: string) => void;
+  /** Clears in-memory favorites (used by logout). */
+  resetFavorites: () => void;
   /** Signed-in favorites are stored in Supabase; otherwise in this browser. */
   storage: "local" | "remote";
   userId: string | null;
@@ -181,12 +183,13 @@ export function Providers({ children }: { children: React.ReactNode }) {
       favorites,
       isFavorite: (listingId: string) => favorites.includes(listingId),
       toggleFavorite,
+      resetFavorites: () => applyFavorites([]),
       storage: userId ? "remote" : "local",
       userId,
       favoriteError,
       dismissFavoriteError: () => setFavoriteError(null),
     }),
-    [favorites, favoriteError, toggleFavorite, userId],
+    [applyFavorites, favorites, favoriteError, toggleFavorite, userId],
   );
 
   return (
