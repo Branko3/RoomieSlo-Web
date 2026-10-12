@@ -3,6 +3,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { fetchListing, fetchListings, type ListingQuery } from "./queries";
 import type { Listing } from "./mappers";
+import { createSupabaseBrowserClient } from "./browser";
+import { writeListingsToCache } from "../listings/cache-sync";
+import { getListingCacheStore } from "../listings/indexeddb-store";
+
+async function readSessionUserId(): Promise<string | null> {
+  const { data } = await createSupabaseBrowserClient().auth.getSession();
+  return data.session?.user.id ?? null;
+}
 
 export function useListings(query: ListingQuery = {}) {
   const [state, setState] = useState<{
@@ -24,9 +32,14 @@ export function useListings(query: ListingQuery = {}) {
       cursor: query.cursor,
       limit: query.limit,
     })
-      .then(
-        (data) => active && setState({ data, isLoading: false, error: null }),
-      )
+      .then((data) => {
+        if (active) setState({ data, isLoading: false, error: null });
+        void writeListingsToCache(
+          data,
+          readSessionUserId,
+          getListingCacheStore(),
+        );
+      })
       .catch((error: unknown) => {
         if (active)
           setState((current) => ({
