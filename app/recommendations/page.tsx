@@ -4,6 +4,12 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { getSupabaseConfig } from "../../lib/config";
 import {
+  QUESTIONNAIRE_ROUTE,
+  readinessMessage,
+  recommendationReadiness,
+  sharedStatementCount,
+} from "../../lib/matching/answer-sufficiency";
+import {
   loadRecommendations,
   nameAndAge,
   RecommendationsError,
@@ -61,6 +67,20 @@ export default function RecommendationsPage() {
         )}
       </div>
     );
+  } else if (readinessMessage(recommendationReadiness(query.data.myAnswers))) {
+    const message = readinessMessage(
+      recommendationReadiness(query.data.myAnswers),
+    )!;
+    body = (
+      <div className="empty-state questionnaire-needed">
+        <span aria-hidden="true">✦</span>
+        <h2>{message.title}</h2>
+        <p>{message.body}</p>
+        <Link className="button" href={QUESTIONNAIRE_ROUTE}>
+          Izpolni vprašalnik
+        </Link>
+      </div>
+    );
   } else if (query.data.recommendations.length === 0) {
     body = (
       <div className="empty-state">
@@ -80,12 +100,23 @@ export default function RecommendationsPage() {
                 <h2>{nameAndAge(profile)}</h2>
                 {profile.faculty && <p className="muted">{profile.faculty}</p>}
               </div>
-              <span
-                className="compatibility-badge"
-                aria-label={`Združljivost ${compatibility} %`}
-              >
-                {compatibility}%
-              </span>
+              {sharedStatementCount(query.data.myAnswers, profile.answers) >
+              0 ? (
+                <span
+                  className="compatibility-badge"
+                  aria-label={`Združljivost ${compatibility} %`}
+                >
+                  {compatibility}%
+                </span>
+              ) : (
+                <span
+                  className="compatibility-badge compatibility-unknown"
+                  aria-label="Združljivosti ni mogoče izračunati: ni skupnih odgovorov"
+                  title="Ni skupnih odgovorov na vprašalnik"
+                >
+                  —
+                </span>
+              )}
             </div>
             <div className="chips">
               {profile.verified && (

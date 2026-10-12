@@ -1565,3 +1565,10 @@ button {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+.compatibility-unknown {
+  background: #eeeeee;
+  color: #4a4a4a;
+}
+.questionnaire-needed .button {
+  margin-top: 8px;
+}
