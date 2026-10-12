@@ -1,7 +1,9 @@
 import { expect, test } from "@playwright/test";
-import { NAV } from "./env";
+import { NAV, requireSignedIn } from "./env";
 
 test.describe("app shell navigation", () => {
+  test.beforeEach(({}, testInfo) => requireSignedIn(testInfo));
+
   for (const { route, label, heading } of NAV) {
     test(`opens ${label} from the sidebar and marks it active`, async ({
       page,

@@ -1,6 +1,9 @@
 import { expect, test } from "@playwright/test";
+import { requireSignedIn } from "./env";
 
 test.describe("search workflow", () => {
+  test.beforeEach(({}, testInfo) => requireSignedIn(testInfo));
+
   test("writes filters to the URL and restores them on reload", async ({
     page,
   }) => {

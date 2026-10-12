@@ -3,7 +3,11 @@ node_modules/
 out/
 .env
 .env.local
+.env.*
+!.env.example
 *.tsbuildinfo
 playwright-report/
 test-results/
 e2e/.auth/
+/coverage
+*.auth.json

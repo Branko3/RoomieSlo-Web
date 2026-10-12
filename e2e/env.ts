@@ -1,3 +1,5 @@
+import { test } from "@playwright/test";
+
 /** Shared environment checks for the Playwright suite. */
 export const supabaseConfigured = Boolean(
   process.env.NEXT_PUBLIC_SUPABASE_URL &&
@@ -15,3 +17,15 @@ export const NAV = [
 ] as const;
 
 export const FAVORITES_KEY = "roomieslo:favorites";
+
+/**
+ * App routes are guarded (middleware + AuthProvider): signed-out visitors go to /login and an
+ * unconfigured build goes to /auth-error. Specs for guarded pages therefore need the
+ * authenticated staging project.
+ */
+export function requireSignedIn(testInfo: { project: { name: string } }) {
+  test.skip(
+    !supabaseConfigured || testInfo.project.name !== "authenticated",
+    "Guarded route: requires staging Supabase and the authenticated project.",
+  );
+}

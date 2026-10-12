@@ -1,5 +1,10 @@
 import { expect, test } from "@playwright/test";
-import { FAVORITES_KEY, listingId, supabaseConfigured } from "./env";
+import {
+  FAVORITES_KEY,
+  listingId,
+  requireSignedIn,
+  supabaseConfigured,
+} from "./env";
 
 test.describe("favorites", () => {
   test("without Supabase configuration, explains why favorites cannot load", async ({
@@ -9,10 +14,10 @@ test.describe("favorites", () => {
       supabaseConfigured,
       "Only meaningful without Supabase variables.",
     );
+    // The route guard explains the missing configuration before the page loads.
     await page.goto("/favorites");
-    await expect(page.getByRole("alert")).toContainText(
-      "Priljubljenih oglasov ni mogoče naložiti",
-    );
+    await expect(page).toHaveURL(/\/auth-error\?reason=configuration$/);
+    await expect(page.getByRole("alert")).toContainText("Supabase");
   });
 
   test("empty collection links to search", async ({ page }, testInfo) => {
@@ -32,7 +37,8 @@ test.describe("favorites", () => {
     await expect(page).toHaveURL(/\/search$/);
   });
 
-  test("recovers from corrupt saved favorites", async ({ page }) => {
+  test("recovers from corrupt saved favorites", async ({ page }, testInfo) => {
+    requireSignedIn(testInfo);
     await page.addInitScript(
       (key) => window.localStorage.setItem(key, "{broken"),
       FAVORITES_KEY,
@@ -41,12 +47,8 @@ test.describe("favorites", () => {
     await expect(
       page.getByRole("heading", { name: "Priljubljeni oglasi" }),
     ).toBeVisible();
-    // The corrupt value is discarded and replaced with an empty list.
-    await expect
-      .poll(() =>
-        page.evaluate((key) => window.localStorage.getItem(key), FAVORITES_KEY),
-      )
-      .toBe("[]");
+    // Signed in, favorites come from Supabase; corrupt local data must not break the page.
+    await expect(page.getByRole("alert")).toHaveCount(0);
   });
 
   test("a listing saved from its detail page appears in favorites after reload", async ({
