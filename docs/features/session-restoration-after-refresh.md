@@ -62,3 +62,17 @@
 - Scenarios covered: every scenario in "Handoff to testing" (15 tests, all passing with `npm run test`).
 - Remaining gaps: real-browser reload against Supabase (Playwright, needs staging credentials and installed browsers); rendering of the navigation profile states is not component-tested because the project has no React Testing Library/jsdom setup.
 - Manual testing: Not run unless explicitly requested
+
+## Merge note (2026-10-12)
+
+Merged after the route guards (#11) and login (#16), which already restore the session in
+`AuthProvider` and refresh auth cookies in `middleware.ts`. To avoid a second provider and Supabase
+subscription:
+
+- the "auth events win over a slower restore" and "ignore an empty `INITIAL_SESSION`" rules were
+  ported into `initializeAuthSession` (`components/auth-provider.tsx`), with a regression test in
+  `tests/email-password-login.test.ts`;
+- `useSession()` (`components/session-provider.tsx`) now derives `SessionState` from `useAuth()`;
+  `lib/auth/session.ts` (state mapping, `profileSummary`) and its tests are unchanged;
+- the separate `lib/supabase/middleware.ts` cookie refresher was dropped in favour of the merged
+  middleware, which now also treats a thrown `getUser` as a session error without clearing cookies.

@@ -1,35 +1,25 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
-import { getSupabaseConfig } from "../lib/config";
+import { useAuth } from "./auth-provider";
 import {
-  initialSessionState,
-  startSessionRestoration,
+  SESSION_RESTORE_ERROR,
+  sessionStateFrom,
   type SessionState,
 } from "../lib/auth/session";
-import { createSupabaseBrowserClient } from "../lib/supabase/browser";
 
-const SessionContext = createContext<SessionState | null>(null);
-
-export function useSession() {
-  const context = useContext(SessionContext);
-  if (!context) {
-    throw new Error("useSession must be used inside SessionProvider");
-  }
-  return context;
-}
-
-export function SessionProvider({ children }: { children: React.ReactNode }) {
-  const [state, setState] = useState<SessionState>(initialSessionState);
-
-  useEffect(() => {
-    const client = getSupabaseConfig().configured
-      ? createSupabaseBrowserClient()
-      : null;
-    return startSessionRestoration(client, setState);
-  }, []);
-
-  return (
-    <SessionContext.Provider value={state}>{children}</SessionContext.Provider>
-  );
+/**
+ * Session restoration state for UI (navigation profile area). It is derived from the single
+ * AuthProvider, which restores the persisted Supabase session after a refresh and follows
+ * auth changes, so no second Supabase subscription is created.
+ */
+export function useSession(): SessionState {
+  const { configured, pending, session, error } = useAuth();
+  if (!configured) return { status: "unconfigured", user: null, error: null };
+  if (pending) return { status: "loading", user: null, error: null };
+  if (session) return sessionStateFrom(session);
+  return {
+    status: "unauthenticated",
+    user: null,
+    error: error ? SESSION_RESTORE_ERROR : null,
+  };
 }
