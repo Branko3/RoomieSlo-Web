@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { ListingPhoto } from "../../../components/listing-photo";
 import { ListingStatusControl } from "../../../components/listing-status-control";
 import { DeleteListingButton } from "../../../components/delete-listing-button";
 import { OwnerListingActions } from "../../../components/owner-listing-actions";
@@ -48,7 +49,13 @@ export default function ListingDetail({ params }: { params: { id: string } }) {
         ← Nazaj na oglase
       </Link>
       <div className="detail-layout">
-        <div className="detail-image">{listing.image}</div>
+        <div className="detail-image">
+          <ListingPhoto
+            listing={listing}
+            sizes="(max-width: 900px) 100vw, 50vw"
+            priority
+          />
+        </div>
         <div className="detail-copy">
           <div className="chips">
             <span className="chip">{listing.roomType}</span>

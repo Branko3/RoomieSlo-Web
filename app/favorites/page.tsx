@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useListings } from "../../lib/supabase/hooks";
+import { ListingPhoto } from "../../components/listing-photo";
 import { useFavorites } from "../../components/providers";
 import {
   DataState,
@@ -38,7 +39,9 @@ export default function FavoritesPage() {
                 href={`/listings/${listing.id}`}
                 className="favorite-row-link"
               >
-                <span className="favorite-art">{listing.image}</span>
+                <span className="favorite-art">
+                  <ListingPhoto listing={listing} sizes="65px" />
+                </span>
                 <span>
                   <b>{listing.title}</b>
                   <small>
