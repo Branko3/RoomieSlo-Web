@@ -8,6 +8,7 @@ import {
   createLoginRedirect,
   getRouteAccess,
   getSafeReturnPath,
+  requiresSession,
 } from "../lib/auth/routes";
 
 type AuthContextValue = {
@@ -116,7 +117,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (pending || error) return;
     const access = getRouteAccess(pathname);
-    if (access !== "public" && !session) {
+    if (requiresSession(access) && !session) {
       router.replace(createLoginRedirect(pathname, window.location.search));
     } else if (access === "public" && session) {
       // Honour the requested destination after signing in on /login.
@@ -149,7 +150,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const access = getRouteAccess(pathname);
   // Public pages (login, register) show the error next to their own form.
-  if (error && access !== "public") {
+  if (error && requiresSession(access)) {
     return (
       <div className="page-state" role="alert">
         <h1>Prijava ni na voljo</h1>
@@ -157,7 +158,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
-  if (access !== "public" && (pending || !session)) {
+  if (requiresSession(access) && (pending || !session)) {
     return (
       <div className="page-state" aria-live="polite">
         <p>Preverjanje prijave ...</p>

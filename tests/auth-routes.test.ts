@@ -3,6 +3,7 @@ import {
   createLoginRedirect,
   getRouteAccess,
   getSafeReturnPath,
+  requiresSession,
 } from "../lib/auth/routes";
 
 describe("auth route guards", () => {
@@ -15,6 +16,16 @@ describe("auth route guards", () => {
     expect(getRouteAccess("/admin/reports/monthly")).toBe("admin");
     expect(getRouteAccess("/login/help")).toBe("public");
     expect(getRouteAccess("/admin")).toBe("auth");
+  });
+
+  it("keeps e-mail confirmation links reachable signed in or out", () => {
+    // email_change links are opened by signed-in users, signup links by signed-out ones.
+    expect(getRouteAccess("/auth/confirm")).toBe("open");
+    expect(getRouteAccess("/auth/confirmation")).toBe("open");
+    expect(requiresSession("open")).toBe(false);
+    expect(requiresSession("public")).toBe(false);
+    expect(requiresSession("auth")).toBe(true);
+    expect(requiresSession("admin")).toBe(true);
   });
   it("preserves only safe internal return paths", () => {
     expect(

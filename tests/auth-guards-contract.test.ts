@@ -13,7 +13,7 @@ describe("route guard implementation contract", () => {
     expect(middleware).toMatch(/client\.auth\s*\.getUser\(\)/);
     expect(middleware).toContain("createLoginRedirect(");
     expect(middleware).toContain('access === "public" && hasSession');
-    expect(middleware).toContain('access !== "public" && !hasSession');
+    expect(middleware).toContain("requiresSession(access) && !hasSession");
     expect(middleware).toContain('reason", "configuration"');
     expect(middleware).toContain('reason", "session"');
   });
@@ -101,7 +101,7 @@ describe("route guard configuration fallback", () => {
     );
 
     expect(unconfigured).toContain(
-      'if (access === "public") return NextResponse.next();',
+      "if (!requiresSession(access)) return NextResponse.next();",
     );
     expect(read("lib/auth/routes.ts")).toContain('"/auth-error"');
   });

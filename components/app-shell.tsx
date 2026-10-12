@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "./auth-provider";
 import { useSession } from "./session-provider";
 import { profileSummary } from "../lib/auth/session";
-import { getRouteAccess } from "../lib/auth/routes";
+import { getRouteAccess, requiresSession } from "../lib/auth/routes";
 
 const navItems = [
   ["listings", "⌂", "Oglasi"],
@@ -19,7 +19,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { signOut } = useAuth();
   const profile = profileSummary(useSession());
-  if (getRouteAccess(pathname) === "public") return <>{children}</>;
+  if (!requiresSession(getRouteAccess(pathname))) return <>{children}</>;
   const active = pathname.split("/")[1] || "listings";
 
   return (

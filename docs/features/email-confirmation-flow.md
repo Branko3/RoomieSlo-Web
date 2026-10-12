@@ -62,3 +62,11 @@
 - Scenarios covered: all logic and route-handler scenarios above (33 tests, all passing with `npm run test`).
 - Remaining gaps: the panel's rendered states and 60-second cooldown are not component-tested (no React Testing Library/jsdom in the repo) and no Playwright run (no installed browsers); real confirmation against Supabase and the e-mail template need staging credentials and mail delivery; registration wiring waits for PR #15.
 - Manual testing: Not run unless explicitly requested
+
+## Merge note (2026-10-12)
+
+- Registration (#15) now sends `emailRedirectTo: emailRedirectUrl(window.location.origin)`.
+- With the route guards (#11) on main, `/auth/confirm` and `/auth/confirmation` are classified as
+  `open` in `lib/auth/routes.ts`. They are reachable signed in or out, so signed-out signup links and
+  signed-in `email_change` links both reach the handler instead of being redirected.
+- Still owed: the Supabase e-mail template per environment and a real e-mail run on staging.
