@@ -6,7 +6,7 @@ import type { MetadataRoute } from "next";
  * may be indexed. `next.config.mjs` sends `X-Robots-Tag: noindex` for the same
  * private prefixes; `tests/seo.test.ts` keeps the two lists in sync.
  */
-export const PUBLIC_PATHS = ["/login", "/register"] as const;
+export const PUBLIC_PATHS = ["/login", "/register", "/privacy"] as const;
 
 export const PRIVATE_PREFIXES = [
   "/listings",

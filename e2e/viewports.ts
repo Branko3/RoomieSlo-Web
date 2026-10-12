@@ -32,6 +32,7 @@ export const PAGES = [
     heading: "Preverjanje akademskega statusa",
   },
   { path: "/auth-error", heading: "Prijava ni na voljo" },
+  { path: "/privacy", heading: "Tvoji podatki" },
   { path: "/login", heading: "Prijavi se v svoj račun" },
   { path: "/register", heading: "Ustvari svoj račun" },
   { path: "/ne-obstaja", heading: "Stran ne obstaja" },

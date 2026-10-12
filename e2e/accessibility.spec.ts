@@ -12,13 +12,19 @@ const PAGES = [
   "/login",
   "/register",
   "/auth-error",
+  "/privacy",
   "/recommendations",
   "/academic-verification",
   "/ne-obstaja",
 ];
 
 // Pages that render signed out; everything else is behind the route guard (#11).
-const PUBLIC_PAGES = new Set(["/login", "/register", "/auth-error"]);
+const PUBLIC_PAGES = new Set([
+  "/login",
+  "/register",
+  "/auth-error",
+  "/privacy",
+]);
 
 for (const path of PAGES) {
   test(`${path} has no WCAG A/AA violations`, async ({ page }, testInfo) => {

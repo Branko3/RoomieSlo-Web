@@ -3,7 +3,9 @@ import { MIN_TARGET_PX, PAGES, VIEWPORTS } from "./viewports";
 import { requireSignedIn } from "./env";
 
 // Only the public auth pages render signed out; every other page is behind the route guard.
-const PUBLIC_PAGE_TEST = new RegExp("^/(login|register|auth-error) fits");
+const PUBLIC_PAGE_TEST = new RegExp(
+  "^/(login|register|auth-error|privacy) fits",
+);
 
 async function horizontalOverflow(page: Page): Promise<number> {
   return page.evaluate(() => {

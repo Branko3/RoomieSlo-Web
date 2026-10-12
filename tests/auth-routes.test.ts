@@ -24,6 +24,7 @@ describe("auth route guards", () => {
     expect(getRouteAccess("/auth/confirmation")).toBe("open");
     // Monitoring polls the health check without a session.
     expect(getRouteAccess("/api/health")).toBe("open");
+    expect(getRouteAccess("/privacy")).toBe("open");
     expect(getRouteAccess("/api/other")).toBe("auth");
     expect(requiresSession("open")).toBe(false);
     expect(requiresSession("public")).toBe(false);
