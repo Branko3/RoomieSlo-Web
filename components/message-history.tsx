@@ -1,7 +1,15 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
+import {
+  applyReadLocally,
+  deliveryLabel,
+  markRead,
+  needsReadMarker,
+  type DeliveryClient,
+} from "../lib/chat/delivery";
+import type { ChatHistory } from "../lib/chat/local-messages";
 import {
   groupByDay,
   loadMessages,
@@ -27,6 +35,7 @@ export function MessageHistory({
   onRetry?: (localId: string) => void;
   onDiscard?: (localId: string) => void;
 }) {
+  const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: messagesQueryKey(matchId),
     queryFn: () =>
@@ -34,9 +43,32 @@ export function MessageHistory({
         createSupabaseBrowserClient() as unknown as MessagesClient,
         matchId,
       ),
+    // Coming back to the tab refreshes the delivery state of my messages.
+    refetchOnWindowFocus: true,
   });
   const endRef = useRef<HTMLDivElement>(null);
   const count = query.data?.messages.length ?? 0;
+  const myUserId = query.data?.myUserId;
+  const unread =
+    query.data && myUserId
+      ? needsReadMarker(query.data.messages, myUserId)
+      : false;
+
+  // The conversation is open, so the other person's messages are read (Android markRead).
+  useEffect(() => {
+    if (!unread || !myUserId) return;
+    void markRead(
+      createSupabaseBrowserClient() as unknown as DeliveryClient,
+      matchId,
+    ).then((ok) => {
+      if (ok) {
+        queryClient.setQueryData<ChatHistory>(
+          messagesQueryKey(matchId),
+          (history) => applyReadLocally(history, myUserId),
+        );
+      }
+    });
+  }, [unread, myUserId, matchId, queryClient]);
 
   // Keep the newest message in view, like a chat app.
   useEffect(() => {
@@ -69,7 +101,7 @@ export function MessageHistory({
     );
   }
 
-  const { messages, myUserId } = query.data;
+  const { messages } = query.data;
   if (messages.length === 0) {
     return (
       <p className="message-state">
@@ -125,9 +157,19 @@ export function MessageHistory({
                     </span>
                   )}
                   {!local && (
-                    <time dateTime={message.sent_at}>
-                      {messageTime(message.sent_at)}
-                    </time>
+                    <span className="message-meta">
+                      <time dateTime={message.sent_at}>
+                        {messageTime(message.sent_at)}
+                      </time>
+                      {mine && (
+                        <span
+                          className={`message-delivery delivery-${message.delivery_status}`}
+                        >
+                          {" · "}
+                          {deliveryLabel(message.delivery_status)}
+                        </span>
+                      )}
+                    </span>
                   )}
                 </li>
               );
