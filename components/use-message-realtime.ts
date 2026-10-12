@@ -8,63 +8,85 @@ import {
   applyRealtimeUpdate,
   subscribeToMessages,
   type RealtimeClient,
-  type RealtimeStatus,
 } from "../lib/chat/realtime";
+import {
+  createReconnectingSubscription,
+  type ReconnectState,
+} from "../lib/chat/reconnect";
 import { createSupabaseBrowserClient } from "../lib/supabase/browser";
 import { messagesQueryKey } from "./message-history";
 
+export type LiveState = { state: ReconnectState; retryInMs?: number };
+
 /**
- * Keeps an open conversation live. The channel is removed when the tab is
- * hidden or the page unmounts (no idle WebSockets in background tabs); when
- * the tab becomes visible again it resubscribes and refetches the history, so
- * messages that arrived while hidden are reconciled from the server.
+ * Keeps an open conversation live and reconnects with bounded backoff
+ * (1, 2, 4, 8, 16, then 30 s, like Android). The channel is removed while the
+ * tab is hidden or the page unmounts; becoming visible again or the browser
+ * coming back online reconnects at once. Every successful reconnect, and every
+ * return to the tab, refetches the history so missed messages are reconciled.
  */
-export function useMessageRealtime(matchId: string, enabled: boolean) {
+export function useMessageRealtime(
+  matchId: string,
+  enabled: boolean,
+): LiveState {
   const queryClient = useQueryClient();
-  const [status, setStatus] = useState<RealtimeStatus>("connecting");
+  const [live, setLive] = useState<LiveState>({ state: "connecting" });
 
   useEffect(() => {
     if (!enabled) return;
     const client = createSupabaseBrowserClient() as unknown as RealtimeClient;
     const key = messagesQueryKey(matchId);
-    let stop: (() => void) | null = null;
+    const reconcile = () =>
+      void queryClient.invalidateQueries({ queryKey: key });
 
-    const start = () => {
-      if (stop) return;
-      stop = subscribeToMessages(client, matchId, {
-        onInsert: (message) =>
-          queryClient.setQueryData<ChatHistory>(key, (history) =>
-            applyRealtimeInsert(history, message),
-          ),
-        onUpdate: (update) =>
-          queryClient.setQueryData<ChatHistory>(key, (history) =>
-            applyRealtimeUpdate(history, update),
-          ),
-        onStatus: setStatus,
-      });
-    };
-    const pause = () => {
-      stop?.();
-      stop = null;
-      setStatus("disconnected");
-    };
+    const subscription = createReconnectingSubscription({
+      connect: (onStatus) =>
+        subscribeToMessages(client, matchId, {
+          onInsert: (message) =>
+            queryClient.setQueryData<ChatHistory>(key, (history) =>
+              applyRealtimeInsert(history, message),
+            ),
+          onUpdate: (update) =>
+            queryClient.setQueryData<ChatHistory>(key, (history) =>
+              applyRealtimeUpdate(history, update),
+            ),
+          onStatus,
+        }),
+      onReconnected: reconcile,
+      onState: (state, retryInMs) => setLive({ state, retryInMs }),
+    });
+
     const onVisibility = () => {
       if (document.visibilityState === "hidden") {
-        pause();
+        subscription.pause();
       } else {
-        start();
-        void queryClient.invalidateQueries({ queryKey: key });
+        subscription.resume();
+        reconcile();
       }
     };
+    const onOnline = () => subscription.retryNow();
 
-    if (document.visibilityState !== "hidden") start();
+    if (document.visibilityState !== "hidden") subscription.start();
     document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("online", onOnline);
     return () => {
       document.removeEventListener("visibilitychange", onVisibility);
-      stop?.();
-      stop = null;
+      window.removeEventListener("online", onOnline);
+      subscription.pause();
     };
   }, [enabled, matchId, queryClient]);
 
-  return status;
+  return live;
+}
+
+/** User-facing notice for the live connection, or null when nothing needs saying. */
+export function liveNotice(live: LiveState): string | null {
+  if (live.state === "waiting") {
+    const seconds = Math.max(1, Math.round((live.retryInMs ?? 0) / 1000));
+    return `Povezava v živo je prekinjena. Ponovni poskus čez ${seconds} s.`;
+  }
+  if (live.state === "disconnected") {
+    return "Povezava v živo je prekinjena. Nova sporočila se prikažejo, ko se povezava obnovi.";
+  }
+  return null;
 }
