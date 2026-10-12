@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "./auth-provider";
 import { useSession } from "./session-provider";
 import { profileSummary } from "../lib/auth/session";
@@ -17,6 +17,7 @@ const navItems = [
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { signOut } = useAuth();
   const profile = profileSummary(useSession());
   if (!requiresSession(getRouteAccess(pathname))) return <>{children}</>;
@@ -65,7 +66,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
           <button
             type="button"
-            onClick={() => void signOut()}
+            onClick={async () => {
+              const result = await signOut();
+              if (result.ok) router.replace(result.redirectTo);
+            }}
             aria-label="Odjava"
           >
             ↪

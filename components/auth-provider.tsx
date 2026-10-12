@@ -3,7 +3,10 @@
 import type { AuthError, Session } from "@supabase/supabase-js";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { createSupabaseBrowserClient } from "../lib/supabase/browser";
+import { performLogout, type LogoutResult } from "../lib/auth/logout";
+import { useFavorites } from "./providers";
 import {
   createLoginRedirect,
   getRouteAccess,
@@ -21,7 +24,8 @@ type AuthContextValue = {
     email: string,
     password: string,
   ) => Promise<{ error: AuthError | null }>;
-  signOut: () => Promise<{ error: AuthError | null }>;
+  /** Local-scope sign-out (Android parity) that also clears cached user data. */
+  signOut: () => Promise<LogoutResult>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -92,6 +96,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [pending, setPending] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const { resetFavorites } = useFavorites();
   const client = useMemo(() => {
     try {
       return createSupabaseBrowserClient();
@@ -138,14 +144,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!client) throw new Error("Supabase is not configured");
         return client.auth.signInWithPassword({ email, password });
       },
-      signOut: async () => {
-        if (!client) throw new Error("Supabase is not configured");
-        const result = await client.auth.signOut();
-        if (result.error) setError("Odjava ni uspela. Poskusite znova.");
-        return result;
-      },
+      signOut: () =>
+        performLogout({
+          client,
+          clearServerState: () => queryClient.clear(),
+          resetUserState: resetFavorites,
+          storage: window.localStorage,
+        }),
     }),
-    [client, error, pending, session],
+    [client, error, pending, queryClient, resetFavorites, session],
   );
 
   const access = getRouteAccess(pathname);
