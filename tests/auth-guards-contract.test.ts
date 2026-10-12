@@ -49,7 +49,7 @@ describe("route guard implementation contract", () => {
     expect(provider).toContain('router.replace("/listings")');
     expect(provider).toContain('router.replace("/login")');
     expect(login).toContain("client.auth.signInWithPassword");
-    expect(register).toContain("client.auth.signUp");
+    expect(register).toMatch(/\.auth\.signUp\(/);
   });
 
   it("surfaces configuration, session, sign-in, and sign-up failures", () => {
