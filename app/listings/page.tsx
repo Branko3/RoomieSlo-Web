@@ -1,10 +1,23 @@
-import { useListings } from "../../lib/supabase/hooks";
+"use client";
+
+import { CacheNotice } from "../../components/cache-notice";
+import {
+  DataState,
+  EmptyState,
+  LoadingState,
+} from "../../components/data-states";
 import { ListingCard } from "../../components/listing-card";
-export const dynamic = "force-dynamic";
+import { useOfflineListings } from "../../lib/listings/use-offline-listings";
 import Link from "next/link";
 
 export default function ListingsPage() {
-  const { data: listings, isLoading, error } = useListings();
+  const {
+    data: listings,
+    isLoading,
+    error,
+    view,
+    retry,
+  } = useOfflineListings();
   return (
     <div className="content-wrap">
       <header className="topbar">
@@ -36,26 +49,32 @@ export default function ListingsPage() {
           <h2>Priporočeni oglasi</h2>
           <p className="muted">Izbrano glede na tvoje preference</p>
         </div>
-        <a className="text-link" href="/search">
-          Poglej vse →
-        </a>
+        <div className="section-actions">
+          <Link className="button button-outline" href="/listings/new">
+            + Objavi oglas
+          </Link>
+          <a className="text-link" href="/search">
+            Poglej vse →
+          </a>
+        </div>
       </div>
-      {isLoading && (
-        <div className="page-state" aria-live="polite">
-          <p>Nalaganje oglasov ...</p>
-        </div>
-      )}
-      {error && (
-        <div className="page-state" role="alert">
-          <h2>Oglasov ni mogoče naložiti</h2>
-          <p>Preveri povezavo in prijavo v Supabase.</p>
-        </div>
+      <CacheNotice view={view} onRetry={retry} />
+      {isLoading && <LoadingState label="Nalaganje oglasov ..." />}
+      {!isLoading && error && (
+        <DataState error={error} onRetry={retry}>
+          <span />
+        </DataState>
       )}
       {!isLoading && !error && listings?.length === 0 && (
-        <div className="empty-state">
-          <h2>Trenutno ni oglasov</h2>
-          <p>Ko bodo oglasi na voljo, se bodo prikazali tukaj.</p>
-        </div>
+        <EmptyState
+          title="Trenutno ni oglasov"
+          description="Ko bodo oglasi na voljo, se bodo prikazali tukaj."
+          action={
+            <Link className="button" href="/search">
+              Razišči oglase
+            </Link>
+          }
+        />
       )}
       <div className="listing-grid">
         {listings?.slice(0, 3).map((listing) => (
