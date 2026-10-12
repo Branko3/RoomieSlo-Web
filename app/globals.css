@@ -3,8 +3,11 @@
   --green-dark: #1d5143;
   --green-light: #d9f2e7;
   --amber: #e7b75f;
+  /* Focus ring; 3:1 or more against every light surface (amber was 1.85:1). */
+  --focus-ring: #1d5143;
   --ink: #1c2925;
-  --muted: #70807a;
+  /* Secondary text; 4.5:1 or more on every light surface (the old grey was 3.96:1). */
+  --muted: #5a6963;
   --line: #e2ebe6;
   --surface: #fff;
   --background: #f8faf8;
@@ -132,7 +135,7 @@ button {
   cursor: pointer;
 }
 :focus-visible {
-  outline: 3px solid var(--amber);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 3px;
 }
 .sr-only {
@@ -207,7 +210,7 @@ button {
 }
 .nav-link {
   border-radius: 12px;
-  color: #7a8983;
+  color: var(--muted);
   padding: 13px 15px;
   display: flex;
   align-items: center;
@@ -325,11 +328,15 @@ button {
   letter-spacing: -0.6px;
 }
 .hero-banner p {
-  color: #cae7db;
+  color: #e0f2ea;
   margin: 0 0 22px;
 }
 .hero-banner .eyebrow {
-  color: #aee2ce;
+  color: #dcf0e7;
+}
+/* The dark focus ring would vanish on the green banner. */
+.hero-banner :focus-visible {
+  outline-color: #fff;
 }
 .hero-shape {
   font-size: 170px;
@@ -429,7 +436,7 @@ button {
   font-size: 21px;
 }
 .heart-button.liked {
-  color: #da7777;
+  color: #c25555;
 }
 .listing-body {
   padding: 17px;
@@ -654,7 +661,7 @@ button {
 }
 .heart-static {
   margin-left: auto;
-  color: #d97777;
+  color: #c25555;
   font-size: 20px;
 }
 .tip-card,
