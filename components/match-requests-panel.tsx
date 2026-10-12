@@ -4,13 +4,19 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { getSupabaseConfig } from "../lib/config";
 import {
+  acceptMatchAtomically,
+  applyDecision,
+  rejectMatchWithConflictCheck,
+  type MatchAcceptanceClient,
+} from "../lib/matching/match-acceptance";
+import {
   loadMyMatches,
   matchMessages,
   MatchRequestError,
   matchStatusLabel,
-  respondToMatch,
   type Decision,
   type MatchClient,
+  type MatchRow,
 } from "../lib/matching/match-requests";
 import { createSupabaseBrowserClient } from "../lib/supabase/browser";
 
@@ -18,6 +24,10 @@ const MATCHES_KEY = ["matches", "mine"] as const;
 
 function client() {
   return createSupabaseBrowserClient() as unknown as MatchClient;
+}
+
+function acceptanceClient() {
+  return createSupabaseBrowserClient() as unknown as MatchAcceptanceClient;
 }
 
 function initials(name: string) {
@@ -41,13 +51,28 @@ export function MatchRequestsPanel() {
     queryFn: () => loadMyMatches(client()),
   });
   const respond = useMutation({
-    mutationFn: ({
+    mutationFn: async ({
       matchId,
       decision,
     }: {
       matchId: string;
       decision: Decision;
-    }) => respondToMatch(client(), matchId, decision),
+    }) => {
+      if (decision === "accepted") {
+        const accepted = await acceptMatchAtomically(
+          acceptanceClient(),
+          matchId,
+        );
+        return { matchId, status: accepted.status, version: accepted.version };
+      }
+      await rejectMatchWithConflictCheck(acceptanceClient(), matchId);
+      return { matchId, status: "rejected" as const, version: undefined };
+    },
+    // Show the confirmed state at once; the refetch below reconciles the rest.
+    onSuccess: ({ matchId, status, version }) =>
+      queryClient.setQueryData<MatchRow[]>(MATCHES_KEY, (rows) =>
+        rows ? applyDecision(rows, matchId, status, version) : rows,
+      ),
     // Refresh after success and after a conflict, so the row shows the real state.
     onSettled: () => queryClient.invalidateQueries({ queryKey: MATCHES_KEY }),
   });
