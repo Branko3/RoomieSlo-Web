@@ -21,6 +21,7 @@ export const PRIVATE_PREFIXES = [
   // E-mail confirmation links and auth errors carry tokens or session state.
   "/auth",
   "/auth-error",
+  "/api",
 ] as const;
 
 export const NOINDEX = "noindex, nofollow, noarchive";

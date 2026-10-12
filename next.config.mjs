@@ -12,6 +12,7 @@ const privatePrefixes = [
   // E-mail confirmation links and auth errors carry tokens or session state.
   "/auth",
   "/auth-error",
+  "/api",
 ];
 
 /** Privacy headers for every response. */

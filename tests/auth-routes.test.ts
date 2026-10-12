@@ -22,6 +22,9 @@ describe("auth route guards", () => {
     // email_change links are opened by signed-in users, signup links by signed-out ones.
     expect(getRouteAccess("/auth/confirm")).toBe("open");
     expect(getRouteAccess("/auth/confirmation")).toBe("open");
+    // Monitoring polls the health check without a session.
+    expect(getRouteAccess("/api/health")).toBe("open");
+    expect(getRouteAccess("/api/other")).toBe("auth");
     expect(requiresSession("open")).toBe(false);
     expect(requiresSession("public")).toBe(false);
     expect(requiresSession("auth")).toBe(true);

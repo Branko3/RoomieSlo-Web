@@ -6,7 +6,8 @@
 export type RouteAccess = "public" | "open" | "auth" | "admin";
 
 const publicRoutes = ["/login", "/register", "/auth-error"];
-const openRoutes = ["/auth/confirm", "/auth/confirmation"];
+// /api/health is polled by monitoring without a session (operations runbook, #60).
+const openRoutes = ["/auth/confirm", "/auth/confirmation", "/api/health"];
 const adminRoutes = ["/admin/reports"];
 
 export function getRouteAccess(pathname: string): RouteAccess {
