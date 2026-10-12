@@ -1496,3 +1496,25 @@ button {
   position: relative;
   overflow: hidden;
 }
+.favorite-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 88px;
+  transform: translateX(-50%);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: min(92vw, 460px);
+  background: #3b1c18;
+  color: #fff;
+  border-radius: 12px;
+  padding: 11px 14px;
+  font-size: 13px;
+  box-shadow: var(--shadow);
+}
+.favorite-toast .text-link {
+  color: #fff;
+  font-size: 18px;
+  line-height: 1;
+}

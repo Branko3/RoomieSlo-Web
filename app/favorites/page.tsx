@@ -1,9 +1,15 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useListings } from "../../lib/supabase/hooks";
 import { ListingPhoto } from "../../components/listing-photo";
 import { useFavorites } from "../../components/providers";
+import {
+  fetchFavoriteListings,
+  type FavoritesClient,
+} from "../../lib/favorites/favorites-api";
+import { createSupabaseBrowserClient } from "../../lib/supabase/browser";
 import {
   DataState,
   EmptyState,
@@ -11,8 +17,24 @@ import {
 } from "../../components/data-states";
 
 export default function FavoritesPage() {
-  const { favorites, toggleFavorite } = useFavorites();
-  const { data: listings = [], isLoading, error, retry } = useListings();
+  const { favorites, toggleFavorite, userId } = useFavorites();
+  // Signed in: the user's favorites come straight from Supabase (one nested query).
+  const remote = useQuery({
+    queryKey: ["favorites", "listings", userId],
+    enabled: Boolean(userId),
+    queryFn: () =>
+      fetchFavoriteListings(
+        createSupabaseBrowserClient() as unknown as FavoritesClient,
+        userId as string,
+      ),
+  });
+  // Signed out (browser-only favorites): match against the listing feed as before.
+  const local = useListings();
+  const listings = userId ? (remote.data ?? []) : (local.data ?? []);
+  const isLoading = userId ? remote.isPending : local.isLoading;
+  const error = userId ? remote.error : local.error;
+  const retry = () => (userId ? void remote.refetch() : local.retry());
+  // Filtering by the live favorite ids makes removals disappear immediately.
   const favoriteListings = listings.filter((listing) =>
     favorites.includes(listing.id),
   );
