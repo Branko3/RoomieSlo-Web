@@ -12,6 +12,11 @@ export default defineConfig({
       include: ["lib/**/*.ts"],
       exclude: [
         "lib/supabase/hooks.ts",
+        // React hooks, the browser IndexedDB adapter, and the next/headers server client
+        // need a browser or request context; their pure logic lives in tested modules.
+        "lib/**/use-*.ts",
+        "lib/listings/indexeddb-store.ts",
+        "lib/supabase/server.ts",
         "lib/supabase/types.ts",
         "lib/data.ts",
       ],

@@ -1,11 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useAuth } from "./auth-provider";
+import { useSession } from "./session-provider";
+import { profileSummary } from "../lib/auth/session";
+import { getRouteAccess, requiresSession } from "../lib/auth/routes";
 import { activeSection, NAV_ITEMS as navItems } from "../lib/navigation";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { signOut } = useAuth();
+  const profile = profileSummary(useSession());
+  if (!requiresSession(getRouteAccess(pathname))) return <>{children}</>;
   const active = activeSection(pathname);
 
   return (
@@ -34,16 +42,31 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
         <div className="sidebar-bottom">
-          <div className="mini-profile">
-            <span className="avatar avatar-small">AH</span>
-            <span>
-              <b>Amar H.</b>
-              <small>Preverjen študent</small>
-            </span>
+          <div className="mini-profile" aria-live="polite">
+            {profile.kind === "signed-in" ? (
+              <>
+                <span className="avatar avatar-small">{profile.initials}</span>
+                <span>
+                  <b>{profile.name}</b>
+                  <small>Prijavljen</small>
+                </span>
+              </>
+            ) : (
+              <span role="status">
+                <small>Obnavljanje seje …</small>
+              </span>
+            )}
           </div>
-          <Link href="/profile" aria-label="Nastavitve profila">
-            ⚙
-          </Link>
+          <button
+            type="button"
+            onClick={async () => {
+              const result = await signOut();
+              if (result.ok) router.replace(result.redirectTo);
+            }}
+            aria-label="Odjava"
+          >
+            ↪
+          </button>
         </div>
       </aside>
       <main id="main-content" className="main-content">
