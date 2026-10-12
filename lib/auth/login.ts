@@ -1,7 +1,8 @@
+import { getSafeReturnPath } from "./routes";
+
+// Same-origin check shared with the middleware and AuthProvider redirects.
 export function safeDestination(value: string | null) {
-  return value && value.startsWith("/") && !value.startsWith("//")
-    ? value
-    : "/listings";
+  return getSafeReturnPath(value);
 }
 
 export function authMessage(message: string) {

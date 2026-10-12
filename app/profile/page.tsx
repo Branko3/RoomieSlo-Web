@@ -1,12 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "../../components/auth-provider";
 
 export default function ProfilePage() {
   const [available, setAvailable] = useState(true);
-  const router = useRouter();
   const { signOut } = useAuth();
   return (
     <div className="content-wrap narrow-content">
@@ -52,10 +50,7 @@ export default function ProfilePage() {
       </section>
       <button
         className="button button-outline full-button"
-        onClick={async () => {
-          const result = await signOut();
-          if (!result.error) router.replace("/login");
-        }}
+        onClick={() => void signOut()}
       >
         Odjava
       </button>

@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { useAuth } from "./auth-provider";
+import { getRouteAccess } from "../lib/auth/routes";
 
 const navItems = [
   ["listings", "⌂", "Oglasi"],
@@ -15,30 +15,8 @@ const navItems = [
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const router = useRouter();
-  const { session, loading } = useAuth();
-  const isPublic = pathname === "/login" || pathname === "/register";
-
-  useEffect(() => {
-    if (loading) return;
-    if (isPublic && session) {
-      router.replace("/listings");
-    } else if (!isPublic && !session) {
-      const query = window.location.search.slice(1);
-      const destination = query ? `${pathname}?${query}` : pathname;
-      router.replace(`/login?next=${encodeURIComponent(destination)}`);
-    }
-  }, [isPublic, loading, pathname, router, session]);
-
-  if (isPublic) return <>{children}</>;
-  if (loading || !session) {
-    return (
-      <main className="page-state" aria-live="polite">
-        {loading ? "Preverjanje seje ..." : "Preusmerjanje na prijavo ..."}
-      </main>
-    );
-  }
-
+  const { session, signOut } = useAuth();
+  if (getRouteAccess(pathname) === "public") return <>{children}</>;
   const active = pathname.split("/")[1] || "listings";
 
   return (
@@ -70,13 +48,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="mini-profile">
             <span className="avatar avatar-small">AH</span>
             <span>
-              <b>Amar H.</b>
-              <small>Preverjen študent</small>
+              <b>{session?.user.email ?? "Uporabnik"}</b>
+              <small>Prijavljen</small>
             </span>
           </div>
-          <Link href="/profile" aria-label="Nastavitve profila">
-            ⚙
-          </Link>
+          <button
+            type="button"
+            onClick={() => void signOut()}
+            aria-label="Odjava"
+          >
+            ↪
+          </button>
         </div>
       </aside>
       <main id="main-content" className="main-content">

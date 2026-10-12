@@ -41,3 +41,12 @@ Add mocked browser-client tests for `signInWithPassword` arguments, no duplicate
 - Test files: `components/auth-provider.tsx`, `app/login/page.tsx`, `components/app-shell.tsx`; feature-specific Vitest/Playwright coverage is not yet present.
 - Commands/results: `npm run typecheck` passed; `npm run lint` passed with no warnings; `npm test -- --run` passed (3 files, 16 tests); `npm run build` passed and generated all 11 routes.
 - Remaining gaps: No staging Supabase credentials or browser binary are available for authenticated integration and Playwright verification.
+
+## Test status
+
+- Automated status: Partially covered
+- Test files: `tests/email-password-login.test.ts`, `tests/auth-guards-contract.test.ts`, `e2e/email-password-login.spec.ts`
+- Scenarios covered: login validation, friendly auth/network error mapping, same-origin `returnTo` redirects (shared `getSafeReturnPath`), duplicate-submit prevention, session restore and sign-in/sign-out transitions through `initializeAuthSession`, cleanup safety.
+- Remaining gaps: the Playwright spec has not been run (no browsers); authenticated login, refresh persistence and logout need staging credentials.
+- Manual testing: Not run unless explicitly requested
+- Merge note (2026-10-12): merged on top of the route guards (#11). The single `AuthProvider` in `app/layout.tsx` provides `signIn`/`signOut`, and the login redirect parameter is `returnTo`.

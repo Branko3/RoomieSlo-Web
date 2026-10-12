@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, useRef, useState } from "react";
 import { useAuth } from "../../components/auth-provider";
 import {
   authMessage,
@@ -13,17 +13,13 @@ import {
 export default function LoginPage() {
   const router = useRouter();
   const params = useSearchParams();
-  const { session, loading: authLoading, error: authError, signIn } = useAuth();
+  const { pending: authLoading, error: authError, signIn } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const emailRef = useRef<HTMLInputElement>(null);
   const errorRef = useRef<HTMLParagraphElement>(null);
-
-  useEffect(() => {
-    if (!authLoading && session) router.replace("/listings");
-  }, [authLoading, router, session]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -47,7 +43,7 @@ export default function LoginPage() {
         setError(authMessage(result.error.message));
         errorRef.current?.focus();
       } else {
-        router.replace(safeDestination(params.get("next")));
+        router.replace(safeDestination(params.get("returnTo")));
       }
     } catch {
       setError("Prijava ni uspela. Preverite povezavo in poskusite znova.");

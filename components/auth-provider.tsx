@@ -2,11 +2,17 @@
 
 import type { AuthError, Session } from "@supabase/supabase-js";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "../lib/supabase/browser";
+import {
+  createLoginRedirect,
+  getRouteAccess,
+  getSafeReturnPath,
+} from "../lib/auth/routes";
 
 type AuthContextValue = {
   session: Session | null;
-  loading: boolean;
+  pending: boolean;
   error: string | null;
   signIn: (
     email: string,
@@ -22,7 +28,10 @@ type SessionCallbacks = {
   setSession: (session: Session | null) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
+  onSignedOut?: () => void;
 };
+
+const SESSION_ERROR = "Seje ni mogoče preveriti. Poskusite znova.";
 
 export function initializeAuthSession(
   client: AuthClient,
@@ -34,23 +43,23 @@ export function initializeAuthSession(
     .then(({ data, error: sessionError }) => {
       if (!active) return;
       callbacks.setSession(data.session);
-      if (sessionError)
-        callbacks.setError("Seje ni mogoče preveriti. Poskusite znova.");
+      if (sessionError) callbacks.setError(SESSION_ERROR);
       callbacks.setLoading(false);
     })
     .catch(() => {
       if (!active) return;
-      callbacks.setError("Seje ni mogoče preveriti. Poskusite znova.");
+      callbacks.setError(SESSION_ERROR);
       callbacks.setLoading(false);
     });
 
   const {
     data: { subscription },
-  } = client.auth.onAuthStateChange((_event, nextSession) => {
+  } = client.auth.onAuthStateChange((event, nextSession) => {
     if (!active) return;
     callbacks.setSession(nextSession);
     callbacks.setLoading(false);
     callbacks.setError(null);
+    if (event === "SIGNED_OUT") callbacks.onSignedOut?.();
   });
 
   return {
@@ -63,14 +72,16 @@ export function initializeAuthSession(
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) throw new Error("useAuth must be used inside Providers");
-  return context;
+  const value = useContext(AuthContext);
+  if (!value) throw new Error("useAuth must be used inside AuthProvider");
+  return value;
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const router = useRouter();
   const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [pending, setPending] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const client = useMemo(() => {
     try {
@@ -82,39 +93,67 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!client) {
-      setError("Prijava trenutno ni na voljo. Poskusite znova pozneje.");
-      setLoading(false);
+      setError("Supabase configuration failed. Prijava trenutno ni na voljo.");
+      setPending(false);
       return;
     }
-
-    const initialized = initializeAuthSession(client, {
+    return initializeAuthSession(client, {
       setSession,
-      setLoading,
+      setLoading: setPending,
       setError,
-    });
-    return initialized.unsubscribe;
-  }, [client]);
+      onSignedOut: () => router.replace("/login"),
+    }).unsubscribe;
+  }, [client, router]);
+
+  useEffect(() => {
+    if (pending || error) return;
+    const access = getRouteAccess(pathname);
+    if (access !== "public" && !session) {
+      router.replace(createLoginRedirect(pathname, window.location.search));
+    } else if (access === "public" && session) {
+      // Honour the requested destination after signing in on /login.
+      const returnTo = new URLSearchParams(window.location.search).get(
+        "returnTo",
+      );
+      router.replace(getSafeReturnPath(returnTo));
+    }
+  }, [error, pathname, pending, router, session]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
       session,
-      loading,
+      pending,
       error,
       signIn: async (email, password) => {
         if (!client) throw new Error("Supabase is not configured");
-        const result = await client.auth.signInWithPassword({
-          email,
-          password,
-        });
-        return result;
+        return client.auth.signInWithPassword({ email, password });
       },
       signOut: async () => {
         if (!client) throw new Error("Supabase is not configured");
-        return client.auth.signOut();
+        const result = await client.auth.signOut();
+        if (result.error) setError("Odjava ni uspela. Poskusite znova.");
+        return result;
       },
     }),
-    [client, error, loading, session],
+    [client, error, pending, session],
   );
 
+  const access = getRouteAccess(pathname);
+  // Public pages (login, register) show the error next to their own form.
+  if (error && access !== "public") {
+    return (
+      <div className="page-state" role="alert">
+        <h1>Prijava ni na voljo</h1>
+        <p>{error}</p>
+      </div>
+    );
+  }
+  if (access !== "public" && (pending || !session)) {
+    return (
+      <div className="page-state" aria-live="polite">
+        <p>Preverjanje prijave ...</p>
+      </div>
+    );
+  }
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
