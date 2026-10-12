@@ -6,14 +6,7 @@ import { useAuth } from "./auth-provider";
 import { useSession } from "./session-provider";
 import { profileSummary } from "../lib/auth/session";
 import { getRouteAccess, requiresSession } from "../lib/auth/routes";
-
-const navItems = [
-  ["listings", "⌂", "Oglasi"],
-  ["search", "⌕", "Iskanje"],
-  ["chats", "▢", "Klepeti"],
-  ["favorites", "♡", "Priljubljene"],
-  ["profile", "◉", "Profil"],
-];
+import { activeSection, NAV_ITEMS as navItems } from "../lib/navigation";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -21,7 +14,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { signOut } = useAuth();
   const profile = profileSummary(useSession());
   if (!requiresSession(getRouteAccess(pathname))) return <>{children}</>;
-  const active = pathname.split("/")[1] || "listings";
+  const active = activeSection(pathname);
 
   return (
     <div className="app-shell">

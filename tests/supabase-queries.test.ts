@@ -200,3 +200,92 @@ describe("Supabase listing query boundary", () => {
     await expect(fetchListing("listing-1")).rejects.toBe(backendError);
   });
 });
+
+describe("Supabase query defaults and profiles", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("lists available listings newest first with the default page size", async () => {
+    const mock = makeClient({ data: null, error: null });
+    vi.mocked(createSupabaseBrowserClient).mockReturnValue(
+      mock.client as never,
+    );
+
+    await expect(fetchListings({ location: "   " })).resolves.toEqual([]);
+    expect(mock.client.from).toHaveBeenCalledWith("listings");
+    expect(mock.calls).toEqual([
+      ["select", ["*"]],
+      ["eq", ["is_filled", false]],
+      ["order", ["created_at", { ascending: false }]],
+      ["limit", [24]],
+    ]);
+  });
+
+  it("keeps a zero price limit instead of dropping it", async () => {
+    const mock = makeClient({ data: [], error: null });
+    vi.mocked(createSupabaseBrowserClient).mockReturnValue(
+      mock.client as never,
+    );
+
+    await fetchListings({ maxPrice: 0 });
+    expect(mock.calls).toContainEqual(["lte", ["price_per_month", 0]]);
+  });
+
+  it("requires a listing id before querying", async () => {
+    await expect(fetchListing("")).rejects.toThrow("Listing id is required");
+    expect(createSupabaseBrowserClient).not.toHaveBeenCalled();
+  });
+
+  it("maps a found listing by id", async () => {
+    const mock = makeClient({ data: listing, error: null });
+    vi.mocked(createSupabaseBrowserClient).mockReturnValue(
+      mock.client as never,
+    );
+
+    await expect(fetchListing("listing-1")).resolves.toMatchObject({
+      id: "listing-1",
+      ownerId: "owner-1",
+      price: 400,
+    });
+    expect(mock.calls).toEqual([
+      ["select", ["*"]],
+      ["eq", ["id", "listing-1"]],
+      ["maybeSingle", []],
+    ]);
+  });
+
+  it("loads and validates profiles, preserving backend errors", async () => {
+    const profile = {
+      id: "p1",
+      display_name: "Ana",
+      academic_status_verified: false,
+      is_available: true,
+      created_at: "2026-01-01T00:00:00Z",
+      age: null,
+      faculty: "",
+      bio: "",
+      avatar_url: "",
+    };
+    const ok = makeClient({ data: [profile], error: null });
+    vi.mocked(createSupabaseBrowserClient).mockReturnValue(ok.client as never);
+    await expect(fetchProfiles()).resolves.toEqual([profile]);
+    expect(ok.client.from).toHaveBeenCalledWith("profiles");
+
+    const malformed = makeClient({
+      data: [{ ...profile, is_available: "yes" }],
+      error: null,
+    });
+    vi.mocked(createSupabaseBrowserClient).mockReturnValue(
+      malformed.client as never,
+    );
+    await expect(fetchProfiles()).rejects.toThrow(
+      "Invalid profiles boolean field",
+    );
+
+    const backendError = new Error("offline");
+    const failed = makeClient({ data: null, error: backendError });
+    vi.mocked(createSupabaseBrowserClient).mockReturnValue(
+      failed.client as never,
+    );
+    await expect(fetchProfiles()).rejects.toBe(backendError);
+  });
+});
