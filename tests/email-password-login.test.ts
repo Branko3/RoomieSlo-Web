@@ -190,3 +190,48 @@ describe("login implementation contract", () => {
     expect(source).not.toContain("SUPABASE_SERVICE_ROLE_KEY");
   });
 });
+
+describe("auth session restore ordering", () => {
+  it("never lets a slower restore overwrite a newer auth event", async () => {
+    let resolveSession!: (value: {
+      data: { session: unknown };
+      error: null;
+    }) => void;
+    let emit!: (event: string, session: unknown) => void;
+    const client = {
+      auth: {
+        getSession: vi.fn(
+          () =>
+            new Promise((resolve) => {
+              resolveSession = resolve;
+            }),
+        ),
+        onAuthStateChange: vi.fn(
+          (callback: (event: string, session: unknown) => void) => {
+            emit = callback;
+            return { data: { subscription: { unsubscribe: vi.fn() } } };
+          },
+        ),
+      },
+    } as never;
+    const setSession = vi.fn();
+    const setError = vi.fn();
+    const initialized = initializeAuthSession(client, {
+      setSession,
+      setLoading: vi.fn(),
+      setError,
+    });
+
+    // An empty INITIAL_SESSION is ignored so the restore can still report errors.
+    emit("INITIAL_SESSION", null);
+    expect(setSession).not.toHaveBeenCalled();
+
+    const signedIn = { access_token: "fresh" };
+    emit("SIGNED_IN", signedIn);
+    resolveSession({ data: { session: null }, error: null });
+    await initialized.sessionRequest;
+
+    expect(setSession).toHaveBeenCalledTimes(1);
+    expect(setSession).toHaveBeenLastCalledWith(signedIn);
+  });
+});

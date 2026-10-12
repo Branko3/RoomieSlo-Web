@@ -10,7 +10,7 @@ describe("route guard implementation contract", () => {
     const middleware = read("middleware.ts");
 
     expect(middleware).toContain("getRouteAccess(request.nextUrl.pathname)");
-    expect(middleware).toContain("client.auth.getUser()");
+    expect(middleware).toMatch(/client\.auth\s*\.getUser\(\)/);
     expect(middleware).toContain("createLoginRedirect(");
     expect(middleware).toContain('access === "public" && hasSession');
     expect(middleware).toContain('access !== "public" && !hasSession');

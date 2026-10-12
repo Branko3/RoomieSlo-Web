@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "./auth-provider";
+import { useSession } from "./session-provider";
+import { profileSummary } from "../lib/auth/session";
 import { getRouteAccess } from "../lib/auth/routes";
 
 const navItems = [
@@ -15,7 +17,8 @@ const navItems = [
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { session, signOut } = useAuth();
+  const { signOut } = useAuth();
+  const profile = profileSummary(useSession());
   if (getRouteAccess(pathname) === "public") return <>{children}</>;
   const active = pathname.split("/")[1] || "listings";
 
@@ -45,12 +48,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
         <div className="sidebar-bottom">
-          <div className="mini-profile">
-            <span className="avatar avatar-small">AH</span>
-            <span>
-              <b>{session?.user.email ?? "Uporabnik"}</b>
-              <small>Prijavljen</small>
-            </span>
+          <div className="mini-profile" aria-live="polite">
+            {profile.kind === "signed-in" ? (
+              <>
+                <span className="avatar avatar-small">{profile.initials}</span>
+                <span>
+                  <b>{profile.name}</b>
+                  <small>Prijavljen</small>
+                </span>
+              </>
+            ) : (
+              <span role="status">
+                <small>Obnavljanje seje …</small>
+              </span>
+            )}
           </div>
           <button
             type="button"

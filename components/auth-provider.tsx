@@ -11,6 +11,8 @@ import {
 } from "../lib/auth/routes";
 
 type AuthContextValue = {
+  /** False when the public Supabase variables are missing. */
+  configured: boolean;
   session: Session | null;
   pending: boolean;
   error: string | null;
@@ -38,16 +40,19 @@ export function initializeAuthSession(
   callbacks: SessionCallbacks,
 ) {
   let active = true;
+  // Auth events always win over the initial restore, so a slow getSession can never
+  // overwrite a newer sign-in or sign-out (ported from the session-restoration feature).
+  let receivedEvent = false;
   const sessionRequest = client.auth
     .getSession()
     .then(({ data, error: sessionError }) => {
-      if (!active) return;
+      if (!active || receivedEvent) return;
       callbacks.setSession(data.session);
       if (sessionError) callbacks.setError(SESSION_ERROR);
       callbacks.setLoading(false);
     })
     .catch(() => {
-      if (!active) return;
+      if (!active || receivedEvent) return;
       callbacks.setError(SESSION_ERROR);
       callbacks.setLoading(false);
     });
@@ -56,6 +61,9 @@ export function initializeAuthSession(
     data: { subscription },
   } = client.auth.onAuthStateChange((event, nextSession) => {
     if (!active) return;
+    // An empty INITIAL_SESSION mirrors getSession; let the restore report its errors.
+    if (event === "INITIAL_SESSION" && !nextSession) return;
+    receivedEvent = true;
     callbacks.setSession(nextSession);
     callbacks.setLoading(false);
     callbacks.setError(null);
@@ -121,6 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<AuthContextValue>(
     () => ({
+      configured: client !== null,
       session,
       pending,
       error,

@@ -32,7 +32,13 @@ export async function middleware(request: NextRequest) {
       },
     },
   });
-  const { data, error } = await client.auth.getUser();
+  // A thrown network failure is handled like a session error and never clears cookies.
+  const { data, error } = await client.auth
+    .getUser()
+    .catch((cause: unknown) => ({
+      data: { user: null },
+      error: cause instanceof Error ? cause : new Error("Session check failed"),
+    }));
   const isMissingSession =
     error?.name === "AuthSessionMissingError" ||
     error?.message.toLowerCase().includes("auth session missing");
