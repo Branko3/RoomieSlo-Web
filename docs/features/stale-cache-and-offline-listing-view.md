@@ -53,3 +53,11 @@ All unit scenarios above; component and browser checks for the notice, the retry
 - Scenarios covered: all unit scenarios (12 tests, passing with `npm run test`).
 - Remaining gaps: the hook, notice, and `online` reload are not component-tested (no React Testing Library/jsdom); no browser offline run (no installed browsers); the native IndexedDB adapter is untested (see PR #29).
 - Manual testing: Not run unless explicitly requested
+
+## Merge note (2026-10-12)
+
+`/search` now uses the paged TanStack Query feed from #28, so it doesn't use `useOfflineListings`.
+Instead, `useCachedListingsFallback` (`lib/listings/use-offline-listings.ts`) loads the same cached
+view when the first page fails or the browser is offline. While offline with no cache, `/search`
+shows the offline state instead of a paused spinner. `/listings` uses `useOfflineListings` with
+#12's data-state components. Not component-tested (no RTL); a browser offline run is still owed.

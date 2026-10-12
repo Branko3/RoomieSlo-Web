@@ -70,3 +70,37 @@ export function useOfflineListings(query: ListingQuery = {}) {
     retry: () => setAttempt((value) => value + 1),
   };
 }
+
+/**
+ * Cache fallback for feeds that fetch through TanStack Query (the paged /search feed). When the
+ * first page fails, or the browser is offline (TanStack Query pauses fetching), it loads the
+ * signed-in user's cached listings for the same filters; otherwise it returns null.
+ */
+export function useCachedListingsFallback(
+  query: { location?: string; maxPrice?: number },
+  reason: "error" | "offline" | null,
+): ListingsView | null {
+  const [view, setView] = useState<ListingsView | null>(null);
+
+  useEffect(() => {
+    if (!reason) {
+      setView(null);
+      return;
+    }
+    let active = true;
+    loadListingsWithFallback({
+      fetchFresh: () => Promise.reject(new Error("Listing query failed")),
+      readUserId: readSessionUserId,
+      store: getListingCacheStore(),
+      query: { location: query.location, maxPrice: query.maxPrice },
+      isOnline: reason !== "offline",
+    }).then((next) => {
+      if (active) setView(next);
+    });
+    return () => {
+      active = false;
+    };
+  }, [reason, query.location, query.maxPrice]);
+
+  return view;
+}
