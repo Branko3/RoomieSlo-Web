@@ -8,55 +8,66 @@
  */
 export type Statement = { id: string; text: string; weight: number };
 
-export const STATEMENTS: readonly Statement[] = [
-  {
-    id: "q_cleanliness",
-    text: "Skupni prostori morajo biti vedno pospravljeni.",
-    weight: 0.1056,
-  },
-  {
-    id: "q_costs",
-    text: "Svoj del stroškov poravnam do dogovorjenega roka.",
-    weight: 0.1056,
-  },
-  { id: "q_smoking", text: "Kajenje v stanovanju me ne moti.", weight: 0.1007 },
-  {
-    id: "q_parties",
-    text: "Občasne zabave v stanovanju me ne motijo.",
-    weight: 0.0977,
-  },
-  { id: "q_noise", text: "Zvečer imam rad(a) mir in tišino.", weight: 0.0927 },
-  {
-    id: "q_chores",
-    text: "Gospodinjska opravila naj bodo razdeljena po dogovorjenem razporedu.",
-    weight: 0.0906,
-  },
-  {
-    id: "q_guests",
-    text: "Vesel(a) sem, če so v stanovanju pogosto obiski.",
-    weight: 0.0866,
-  },
-  {
-    id: "q_pets",
-    text: "V stanovanju bi rad(a) imel(a) hišnega ljubljenčka.",
-    weight: 0.0843,
-  },
-  {
-    id: "q_study",
-    text: "Doma se pogosto učim in takrat potrebujem mir.",
-    weight: 0.083,
-  },
-  {
-    id: "q_overnight",
-    text: "Ne moti me, če gostje ali partner(ka) prespijo v stanovanju.",
-    weight: 0.0801,
-  },
-  {
-    id: "q_wake",
-    text: "Zjutraj vstajam zgodaj in zvečer hodim zgodaj spat.",
-    weight: 0.0731,
-  },
-];
+// Frozen: ids and weights are persisted keys and must not be changed at runtime.
+export const STATEMENTS: readonly Readonly<Statement>[] = Object.freeze(
+  [
+    {
+      id: "q_cleanliness",
+      text: "Skupni prostori morajo biti vedno pospravljeni.",
+      weight: 0.1056,
+    },
+    {
+      id: "q_costs",
+      text: "Svoj del stroškov poravnam do dogovorjenega roka.",
+      weight: 0.1056,
+    },
+    {
+      id: "q_smoking",
+      text: "Kajenje v stanovanju me ne moti.",
+      weight: 0.1007,
+    },
+    {
+      id: "q_parties",
+      text: "Občasne zabave v stanovanju me ne motijo.",
+      weight: 0.0977,
+    },
+    {
+      id: "q_noise",
+      text: "Zvečer imam rad(a) mir in tišino.",
+      weight: 0.0927,
+    },
+    {
+      id: "q_chores",
+      text: "Gospodinjska opravila naj bodo razdeljena po dogovorjenem razporedu.",
+      weight: 0.0906,
+    },
+    {
+      id: "q_guests",
+      text: "Vesel(a) sem, če so v stanovanju pogosto obiski.",
+      weight: 0.0866,
+    },
+    {
+      id: "q_pets",
+      text: "V stanovanju bi rad(a) imel(a) hišnega ljubljenčka.",
+      weight: 0.0843,
+    },
+    {
+      id: "q_study",
+      text: "Doma se pogosto učim in takrat potrebujem mir.",
+      weight: 0.083,
+    },
+    {
+      id: "q_overnight",
+      text: "Ne moti me, če gostje ali partner(ka) prespijo v stanovanju.",
+      weight: 0.0801,
+    },
+    {
+      id: "q_wake",
+      text: "Zjutraj vstajam zgodaj in zvečer hodim zgodaj spat.",
+      weight: 0.0731,
+    },
+  ].map((statement) => Object.freeze(statement)),
+);
 
 /**
  * Likert levels (Android `LikertOdgovor`). `value` is normalized to 0..1 for
@@ -113,7 +124,11 @@ export function isExpressed(key: LikertKey): boolean {
  * an earlier questionnaire version used a continuous slider.
  */
 export function levelFromStored(value: number, weight: number): LikertKey {
-  if (!(weight > 0)) return "no_answer";
+  // Corrupt rows (non-finite value or weight) are treated as unanswered, not as a
+  // disagreement that would be counted as completed and re-saved with weight.
+  if (!(weight > 0) || !Number.isFinite(weight) || !Number.isFinite(value)) {
+    return "no_answer";
+  }
   let best: LikertLevel = LIKERT[0];
   for (const level of LIKERT) {
     if (
