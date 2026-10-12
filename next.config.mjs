@@ -7,6 +7,11 @@ const privatePrefixes = [
   "/profile",
   "/admin",
   "/report",
+  "/recommendations",
+  "/academic-verification",
+  // E-mail confirmation links and auth errors carry tokens or session state.
+  "/auth",
+  "/auth-error",
 ];
 
 /** Privacy headers for every response. */

@@ -16,6 +16,11 @@ export const PRIVATE_PREFIXES = [
   "/profile",
   "/admin",
   "/report",
+  "/recommendations",
+  "/academic-verification",
+  // E-mail confirmation links and auth errors carry tokens or session state.
+  "/auth",
+  "/auth-error",
 ] as const;
 
 export const NOINDEX = "noindex, nofollow, noarchive";

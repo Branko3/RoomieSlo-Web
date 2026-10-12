@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { AppShell } from "../components/app-shell";
 import { Providers } from "../components/providers";
+import { AuthProvider } from "../components/auth-provider";
 
 export const metadata: Metadata = {
   title: "RoomieSlo — najdi svoj dom",
@@ -18,7 +19,9 @@ export default function RootLayout({
     <html lang="sl">
       <body>
         <Providers>
-          <AppShell>{children}</AppShell>
+          <AuthProvider>
+            <AppShell>{children}</AppShell>
+          </AuthProvider>
         </Providers>
       </body>
     </html>
