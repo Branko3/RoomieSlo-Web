@@ -3,10 +3,9 @@
 How operators handle data-subject requests, account deletion, retention and personal-data
 incidents for the web app and the shared Supabase project.
 
-The retention matrix itself, which data is kept and for how long after deletion, is still
-**pending approval** in PR #9 (`docs/features/account-document-deletion-retention-rules.md`).
-These procedures don't decide retention. Where a step depends on it, they point to the matrix and
-take the most protective safe action (keep the data, restrict access) until it is approved.
+The retention matrix, which data is kept and for how long after deletion, was **approved on
+2026-10-12** and lives in `docs/features/account-document-deletion-retention-rules.md`. That
+record is the single policy source; these procedures apply it and don't set periods of their own.
 
 Values in angle brackets (`<…>`) are owner decisions; see [Open decisions](#open-decisions).
 
@@ -30,13 +29,13 @@ date closed. Store no copies of the user's data in the log.
 
 ## 3. Account deletion procedure (operator)
 
-There's no self-service deletion yet. Android has none, and the automated flow is blocked on the
-retention matrix in PR #9. Until then, operators delete accounts manually in the Supabase dashboard
-of the **production** project, with two people where possible.
+There's no self-service deletion yet (Android has none; it is follow-up work in the retention
+record). Operators delete accounts manually in the Supabase dashboard of the **production**
+project, with two people where possible.
 
 1. **Verify** the request (section 2) and record it.
 2. **Check open safety cases:** in `/admin/reports`, or with the SQL editor `select id, status from reports where reported_id = '<uid>' and status = 'open'`.
-   - If there are open reports about this user, finish reviewing them first. While the report-retention row of the matrix is pending, keep a redacted note: report id, reason, outcome, no personal text.
+   - If there are open reports about this user, finish reviewing them first. Reports are kept, anonymized, for 12 months after closing (approved matrix).
 3. **Delete academic documents:** Storage → `vpisnice` → folder `<uid>/` → select all → delete.
    - This is mandatory: database deletion does **not** remove Storage files.
    - Confirm the folder is empty.
@@ -46,7 +45,9 @@ of the **production** project, with two people where possible.
    - `matches` they took part in, and every message in those matches, including the other participant's;
    - reports they filed or that name them.
 
-   This is today's schema behavior. If the approved matrix requires keeping or anonymizing messages or reports, a migration must change the cascades **before** this step is used again (tracked in PR #9).
+   **This contradicts the approved matrix**, which keeps matches, messages and reports for the other participant (anonymized). Until the cascade migration from the retention record lands:
+   - if the user has **no** matches and is named in **no** reports, run this step as written;
+   - otherwise, do steps 3 and 5's document check, delete the user's `questionnaire_answers`, `favorites` and owned `listings` in the SQL editor, record the request as "awaiting migration", and finish this step only after the migration is applied. Tell the user what was deleted and when the rest will follow, within the one-month deadline (extendable by two months under GDPR art. 12(3) with a reason).
 
 5. **Verify** in the SQL editor that each count is 0:
 
@@ -58,7 +59,7 @@ of the **production** project, with two people where possible.
      (select count(*) from storage.objects where bucket_id = 'vpisnice' and name like '<uid>/%') as documents;
    ```
 
-6. **Backups:** deleted data remains in backups until they expire (`<retention>`, see the runbook's section 4). If a backup is ever restored, re-apply all deletions recorded in the request log since the backup date before reopening the service.
+6. **Backups:** deleted data remains in backups until they expire (30 days, approved matrix; see the runbook's section 4). If a backup is ever restored, re-apply all deletions recorded in the request log since the backup date before reopening the service.
 7. **Reply** to the user confirming deletion and the backup-expiry date. Close the log entry.
 
 ## 4. Data minimisation in operations
@@ -89,13 +90,12 @@ of the **production** project, with two people where possible.
     );
   ```
 
-- Check that backups older than `<retention>` are deleted and the request log is current.
-- Once the PR #9 matrix is approved, apply its periods here (for example closed reports or inactive accounts).
+- Check that backups older than 30 days are deleted and the request log is current.
+- Apply the approved periods: delete reports (and their linked message evidence) closed more than 12 months ago, conversations whose participants have all deleted their accounts, and logs older than 90 days.
+- Review the admin message-access audit log: every in-app read must belong to a reported conversation.
 
 ## Open decisions
 
 - `NEXT_PUBLIC_PRIVACY_CONTACT` (the privacy email shown on `/privacy`) and the request owner.
 - Locations of the request log and breach register.
-- Backup retention (shared with the runbook).
-- The PR #9 retention matrix (messages, reports, listings, logs), which may require a migration before deletions continue.
-- Whether to build self-service deletion (a trusted server function or Edge Function, as described in PR #9) once the matrix is approved.
+- Decided 2026-10-12 (retention record): backup retention 30 days; the full retention matrix; admin message access limited to reported conversations. Still to build: the cascade migration, report evidence, the admin message view with audit log, and self-service deletion.

@@ -178,8 +178,11 @@ describe("privacy procedures document", () => {
     expect(auth).toBeLessThan(verify);
   });
 
-  it("states the 72-hour breach notification and defers retention to PR #9", () => {
+  it("states the 72-hour breach notification and follows the approved retention record", () => {
     expect(doc).toContain("72 hours");
-    expect(doc).toContain("PR #9");
+    expect(doc).toContain("account-document-deletion-retention-rules.md");
+    expect(doc).toMatch(/approved on\s+2026-10-12/);
+    // Until the cascade migration lands, accounts with chats or reports are not fully deleted.
+    expect(doc).toContain("awaiting migration");
   });
 });

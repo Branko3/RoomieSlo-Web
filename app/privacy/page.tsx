@@ -61,6 +61,14 @@ export default function PrivacyPage() {
             prijave, ki si jih oddal, ter dokazilo o vpisu v zasebni shrambi, do
             katere imata dostop le ti in skrbnik.
           </p>
+          <p>
+            Ob prijavi zlorabe lahko skrbnik pregleda pogovor, povezan s
+            prijavo; vsak tak vpogled se zabeleži. Upravljavec baze lahko do
+            sporočil dostopa za vzdrževanje in obravnavo zlorab. Po izbrisu
+            računa ostanejo tvoja sporočila drugi osebi vidna kot »Izbrisan
+            uporabnik«, prijave pa se anonimizirane hranijo 12 mesecev po
+            zaključku.
+          </p>
         </div>
       </section>
 
