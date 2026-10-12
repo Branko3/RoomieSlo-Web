@@ -89,3 +89,18 @@ describe("admin and indexing contract", () => {
     );
   });
 });
+
+describe("route guard configuration fallback", () => {
+  it("keeps public routes reachable without Supabase configuration (no /auth-error loop)", () => {
+    const middleware = read("middleware.ts");
+    const unconfigured = middleware.slice(
+      middleware.indexOf("if (!config.configured)"),
+      middleware.indexOf('reason", "configuration"'),
+    );
+
+    expect(unconfigured).toContain(
+      'if (access === "public") return NextResponse.next();',
+    );
+    expect(read("lib/auth/routes.ts")).toContain('"/auth-error"');
+  });
+});

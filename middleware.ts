@@ -8,6 +8,8 @@ export async function middleware(request: NextRequest) {
   const config = getSupabaseConfig();
 
   if (!config.configured) {
+    // Public routes (including /auth-error itself) stay reachable; redirecting them would loop.
+    if (access === "public") return NextResponse.next();
     const errorUrl = request.nextUrl.clone();
     errorUrl.pathname = "/auth-error";
     errorUrl.search = "";
@@ -50,17 +52,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(destination);
   }
   if (access !== "public" && !hasSession) {
-    const destination = request.nextUrl.clone();
-    destination.pathname = createLoginRedirect(
-      request.nextUrl.pathname,
-      request.nextUrl.search,
-    ).split("?")[0];
-    destination.search =
-      createLoginRedirect(
-        request.nextUrl.pathname,
-        request.nextUrl.search,
-      ).split("?")[1] || "";
-    return NextResponse.redirect(destination);
+    return NextResponse.redirect(
+      new URL(
+        createLoginRedirect(request.nextUrl.pathname, request.nextUrl.search),
+        request.url,
+      ),
+    );
   }
   return response;
 }
