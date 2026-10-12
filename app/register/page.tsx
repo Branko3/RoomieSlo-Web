@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "../../lib/supabase/browser";
 import {
   getRegistrationErrorMessage,
@@ -18,6 +19,7 @@ const initialValues: RegistrationValues = {
 };
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [values, setValues] = useState(initialValues);
   const [errors, setErrors] = useState<RegistrationErrors>({});
   const [status, setStatus] = useState("");
@@ -50,9 +52,8 @@ export default function RegisterPage() {
       if (error) {
         setStatus(getRegistrationErrorMessage(error));
       } else if (data.session) {
-        setStatus(
-          "Račun je ustvarjen. Lahko nadaljuješ na prijavo, ko bo ta omogočena.",
-        );
+        // Email confirmation is disabled for this project: the user is already signed in.
+        router.replace("/listings");
       } else {
         setStatus(
           `Račun je ustvarjen. Na ${signUpInput.email} smo poslali potrditveno povezavo. Preveri e-pošto in nato nadaljuj na prijavo.`,
