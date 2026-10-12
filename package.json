@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node scripts/validate-environment.mjs --deployment-only",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
@@ -11,6 +12,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
+    "validate:env": "node scripts/validate-environment.mjs",
     "test:e2e": "playwright test",
     "db:push": "supabase db push",
     "db:status": "supabase migration list"
