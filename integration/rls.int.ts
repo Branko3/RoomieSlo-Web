@@ -148,6 +148,35 @@ describe.skipIf(skip)("RLS negative access", () => {
   });
 
   describe("favorites and questionnaire answers", () => {
+    it("keeps questionnaire answers private to their owner", async () => {
+      await b.client
+        .from("questionnaire_answers")
+        .upsert(
+          { profile_id: b.userId, question_id: "q_noise", value: 0.5 },
+          { onConflict: "profile_id,question_id" },
+        );
+      const own = await b.client
+        .from("questionnaire_answers")
+        .select("question_id")
+        .eq("profile_id", b.userId);
+      expect(own.data?.length).toBeGreaterThan(0);
+      const theirs = await a.client
+        .from("questionnaire_answers")
+        .select("question_id")
+        .eq("profile_id", b.userId);
+      expect(theirs.error ? [] : theirs.data).toEqual([]);
+      // Recommendations still work for A, and carry no one else's answers.
+      const ranked = await a.client.functions.invoke("recommendations");
+      expect(ranked.error).toBeNull();
+      const others = (
+        ranked.data as { recommendations: Array<Record<string, unknown>> }
+      ).recommendations;
+      for (const entry of others) {
+        expect(entry).not.toHaveProperty("answers");
+        expect(entry.profile).not.toHaveProperty("answers");
+      }
+    });
+
     it("keeps favorites private and refuses favorites for someone else", async () => {
       const own = await a.client
         .from("favorites")
