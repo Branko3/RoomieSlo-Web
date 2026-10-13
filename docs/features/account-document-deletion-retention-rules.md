@@ -1,6 +1,6 @@
 # Account/document deletion and retention rules
 
-- Status: Approved policy (implementation in progress)
+- Status: Implemented (staging verification pending)
 - Date: 2026-10-09 (policy approved 2026-10-12)
 - Automated status: Not covered
 - Web surfaces: `/profile`, `/academic-verification`, `/admin/reports`, Supabase Auth, Postgres, Storage bucket `vpisnice`, backups and operational runbooks
@@ -34,7 +34,7 @@ academic-document upload (`vpisnice`), reports and the admin report dashboard, t
 authorization boundary, the `/privacy` page with self-service data export and manual
 deletion procedures, and the operations runbook.
 
-Still to build (follow-up PR, in this order):
+Implementation steps (all five are implemented; none is verified on staging yet):
 
 1. **Done: migration `20261014000000_account_deletion_tombstones.sql`.** A `before delete`
    trigger on `auth.users` applies the matrix and turns the profile into a tombstone; the
@@ -59,8 +59,12 @@ Still to build (follow-up PR, in this order):
    writes `deletion_register` (migration `20261014000300`). The page then signs out, clears
    cached data and opens `/login?deleted=1`. Shared rules live in
    `supabase/functions/_shared/account-deletion.ts`.
-5. **Retention jobs**: purge closed-report evidence after 12 months, conversations whose
-   participants have all deleted their accounts, and logs after 90 days.
+5. **Done: migration `20261014000400_retention_jobs.sql`.** `purge_expired_data()` (not
+   callable through the API) runs daily at 03:15 UTC through `pg_cron`. It deletes reports
+   and their evidence 12 months after closing, conversations whose participants have all
+   deleted their accounts (unless a report still needs them), expired safety identity
+   records, tombstones nothing refers to any more, admin read-log rows after 12 months, and
+   `deletion_register` rows after 90 days (their `subject` after 30).
 
 Once migration `20261014000000` is applied, operators may delete any account through the
 dashboard after emptying its `vpisnice` folder (see `docs/operations/privacy-procedures.md`).
@@ -110,7 +114,7 @@ public URLs.
 | User reports                     | Keep, anonymized                                 | Reports made by or about the user are kept, anonymized, for 12 months after the report is closed, then deleted.                                                                                                                                                                                                                                              | Approved            |
 | Academic documents in `vpisnice` | Delete immediately                               | Every object under the user's UUID folder is enumerated and deleted, then verified.                                                                                                                                                                                                                                                                          | Approved            |
 | Backups                          | Expire after 30 days                             | Deleted data can remain in backups for up to 30 days. If a backup is restored, every deletion recorded since the backup date is re-applied before the service reopens.                                                                                                                                                                                       | Approved            |
-| Logs/analytics                   | Minimal fields, 90 days                          | Keep only the request id, date and outcome; never passwords, tokens, document contents or message text. Deleted after 90 days.                                                                                                                                                                                                                               | Approved            |
+| Logs/analytics                   | Minimal fields, 90 days                          | Keep only the request id, date and outcome; never passwords, tokens, document contents or message text. Deleted after 90 days. The deletion register also keeps the deleted user id for 30 days, only to re-apply deletions after a backup restore.                                                                                                          | Approved            |
 | Admin access to messages         | Reported conversations only                      | Database owner: full access through Supabase for operations and abuse handling. In-app admins: only conversations linked to a report, with an audit record for every read. The privacy notice discloses this.                                                                                                                                                | Approved            |
 | Admin message-read audit log     | Keep 12 months                                   | One row per admin read of a reported conversation (admin id, report id, time); append-only; admins can review it. Deleted 12 months after the read, like reports.                                                                                                                                                                                            | Approved 2026-10-12 |
 

@@ -103,6 +103,10 @@ deletion, or 12 months after the last report about the person closes, whichever 
 
 ## 6. Retention review (quarterly)
 
+- Check that the daily retention job ran and succeeded:
+  `select status, return_message, start_time from cron.job_run_details where jobid = (select jobid from cron.job where jobname = 'purge-expired-data') order by start_time desc limit 7;`
+  The job returns its per-rule counts; run `select public.purge_expired_data();` by hand to catch up after an outage.
+- After a backup restore, re-apply every deletion since the backup date: for each `deletion_register` row with a `subject` and `requested_at` after the backup, delete that Auth user again (section 3).
 - Check that `vpisnice` holds no folders for deleted accounts:
 
   ```sql
