@@ -3,6 +3,7 @@ import {
   applyReadLocally,
   deliveryLabel,
   isAdvance,
+  markAcceptedDelivered,
   markDelivered,
   markRead,
   needsReadMarker,
@@ -119,6 +120,41 @@ describe("markDelivered (Android ChatRepository.markDelivered)", () => {
     await expect(
       markDelivered(makeClient({ user: null }).client, "m1"),
     ).resolves.toBe(false);
+  });
+});
+
+describe("markAcceptedDelivered (Android ChatListViewModel.load)", () => {
+  const rows = [
+    { match: { id: "accepted-1", status: "accepted" } },
+    { match: { id: "pending-1", status: "pending" } },
+    { match: { id: "rejected-1", status: "rejected" } },
+    { match: { id: "accepted-2", status: "accepted" } },
+  ];
+
+  it("marks only accepted matches delivered", async () => {
+    const { client, calls } = makeClient();
+    await expect(markAcceptedDelivered(client, rows)).resolves.toBe(2);
+    const matchIds = calls
+      .filter(([name, args]) => name === "eq" && args[0] === "match_id")
+      .map(([, args]) => args[1]);
+    expect(matchIds.sort()).toEqual(["accepted-1", "accepted-2"]);
+  });
+
+  it("does nothing without accepted matches", async () => {
+    const { client, calls } = makeClient();
+    await expect(markAcceptedDelivered(client, rows.slice(1, 3))).resolves.toBe(
+      0,
+    );
+    expect(calls).toEqual([]);
+  });
+
+  it("never throws when the updates fail", async () => {
+    await expect(
+      markAcceptedDelivered(
+        makeClient({ result: new TypeError("Failed to fetch") }).client,
+        rows,
+      ),
+    ).resolves.toBe(0);
   });
 });
 
