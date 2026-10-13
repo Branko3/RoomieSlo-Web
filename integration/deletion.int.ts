@@ -52,13 +52,11 @@ describe.skipIf(skip)("account deletion (throwaway user)", () => {
     });
     if (accepted.error) throw accepted.error;
     messageBody = marker("last-words");
-    const sent = await client
-      .from("messages")
-      .insert({
-        match_id: matchId,
-        sender_id: doomed.userId,
-        body: messageBody,
-      });
+    const sent = await client.from("messages").insert({
+      match_id: matchId,
+      sender_id: doomed.userId,
+      body: messageBody,
+    });
     if (sent.error) throw sent.error;
     await client
       .from("questionnaire_answers")
