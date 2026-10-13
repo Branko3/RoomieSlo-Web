@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import { writeListingsToCache } from "../lib/listings/cache-sync";
+import {
+  fetchPageAndCache,
+  writeListingsToCache,
+} from "../lib/listings/cache-sync";
 import { getListingCacheStore } from "../lib/listings/indexeddb-store";
 import {
   cacheListingsPage,
@@ -269,6 +272,52 @@ describe("writeListingsToCache", () => {
         createMemoryListingStore(),
       ),
     ).resolves.toBe(false);
+  });
+});
+
+describe("fetchPageAndCache (paged /search feed)", () => {
+  it("returns the page and caches its listings for the session user", async () => {
+    const store = createMemoryListingStore();
+    const page = { items: [listing("a"), listing("b")], nextCursor: null };
+    await expect(
+      fetchPageAndCache(
+        async () => page,
+        async () => USER,
+        store,
+      ),
+    ).resolves.toBe(page);
+    await vi.waitFor(async () =>
+      expect(ids(await store.getAll()).sort()).toEqual(["a", "b"]),
+    );
+  });
+
+  it("returns the page even when caching fails", async () => {
+    const failing: ListingCacheStore = {
+      ...createMemoryListingStore(),
+      putAll: vi.fn().mockRejectedValue(new Error("QuotaExceededError")),
+    };
+    const page = { items: [listing("a")] };
+    await expect(
+      fetchPageAndCache(
+        async () => page,
+        async () => USER,
+        failing,
+      ),
+    ).resolves.toBe(page);
+  });
+
+  it("propagates fetch errors and caches nothing", async () => {
+    const store = createMemoryListingStore();
+    const readUserId = vi.fn(async () => USER);
+    await expect(
+      fetchPageAndCache(
+        () => Promise.reject(new TypeError("Failed to fetch")),
+        readUserId,
+        store,
+      ),
+    ).rejects.toThrow("Failed to fetch");
+    expect(readUserId).not.toHaveBeenCalled();
+    expect(await store.getAll()).toEqual([]);
   });
 });
 
