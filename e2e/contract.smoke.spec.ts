@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { pageAlerts } from "./env";
 
 const stagingListingId = process.env.E2E_LISTING_ID;
 const hasStagingContract = Boolean(
@@ -23,7 +24,7 @@ test("starts with public Supabase configuration handling", async ({ page }) => {
   ) {
     // Protected routes explain the missing configuration instead of rendering data.
     await expect(page).toHaveURL(/\/auth-error\?reason=configuration$/);
-    await expect(page.getByRole("alert")).toContainText("Supabase");
+    await expect(pageAlerts(page)).toContainText("Supabase");
   } else {
     // Signed-out visitors are sent to login with the original destination preserved.
     await expect(page).toHaveURL(/\/login\?returnTo=%2Flistings$/);
