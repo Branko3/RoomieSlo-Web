@@ -3,12 +3,12 @@ import {
   compatibilityPercent,
   compatibilityScore,
   rankByCompatibility,
+  scoreCandidates,
   type CompatibilityAnswer,
 } from "../lib/compatibility/compatibility";
 import {
   loadRecommendations,
   nameAndAge,
-  PROFILE_WITH_ANSWERS,
   type RecommendationsClient,
 } from "../lib/matching/recommendations";
 
@@ -170,169 +170,151 @@ describe("nameAndAge", () => {
   });
 });
 
-type Rows = Array<Record<string, unknown>>;
+describe("scoreCandidates (what the server returns)", () => {
+  const me = [answer("q1", 1), answer("q2", 0)];
+  const person = (id: string, answers: CompatibilityAnswer[]) => ({
+    id,
+    displayName: `Oseba ${id}`,
+    answers,
+  });
+
+  it("ranks like rankByCompatibility and never returns the candidates' answers", () => {
+    const scored = scoreCandidates(me, [
+      person("low", [answer("q1", 0)]),
+      person("high", [answer("q1", 1), answer("q2", 0)]),
+    ]);
+    expect(scored).toEqual([
+      {
+        profile: { id: "high", displayName: "Oseba high" },
+        compatibility: 100,
+        sharedStatements: 2,
+      },
+      {
+        profile: { id: "low", displayName: "Oseba low" },
+        compatibility: 0,
+        sharedStatements: 1,
+      },
+    ]);
+    expect(JSON.stringify(scored)).not.toContain("question_id");
+  });
+
+  it("counts no shared statements when either side skipped them", () => {
+    const [only] = scoreCandidates(me, [
+      person("skip", [answer("q1", 1, 0), answer("q3", 1)]),
+    ]);
+    expect(only.sharedStatements).toBe(0);
+    expect(only.compatibility).toBe(0);
+  });
+});
 
 function makeClient({
   user = { id: "me" } as { id: string } | null,
-  mine = [
-    {
-      id: "me",
-      display_name: "Jaz",
-      academic_status_verified: true,
-      is_available: true,
-      age: 22,
-      faculty: "FRI",
-      bio: "",
-      avatar_url: "",
-      questionnaire_answers: [answer("q1", 1)],
-    },
-  ] as Rows,
-  candidates = [] as Rows,
-  failWith = null as unknown,
+  invoke = {
+    data: { myAnswers: [answer("q1", 1)], recommendations: [] },
+    error: null,
+  } as { data: unknown; error: unknown } | Error,
 } = {}) {
-  const queries: Array<Array<[string, unknown[]]>> = [];
+  const calls: string[] = [];
   const client = {
     auth: { getUser: vi.fn(async () => ({ data: { user }, error: null })) },
-    from: vi.fn(() => ({
-      select: (columns: string) => {
-        const calls: Array<[string, unknown[]]> = [["select", [columns]]];
-        queries.push(calls);
-        const builder = {
-          eq: (column: string, value: unknown) => {
-            calls.push(["eq", [column, value]]);
-            return builder;
-          },
-          neq: (column: string, value: unknown) => {
-            calls.push(["neq", [column, value]]);
-            return builder;
-          },
-          then: (
-            resolve: (v: unknown) => unknown,
-            reject: (e: unknown) => unknown,
-          ) => {
-            if (failWith instanceof Error)
-              return Promise.reject(failWith).then(resolve, reject);
-            const isMine = calls.some(
-              ([name, args]) => name === "eq" && args[0] === "id",
-            );
-            return Promise.resolve({
-              data: isMine ? mine : candidates,
-              error: failWith,
-            }).then(resolve, reject);
-          },
-        };
-        return builder;
-      },
-    })),
+    functions: {
+      invoke: vi.fn(async (name: string) => {
+        calls.push(name);
+        if (invoke instanceof Error) throw invoke;
+        return invoke;
+      }),
+    },
   };
-  return { client: client as unknown as RecommendationsClient, queries };
+  return { client: client as unknown as RecommendationsClient, calls };
 }
 
-const profile = (
-  id: string,
-  value: number,
-  extra: Record<string, unknown> = {},
-) => ({
-  id,
-  display_name: `Oseba ${id}`,
-  academic_status_verified: false,
-  is_available: true,
-  age: null,
-  faculty: "",
-  bio: "",
-  avatar_url: "",
-  questionnaire_answers: [answer("q1", value)],
-  ...extra,
+const recommendation = (id: string, compatibility: number) => ({
+  profile: {
+    id,
+    displayName: `Oseba ${id}`,
+    verified: false,
+    available: true,
+    age: null,
+    faculty: "",
+    bio: "",
+  },
+  compatibility,
+  sharedStatements: 1,
 });
 
 describe("loadRecommendations", () => {
-  it("loads available profiles other than the user with nested answers", async () => {
-    const { client, queries } = makeClient();
-    await loadRecommendations(client);
-    expect(queries).toContainEqual([
-      ["select", [PROFILE_WITH_ANSWERS]],
-      ["eq", ["is_available", true]],
-      ["neq", ["id", "me"]],
-    ]);
-    expect(queries).toContainEqual([
-      ["select", [PROFILE_WITH_ANSWERS]],
-      ["eq", ["id", "me"]],
-    ]);
-    expect(PROFILE_WITH_ANSWERS).toContain(
-      "questionnaire_answers(profile_id,question_id,value,weight)",
-    );
-  });
-
-  it("ranks candidates by compatibility with the user's answers", async () => {
-    const { client } = makeClient({
-      candidates: [
-        profile("a", 0),
-        profile("b", 1, { age: 23, faculty: "FF" }),
-      ],
+  it("asks the recommendations function, never the answers table", async () => {
+    const result = {
+      myAnswers: [answer("q1", 1)],
+      recommendations: [recommendation("b", 100), recommendation("a", 0)],
+    };
+    const { client, calls } = makeClient({
+      invoke: { data: result, error: null },
     });
-    const result = await loadRecommendations(client);
-    expect(
-      result.recommendations.map((r) => [r.profile.id, r.compatibility]),
-    ).toEqual([
-      ["b", 100],
-      ["a", 0],
-    ]);
-    expect(result.recommendations[0].profile).toMatchObject({
-      displayName: "Oseba b",
-      age: 23,
-      faculty: "FF",
-    });
-  });
-
-  it("scores 0 when the user's own profile row is missing", async () => {
-    const { client } = makeClient({ mine: [], candidates: [profile("a", 1)] });
-    const result = await loadRecommendations(client);
-    expect(result.myAnswers).toBeNull();
-    expect(result.recommendations[0].compatibility).toBe(0);
-  });
-
-  it("fills in safe defaults for missing profile fields", async () => {
-    const { client } = makeClient({
-      candidates: [
-        profile("a", 1, {
-          display_name: "  ",
-          faculty: null,
-          bio: null,
-          questionnaire_answers: null,
-        }),
-      ],
-    });
-    const [rec] = (await loadRecommendations(client)).recommendations;
-    expect(rec.profile).toMatchObject({
-      displayName: "Uporabnik",
-      faculty: "",
-      bio: "",
-      answers: [],
-    });
-    expect(rec.compatibility).toBe(0);
+    await expect(loadRecommendations(client)).resolves.toEqual(result);
+    expect(calls).toEqual(["recommendations"]);
+    expect(client).not.toHaveProperty("from");
   });
 
   it("requires a signed-in user", async () => {
-    const { client, queries } = makeClient({ user: null });
+    const { client, calls } = makeClient({ user: null });
     await expect(loadRecommendations(client)).rejects.toMatchObject({
       kind: "signed-out",
     });
-    expect(queries).toEqual([]);
+    expect(calls).toEqual([]);
+  });
+
+  it("maps the function's 401 to signed-out", async () => {
+    await expect(
+      loadRecommendations(
+        makeClient({
+          invoke: {
+            data: null,
+            error: { name: "FunctionsHttpError", context: { status: 401 } },
+          },
+        }).client,
+      ),
+    ).rejects.toMatchObject({ kind: "signed-out" });
   });
 
   it("maps network and server failures to safe messages", async () => {
     await expect(
       loadRecommendations(
-        makeClient({ failWith: new TypeError("Failed to fetch") }).client,
+        makeClient({ invoke: new TypeError("Failed to fetch") }).client,
       ),
     ).rejects.toMatchObject({ kind: "offline" });
     await expect(
       loadRecommendations(
-        makeClient({ failWith: { code: "XX000", message: "internal" } }).client,
+        makeClient({
+          invoke: {
+            data: null,
+            error: { name: "FunctionsFetchError", message: "Failed to send" },
+          },
+        }).client,
+      ),
+    ).rejects.toMatchObject({ kind: "offline" });
+    await expect(
+      loadRecommendations(
+        makeClient({
+          invoke: {
+            data: null,
+            error: { name: "FunctionsHttpError", context: { status: 500 } },
+          },
+        }).client,
       ),
     ).rejects.toMatchObject({
       kind: "unknown",
       message: "Napaka pri nalaganju priporočil.",
     });
+  });
+
+  it("rejects a malformed response instead of rendering it", async () => {
+    await expect(
+      loadRecommendations(
+        makeClient({
+          invoke: { data: { recommendations: "nope" }, error: null },
+        }).client,
+      ),
+    ).rejects.toMatchObject({ kind: "unknown" });
   });
 });

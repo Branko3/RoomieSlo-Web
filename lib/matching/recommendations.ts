@@ -1,26 +1,8 @@
-import {
-  rankByCompatibility,
-  type CompatibilityAnswer,
-} from "../compatibility/compatibility";
+import type { CompatibilityAnswer } from "../compatibility/compatibility";
 
 type DbError = { code?: string; message?: string; status?: number } | null;
 
-/** Android `PROFILE_WITH_ANSWERS`: profile fields plus nested questionnaire answers. */
-export const PROFILE_WITH_ANSWERS =
-  "id,display_name,academic_status_verified,is_available,age,faculty,bio,avatar_url,questionnaire_answers(profile_id,question_id,value,weight)";
-
-type ProfileWithAnswersRow = {
-  id: string;
-  display_name: string | null;
-  academic_status_verified: boolean;
-  is_available: boolean;
-  age: number | null;
-  faculty: string | null;
-  bio: string | null;
-  avatar_url: string | null;
-  questionnaire_answers: CompatibilityAnswer[] | null;
-};
-
+/** A recommended person as the server returns it: no questionnaire answers. */
 export type RecommendedProfile = {
   id: string;
   displayName: string;
@@ -29,20 +11,19 @@ export type RecommendedProfile = {
   age: number | null;
   faculty: string;
   bio: string;
-  answers: CompatibilityAnswer[];
 };
 
 export type Recommendation = {
   profile: RecommendedProfile;
   compatibility: number;
+  /** Statements both people answered; 0 means no score could be computed. */
+  sharedStatements: number;
 };
 
-type Filterable = PromiseLike<{
-  data: ProfileWithAnswersRow[] | null;
-  error: DbError;
-}> & {
-  eq: (column: string, value: unknown) => Filterable;
-  neq: (column: string, value: unknown) => Filterable;
+export type RecommendationsResult = {
+  /** The signed-in user's own answers (for the "answer more" empty state). */
+  myAnswers: CompatibilityAnswer[];
+  recommendations: Recommendation[];
 };
 
 /** Structural subset of the Supabase client used for recommendations. */
@@ -53,7 +34,12 @@ export type RecommendationsClient = {
       error: DbError;
     }>;
   };
-  from: (table: "profiles") => { select: (columns: string) => Filterable };
+  functions: {
+    invoke: (
+      name: "recommendations",
+      options?: { body?: unknown },
+    ) => Promise<{ data: unknown; error: unknown }>;
+  };
 };
 
 export class RecommendationsError extends Error {
@@ -69,19 +55,6 @@ export class RecommendationsError extends Error {
   }
 }
 
-function toProfile(row: ProfileWithAnswersRow): RecommendedProfile {
-  return {
-    id: row.id,
-    displayName: row.display_name?.trim() || "Uporabnik",
-    verified: row.academic_status_verified === true,
-    available: row.is_available === true,
-    age: row.age,
-    faculty: row.faculty ?? "",
-    bio: row.bio ?? "",
-    answers: row.questionnaire_answers ?? [],
-  };
-}
-
 /** "Ana K., 22", or the name alone when no age is set (Android `imeInStarost`). */
 export function nameAndAge(
   profile: Pick<RecommendedProfile, "displayName" | "age">,
@@ -91,53 +64,55 @@ export function nameAndAge(
     : `${profile.displayName}, ${profile.age}`;
 }
 
+function isResult(value: unknown): value is RecommendationsResult {
+  const v = value as RecommendationsResult | null;
+  return (
+    !!v &&
+    Array.isArray(v.myAnswers) &&
+    Array.isArray(v.recommendations) &&
+    v.recommendations.every(
+      (r) =>
+        typeof r?.profile?.id === "string" &&
+        typeof r.compatibility === "number" &&
+        typeof r.sharedStatements === "number",
+    )
+  );
+}
+
+function toError(error: unknown): RecommendationsError {
+  const e = error as {
+    name?: string;
+    message?: string;
+    context?: { status?: number };
+  } | null;
+  if (e?.context?.status === 401) return new RecommendationsError("signed-out");
+  if (
+    error instanceof TypeError ||
+    e?.name === "FunctionsFetchError" ||
+    /fetch|network/i.test(e?.message ?? "")
+  )
+    return new RecommendationsError("offline");
+  return new RecommendationsError("unknown");
+}
+
 /**
- * Loads available profiles other than the current user with their answers in
- * one request, scores them against the user's own answers, and orders them by
- * descending compatibility (Android `RecommendedProfilesViewModel.load`).
+ * Loads available profiles ranked by compatibility with the user's answers
+ * (Android `RecommendedProfilesViewModel.load`). The ranking runs in the
+ * `recommendations` Edge Function, because other people's answers are not
+ * readable from the browser.
  */
 export async function loadRecommendations(
   client: RecommendationsClient,
-): Promise<{
-  myAnswers: CompatibilityAnswer[] | null;
-  recommendations: Recommendation[];
-}> {
+): Promise<RecommendationsResult> {
   try {
     const { data: userData } = await client.auth.getUser();
-    const userId = userData.user?.id;
-    if (!userId) throw new RecommendationsError("signed-out");
-
-    const [mine, candidates] = await Promise.all([
-      client.from("profiles").select(PROFILE_WITH_ANSWERS).eq("id", userId),
-      client
-        .from("profiles")
-        .select(PROFILE_WITH_ANSWERS)
-        .eq("is_available", true)
-        .neq("id", userId),
-    ]);
-    if (mine.error) throw mine.error;
-    if (candidates.error) throw candidates.error;
-
-    const myRow = mine.data?.[0];
-    const myAnswers = myRow ? (myRow.questionnaire_answers ?? []) : null;
-    const ranked = rankByCompatibility(
-      myAnswers,
-      (candidates.data ?? []).map(toProfile),
-    );
-    return {
-      myAnswers,
-      recommendations: ranked.map(({ candidate, compatibility }) => ({
-        profile: candidate,
-        compatibility,
-      })),
-    };
+    if (!userData.user?.id) throw new RecommendationsError("signed-out");
+    const { data, error } = await client.functions.invoke("recommendations");
+    if (error) throw toError(error);
+    if (!isResult(data)) throw new RecommendationsError("unknown");
+    return data;
   } catch (error) {
     if (error instanceof RecommendationsError) throw error;
-    const message = (error as { message?: string } | null)?.message ?? "";
-    throw new RecommendationsError(
-      error instanceof TypeError || /fetch|network/i.test(message)
-        ? "offline"
-        : "unknown",
-    );
+    throw toError(error);
   }
 }

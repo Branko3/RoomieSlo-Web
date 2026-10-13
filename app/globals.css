@@ -609,27 +609,23 @@ button {
   color: var(--ink);
   margin: 10px 0 5px;
 }
-.favorite-list,
-.chat-list {
+.favorite-list {
   background: #fff;
   border: 1px solid var(--line);
   border-radius: 17px;
   overflow: hidden;
 }
-.favorite-row,
-.chat-row {
+.favorite-row {
   display: flex;
   align-items: center;
   gap: 14px;
   padding: 18px 20px;
   border-bottom: 1px solid var(--line);
 }
-.favorite-row:last-child,
-.chat-row:last-child {
+.favorite-row:last-child {
   border-bottom: 0;
 }
-.favorite-row:hover,
-.chat-row:hover {
+.favorite-row:hover {
   background: #fafdfb;
 }
 .favorite-row-link {
@@ -648,13 +644,10 @@ button {
   font-size: 30px;
 }
 .favorite-row b,
-.favorite-row small,
-.chat-copy b,
-.chat-copy small {
+.favorite-row small {
   display: block;
 }
-.favorite-row small,
-.chat-copy small {
+.favorite-row small {
   color: var(--muted);
   font-size: 12px;
   margin-top: 5px;
@@ -708,9 +701,6 @@ button {
   height: 34px;
   font-size: 10px;
 }
-.chat-copy {
-  flex: 1;
-}
 .verified {
   display: inline-grid;
   place-items: center;
@@ -721,21 +711,6 @@ button {
   width: 14px;
   height: 14px;
   margin-left: 5px;
-}
-.chat-time {
-  color: var(--muted);
-  font-size: 11px;
-  text-align: right;
-  align-self: flex-start;
-}
-.chat-time i {
-  font-style: normal;
-  display: block;
-  background: var(--green);
-  color: white;
-  border-radius: 10px;
-  padding: 3px 6px;
-  margin-top: 7px;
 }
 .profile-header {
   display: flex;
@@ -835,7 +810,6 @@ button {
 }
 .progress span {
   display: block;
-  width: 68%;
   height: 100%;
   background: var(--green);
 }
