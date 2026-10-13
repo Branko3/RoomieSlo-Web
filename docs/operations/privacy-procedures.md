@@ -11,12 +11,12 @@ Values in angle brackets (`<…>`) are owner decisions; see [Open decisions](#op
 
 ## 1. Requests and deadlines
 
-| Request (GDPR)                        | How users make it                                                                        | Who handles it           | Deadline                              |
-| ------------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------ | ------------------------------------- |
-| Access / portability (Art. 15, 20)    | Self-service: `/privacy` → "Prenesi podatke" (JSON). Academic document files on request. | User; operator for files | Immediate; files within 1 month       |
-| Rectification (Art. 16)               | Edit the profile, or "Zahtevaj popravek" (email)                                         | User; operator           | 1 month                               |
-| Erasure / account deletion (Art. 17)  | "Zahtevaj izbris" (email to `NEXT_PUBLIC_PRIVACY_CONTACT`)                               | Operator (section 3)     | 1 month (extendable by 2 with notice) |
-| Objection / restriction (Art. 18, 21) | Email                                                                                    | Operator and owner       | 1 month                               |
+| Request (GDPR)                        | How users make it                                                                        | Who handles it                                                      | Deadline                                                                |
+| ------------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Access / portability (Art. 15, 20)    | Self-service: `/privacy` → "Prenesi podatke" (JSON). Academic document files on request. | User; operator for files                                            | Immediate; files within 1 month                                         |
+| Rectification (Art. 16)               | Edit the profile, or "Zahtevaj popravek" (email)                                         | User; operator                                                      | 1 month                                                                 |
+| Erasure / account deletion (Art. 17)  | Self-service: Profil → "Izbriši račun"; or "Zahtevaj izbris po e-pošti"                  | User; operator (section 3) for e-mail requests and partial failures | Immediate; e-mail requests within 1 month (extendable by 2 with notice) |
+| Objection / restriction (Art. 18, 21) | Email                                                                                    | Operator and owner                                                  | 1 month                                                                 |
 
 Log every request in `<request log>`: date received, account id, type, identity check, actions and
 date closed. Store no copies of the user's data in the log.
@@ -29,7 +29,9 @@ date closed. Store no copies of the user's data in the log.
 
 ## 3. Account deletion procedure (operator)
 
-Until self-service deletion ships, operators delete accounts in the Supabase dashboard of the
+Users delete their own accounts on `/profile/delete-account`. Operators handle e-mail requests
+and finish self-service deletions that ended in `partial_failure` (a `deletion_register` row
+with that outcome: re-run this procedure for its `subject`). Operators delete accounts in the Supabase dashboard of the
 **production** project, with two people where possible. The same database trigger runs for
 both, so the outcome is identical.
 

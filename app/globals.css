@@ -1996,3 +1996,19 @@ button {
 .privacy-error {
   color: #b42318;
 }
+
+/* Self-service account deletion */
+.delete-account-link {
+  display: block;
+  width: fit-content;
+  margin: 18px auto 0;
+}
+.delete-account ul {
+  margin: 8px 0 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 4px;
+}
+.delete-account .profile-form {
+  margin-top: 20px;
+}

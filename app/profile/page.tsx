@@ -51,6 +51,12 @@ export default function ProfilePage() {
         <Link href="/profile/questionnaire">Nadaljuj →</Link>
       </section>
       <LogoutButton />
+      <Link
+        className="text-link danger-link delete-account-link"
+        href="/profile/delete-account"
+      >
+        Izbriši račun
+      </Link>
     </div>
   );
 }

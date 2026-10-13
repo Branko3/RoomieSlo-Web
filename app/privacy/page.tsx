@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
+import Link from "next/link";
 import {
   ExportError,
   exportCopy,
@@ -107,18 +108,25 @@ export default function PrivacyPage() {
         <div>
           <b>Izbris računa in popravki</b>
           <p>
-            Izbris računa trenutno opravi skrbnik na tvojo zahtevo, ker mora
-            hkrati izbrisati tudi dokazilo o vpisu in upoštevati pravila hrambe
-            prijav. Na zahtevo odgovorimo najpozneje v enem mesecu.
+            Račun lahko izbrišeš sam, ko si prijavljen: Profil → Izbriši račun.
+            Če to ne gre, nam piši in izbris opravimo v enem mesecu.
           </p>
+        </div>
+        <div className="privacy-actions">
+          <Link
+            className="button button-outline"
+            href="/profile/delete-account"
+          >
+            Izbriši račun
+          </Link>
         </div>
         {contact ? (
           <div className="privacy-actions">
             <a
-              className="button button-outline"
+              className="text-link"
               href={privacyRequestHref(contact, "deletion")}
             >
-              Zahtevaj izbris
+              Zahtevaj izbris po e-pošti
             </a>
             <a
               className="text-link"
