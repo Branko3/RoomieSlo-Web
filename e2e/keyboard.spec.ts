@@ -141,12 +141,16 @@ test.describe("keyboard journey", () => {
     const toggle = page.getByRole("button", {
       name: "Preklopi razpoložljivost",
     });
-    await expect(toggle).toHaveAttribute("aria-pressed", "true");
+    // The state is saved to the profile, so toggle relative to it and restore it.
+    const before = (await toggle.getAttribute("aria-pressed")) ?? "false";
+    const flipped = before === "true" ? "false" : "true";
     await toggle.focus();
     await page.keyboard.press("Space");
-    await expect(toggle).toHaveAttribute("aria-pressed", "false");
+    await expect(toggle).toHaveAttribute("aria-pressed", flipped);
+    await expect(toggle).not.toHaveAttribute("aria-busy", "true");
     await page.keyboard.press("Enter");
-    await expect(toggle).toHaveAttribute("aria-pressed", "true");
+    await expect(toggle).toHaveAttribute("aria-pressed", before);
+    await expect(toggle).not.toHaveAttribute("aria-busy", "true");
   });
 
   test("the login form can be filled and submitted without a mouse", async ({

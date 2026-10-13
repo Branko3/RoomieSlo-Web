@@ -835,7 +835,6 @@ button {
 }
 .progress span {
   display: block;
-  width: 68%;
   height: 100%;
   background: var(--green);
 }
