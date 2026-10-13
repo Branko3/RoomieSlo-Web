@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import {
   FAVORITES_KEY,
   listingId,
+  pageAlerts,
   requireSignedIn,
   supabaseConfigured,
 } from "./env";
@@ -17,7 +18,7 @@ test.describe("favorites", () => {
     // The route guard explains the missing configuration before the page loads.
     await page.goto("/favorites");
     await expect(page).toHaveURL(/\/auth-error\?reason=configuration$/);
-    await expect(page.getByRole("alert")).toContainText("Supabase");
+    await expect(pageAlerts(page)).toContainText("Supabase");
   });
 
   test("empty collection links to search", async ({ page }, testInfo) => {
@@ -48,7 +49,7 @@ test.describe("favorites", () => {
       page.getByRole("heading", { name: "Priljubljeni oglasi" }),
     ).toBeVisible();
     // Signed in, favorites come from Supabase; corrupt local data must not break the page.
-    await expect(page.getByRole("alert")).toHaveCount(0);
+    await expect(pageAlerts(page)).toHaveCount(0);
   });
 
   test("a listing saved from its detail page appears in favorites after reload", async ({
