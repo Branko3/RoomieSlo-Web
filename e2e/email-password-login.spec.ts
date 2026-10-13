@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { pageAlerts } from "./env";
 
 const hasStagingAuth = Boolean(
   process.env.NEXT_PUBLIC_SUPABASE_URL &&
@@ -23,7 +24,7 @@ test.describe("login public contract", () => {
 
     await page.getByLabel("E-naslov").fill("not-an-email");
     await page.getByRole("button", { name: "Prijava" }).press("Enter");
-    await expect(page.getByRole("alert")).toContainText("veljaven e-naslov");
+    await expect(pageAlerts(page)).toContainText("veljaven e-naslov");
     await expect(page.getByLabel("E-naslov")).toBeFocused();
   });
 
