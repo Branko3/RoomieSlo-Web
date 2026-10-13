@@ -1,4 +1,14 @@
 import { expect, test, type Page } from "@playwright/test";
+import { pageAlerts, supabaseConfigured } from "./env";
+
+// These tests answer Auth requests with `page.route`, but the page only sends
+// them when a Supabase URL is configured (any staging project works; nothing
+// reaches it). Without one, registration stops before the request.
+const needsSupabaseUrl = () =>
+  test.skip(
+    !supabaseConfigured,
+    "Needs NEXT_PUBLIC_SUPABASE_URL/ANON_KEY; Auth responses are mocked.",
+  );
 
 const validValues = {
   name: " Ana Novak ",
@@ -41,7 +51,7 @@ test.describe("/register", () => {
     );
 
     await page.getByRole("button", { name: "Ustvari račun" }).click();
-    await expect(page.getByRole("alert")).toHaveCount(3);
+    await expect(pageAlerts(page)).toHaveCount(3);
     await expect(page.getByLabel("Ime in priimek")).toHaveAttribute(
       "aria-describedby",
       "display-name-error",
@@ -83,9 +93,14 @@ test.describe("/register", () => {
   });
 
   test("sends the exact normalized signUp payload", async ({ page }) => {
+    needsSupabaseUrl();
     let payload: Record<string, unknown> | undefined;
+    let redirectTo: string | null = null;
     await page.route("**/auth/v1/signup", async (route) => {
       payload = route.request().postDataJSON();
+      redirectTo = new URL(route.request().url()).searchParams.get(
+        "redirect_to",
+      );
       await route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -97,16 +112,19 @@ test.describe("/register", () => {
     await page.getByRole("button", { name: "Ustvari račun" }).click();
 
     await expect(page.getByRole("status")).toContainText("ana@example.com");
-    expect(payload).toEqual({
+    // supabase-js sends `options.data` as `data` and the redirect as a query parameter.
+    expect(payload).toMatchObject({
       email: "ana@example.com",
       password: "password",
-      options: { data: { display_name: "Ana Novak" } },
+      data: { display_name: "Ana Novak" },
     });
+    expect(redirectTo).toMatch(/\/auth\/confirm/);
   });
 
   test("disables submit while pending and prevents duplicate clicks", async ({
     page,
   }) => {
+    needsSupabaseUrl();
     let releaseResponse!: () => void;
     const responseReleased = new Promise<void>((resolve) => {
       releaseResponse = resolve;
@@ -137,6 +155,7 @@ test.describe("/register", () => {
   test("handles confirmation-required, duplicate, and generic errors safely", async ({
     page,
   }) => {
+    needsSupabaseUrl();
     await mockSignUp(page, { user: { id: "user-id" }, session: null });
     await page.goto("/register");
     await fillRegistrationForm(page);
