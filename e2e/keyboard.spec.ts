@@ -22,10 +22,21 @@ async function focused(page: Page) {
     const style = getComputedStyle(el);
     return {
       tag: el.tagName.toLowerCase(),
+      // Accessible-name sources in priority order; form fields are usually
+      // named by their <label>, which textContent does not include.
       name: (
-        el.getAttribute("aria-label") ??
-        el.getAttribute("title") ??
-        el.textContent ??
+        el.getAttribute("aria-label") ||
+        (el.getAttribute("aria-labelledby") ?? "")
+          .split(/\s+/)
+          .map((id) => document.getElementById(id)?.textContent ?? "")
+          .join(" ")
+          .trim() ||
+        Array.from((el as HTMLInputElement).labels ?? [])
+          .map((label) => label.textContent ?? "")
+          .join(" ")
+          .trim() ||
+        el.getAttribute("title") ||
+        el.textContent ||
         ""
       )
         .replace(/\s+/g, " ")
@@ -160,6 +171,10 @@ test.describe("keyboard journey", () => {
     await page.keyboard.type("geslo1234");
     await page.getByRole("button", { name: "Prijava" }).focus();
     await page.keyboard.press("Enter");
-    await expect(page.getByText(/prijava je uspešna/i)).toBeVisible();
+    // The example account doesn't exist (and CI has no Supabase), so the
+    // submission ends in the form's error, which takes focus for the keyboard user.
+    const error = page.locator("form.auth-card").getByRole("alert");
+    await expect(error).toBeVisible();
+    await expect(error).toBeFocused();
   });
 });

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useRef, useState } from "react";
+import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "../../lib/supabase/browser";
 import {
@@ -19,13 +19,19 @@ const initialValues: RegistrationValues = {
   password: "",
 };
 
+const FIELD_ORDER = ["displayName", "email", "password"] as const;
+const FIELD_IDS = {
+  displayName: "display-name",
+  email: "email",
+  password: "password",
+} as const;
+
 export default function RegisterPage() {
   const router = useRouter();
   const [values, setValues] = useState(initialValues);
   const [errors, setErrors] = useState<RegistrationErrors>({});
   const [status, setStatus] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const firstInvalidRef = useRef<HTMLInputElement>(null);
 
   function updateValue(field: keyof RegistrationValues, value: string) {
     setValues((current) => ({ ...current, [field]: value }));
@@ -39,8 +45,10 @@ export default function RegisterPage() {
     setErrors(validationErrors);
     setStatus("");
 
-    if (Object.keys(validationErrors).length > 0) {
-      firstInvalidRef.current?.focus();
+    // Focus from the fresh result: the error state is not rendered yet.
+    const firstInvalid = FIELD_ORDER.find((field) => validationErrors[field]);
+    if (firstInvalid) {
+      document.getElementById(FIELD_IDS[firstInvalid])?.focus();
       return;
     }
 
@@ -85,7 +93,6 @@ export default function RegisterPage() {
         <form onSubmit={handleSubmit} noValidate>
           <label htmlFor="display-name">Ime in priimek</label>
           <input
-            ref={errors.displayName ? firstInvalidRef : undefined}
             id="display-name"
             name="displayName"
             value={values.displayName}
@@ -104,9 +111,6 @@ export default function RegisterPage() {
 
           <label htmlFor="email">E-naslov</label>
           <input
-            ref={
-              errors.email && !errors.displayName ? firstInvalidRef : undefined
-            }
             id="email"
             name="email"
             type="email"
@@ -124,11 +128,6 @@ export default function RegisterPage() {
 
           <label htmlFor="password">Geslo</label>
           <input
-            ref={
-              errors.password && !errors.displayName && !errors.email
-                ? firstInvalidRef
-                : undefined
-            }
             id="password"
             name="password"
             type="password"
