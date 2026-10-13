@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { OwnProfileSection } from "../../components/own-profile-section";
 import {
   AvailabilityCard,
