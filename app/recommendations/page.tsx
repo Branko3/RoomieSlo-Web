@@ -7,7 +7,6 @@ import {
   QUESTIONNAIRE_ROUTE,
   readinessMessage,
   recommendationReadiness,
-  sharedStatementCount,
 } from "../../lib/matching/answer-sufficiency";
 import {
   loadRecommendations,
@@ -93,42 +92,47 @@ export default function RecommendationsPage() {
   } else {
     body = (
       <ol className="recommendation-list">
-        {query.data.recommendations.map(({ profile, compatibility }) => (
-          <li className="recommendation-card" key={profile.id}>
-            <div className="recommendation-head">
-              <div>
-                <h2>{nameAndAge(profile)}</h2>
-                {profile.faculty && <p className="muted">{profile.faculty}</p>}
+        {query.data.recommendations.map(
+          ({ profile, compatibility, sharedStatements }) => (
+            <li className="recommendation-card" key={profile.id}>
+              <div className="recommendation-head">
+                <div>
+                  <h2>{nameAndAge(profile)}</h2>
+                  {profile.faculty && (
+                    <p className="muted">{profile.faculty}</p>
+                  )}
+                </div>
+                {sharedStatements > 0 ? (
+                  <span
+                    className="compatibility-badge"
+                    aria-label={`Združljivost ${compatibility} %`}
+                  >
+                    {compatibility}%
+                  </span>
+                ) : (
+                  <span
+                    className="compatibility-badge compatibility-unknown"
+                    aria-label="Združljivosti ni mogoče izračunati: ni skupnih odgovorov"
+                    title="Ni skupnih odgovorov na vprašalnik"
+                  >
+                    —
+                  </span>
+                )}
               </div>
-              {sharedStatementCount(query.data.myAnswers, profile.answers) >
-              0 ? (
-                <span
-                  className="compatibility-badge"
-                  aria-label={`Združljivost ${compatibility} %`}
-                >
-                  {compatibility}%
-                </span>
-              ) : (
-                <span
-                  className="compatibility-badge compatibility-unknown"
-                  aria-label="Združljivosti ni mogoče izračunati: ni skupnih odgovorov"
-                  title="Ni skupnih odgovorov na vprašalnik"
-                >
-                  —
-                </span>
+              <div className="chips">
+                {profile.verified && (
+                  <span className="chip chip-green">✓ Preverjen študent</span>
+                )}
+                {profile.available && (
+                  <span className="chip">Išče sostanovalca</span>
+                )}
+              </div>
+              {profile.bio && (
+                <p className="recommendation-bio">{profile.bio}</p>
               )}
-            </div>
-            <div className="chips">
-              {profile.verified && (
-                <span className="chip chip-green">✓ Preverjen študent</span>
-              )}
-              {profile.available && (
-                <span className="chip">Išče sostanovalca</span>
-              )}
-            </div>
-            {profile.bio && <p className="recommendation-bio">{profile.bio}</p>}
-          </li>
-        ))}
+            </li>
+          ),
+        )}
       </ol>
     );
   }

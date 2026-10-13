@@ -19,21 +19,7 @@ export function expressedAnswerCount(
     .size;
 }
 
-/** Statements both users answered with a positive weight; 0 means no score can be computed. */
-export function sharedStatementCount(
-  a: readonly CompatibilityAnswer[] | null,
-  b: readonly CompatibilityAnswer[],
-): number {
-  if (!a) return 0;
-  const theirs = new Set(
-    b.filter((x) => x.weight > 0).map((x) => x.question_id),
-  );
-  return new Set(
-    a
-      .filter((x) => x.weight > 0 && theirs.has(x.question_id))
-      .map((x) => x.question_id),
-  ).size;
-}
+export { sharedStatementCount } from "../compatibility/compatibility";
 
 export type RecommendationReadiness =
   | { status: "ready" }

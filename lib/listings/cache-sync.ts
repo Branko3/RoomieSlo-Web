@@ -22,3 +22,20 @@ export async function writeListingsToCache(
     return false;
   }
 }
+
+/**
+ * Fetches one feed page and writes its listings to the cache without waiting
+ * for it, so the paged `/search` feed fills the offline cache like `/listings`.
+ * Fetch errors propagate unchanged; cache failures are ignored.
+ */
+export async function fetchPageAndCache<
+  T extends { items: readonly Listing[] },
+>(
+  fetchPage: () => Promise<T>,
+  readUserId: SessionReader,
+  store: ListingCacheStore,
+): Promise<T> {
+  const page = await fetchPage();
+  void writeListingsToCache(page.items, readUserId, store);
+  return page;
+}
