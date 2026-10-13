@@ -31,6 +31,17 @@ vi.mock("../../lib/supabase/browser", () => ({
           }),
         };
       }
+      if (table === "messages") {
+        // Delivery markers (Android chat list); answered, but not under test here.
+        const chain = {
+          update: () => chain,
+          eq: () => chain,
+          neq: () => chain,
+          then: (resolve: (value: { error: null }) => unknown) =>
+            resolve({ error: null }),
+        };
+        return chain;
+      }
       return {
         select: () => ({
           or: () => ({
