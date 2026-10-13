@@ -102,6 +102,23 @@ export async function markDelivered(
   }
 }
 
+/**
+ * Marks the other person's messages delivered in every accepted match, as
+ * Android's chat list does on each load: opening the list means the messages
+ * reached this device. Never throws; returns how many matches were updated.
+ */
+export async function markAcceptedDelivered(
+  client: DeliveryClient,
+  rows: ReadonlyArray<{ match: { id: string; status: string } }>,
+): Promise<number> {
+  const results = await Promise.all(
+    rows
+      .filter((row) => row.match.status === "accepted")
+      .map((row) => markDelivered(client, row.match.id)),
+  );
+  return results.filter(Boolean).length;
+}
+
 /** Marks the other person's messages as read in the loaded history, so it matches the server. */
 export function applyReadLocally<
   T extends {

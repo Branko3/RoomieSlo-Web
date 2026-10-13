@@ -1,12 +1,14 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   adminCredentials,
+  ensureAcceptedMatch,
   isRlsRefusal,
   marker,
   signIn,
   signInA,
   signInB,
   skip,
+  type PairMatch,
   type Session,
 } from "./clients";
 
@@ -20,6 +22,7 @@ describe.skipIf(skip)("RLS negative access", () => {
   let b: Session;
   let listingB: string;
   let matchAB: string;
+  let requesterAnswer: PairMatch["requesterAnswer"] = null;
   const createdListings: Array<{ session: () => Session; id: string }> = [];
 
   beforeAll(async () => {
@@ -39,25 +42,9 @@ describe.skipIf(skip)("RLS negative access", () => {
     listingB = listing.data.id;
     createdListings.push({ session: () => b, id: listingB });
 
-    const existing = await a.client
-      .from("matches")
-      .select("id")
-      .or(
-        `and(user_id_a.eq.${a.userId},user_id_b.eq.${b.userId}),and(user_id_a.eq.${b.userId},user_id_b.eq.${a.userId})`,
-      )
-      .limit(1);
-    if (existing.error) throw existing.error;
-    if (existing.data.length) {
-      matchAB = existing.data[0].id;
-    } else {
-      const created = await a.client
-        .from("matches")
-        .insert({ user_id_a: a.userId, user_id_b: b.userId })
-        .select("id")
-        .single();
-      if (created.error) throw created.error;
-      matchAB = created.data.id;
-    }
+    const match = await ensureAcceptedMatch(a, b);
+    matchAB = match.id;
+    requesterAnswer = match.requesterAnswer;
   });
 
   afterAll(async () => {
@@ -148,6 +135,35 @@ describe.skipIf(skip)("RLS negative access", () => {
   });
 
   describe("favorites and questionnaire answers", () => {
+    it("keeps questionnaire answers private to their owner", async () => {
+      await b.client
+        .from("questionnaire_answers")
+        .upsert(
+          { profile_id: b.userId, question_id: "q_noise", value: 0.5 },
+          { onConflict: "profile_id,question_id" },
+        );
+      const own = await b.client
+        .from("questionnaire_answers")
+        .select("question_id")
+        .eq("profile_id", b.userId);
+      expect(own.data?.length).toBeGreaterThan(0);
+      const theirs = await a.client
+        .from("questionnaire_answers")
+        .select("question_id")
+        .eq("profile_id", b.userId);
+      expect(theirs.error ? [] : theirs.data).toEqual([]);
+      // Recommendations still work for A, and carry no one else's answers.
+      const ranked = await a.client.functions.invoke("recommendations");
+      expect(ranked.error).toBeNull();
+      const others = (
+        ranked.data as { recommendations: Array<Record<string, unknown>> }
+      ).recommendations;
+      for (const entry of others) {
+        expect(entry).not.toHaveProperty("answers");
+        expect(entry.profile).not.toHaveProperty("answers");
+      }
+    });
+
     it("keeps favorites private and refuses favorites for someone else", async () => {
       const own = await a.client
         .from("favorites")
@@ -189,7 +205,7 @@ describe.skipIf(skip)("RLS negative access", () => {
       expect(isRlsRefusal(error)).toBe(true);
     });
 
-    // Known gap noted in PR #42: `messages_update` has no sender check.
+    // Gap noted in PR #42, closed by migration 20261013000000.
     it("does not let a participant rewrite the other person's message", async () => {
       const sent = await b.client
         .from("messages")
@@ -215,17 +231,92 @@ describe.skipIf(skip)("RLS negative access", () => {
         .single();
       expect(after.data?.body).toBe(sent.data.body);
     });
+    it("does not let the requester accept their own request", () => {
+      // Only observable when this run created the match (it is reused later).
+      if (!requesterAnswer) return;
+      expect(requesterAnswer.rpcError).not.toBeNull();
+      expect(requesterAnswer.updatedRows).toBe(0);
+    });
+
+    it("lets the recipient mark a message read but not move it backwards", async () => {
+      const sent = await a.client
+        .from("messages")
+        .insert({ match_id: matchAB, sender_id: a.userId, body: marker("dl") })
+        .select("id")
+        .single();
+      expect(sent.error).toBeNull();
+      const read = await b.client
+        .from("messages")
+        .update({ delivery_status: "read" })
+        .eq("id", sent.data!.id)
+        .select("delivery_status");
+      expect(read.data).toEqual([{ delivery_status: "read" }]);
+      const back = await b.client
+        .from("messages")
+        .update({ delivery_status: "sent" })
+        .eq("id", sent.data!.id)
+        .select("id");
+      expect(back.error).not.toBeNull();
+    });
+
+    it("does not let the sender change their own message's delivery status", async () => {
+      const sent = await a.client
+        .from("messages")
+        .insert({ match_id: matchAB, sender_id: a.userId, body: marker("own") })
+        .select("id")
+        .single();
+      const update = await a.client
+        .from("messages")
+        .update({ delivery_status: "read" })
+        .eq("id", sent.data!.id)
+        .select("id");
+      expect(update.error ? [] : update.data).toEqual([]);
+    });
   });
 
   describe("reports and admins", () => {
-    it("lets a user file a report only as themselves", async () => {
-      const forged = await a.client.from("reports").insert({
-        reporter_id: b.userId,
-        reported_id: a.userId,
-        reason: "Drugo",
-        description: marker("forged"),
+    it("refuses direct report inserts, even in one's own name", async () => {
+      for (const reporter of [b.userId, a.userId]) {
+        const direct = await a.client.from("reports").insert({
+          reporter_id: reporter,
+          reported_id: reporter === a.userId ? b.userId : a.userId,
+          reason: "Drugo",
+          description: marker("direct"),
+        });
+        expect(isRlsRefusal(direct.error)).toBe(true);
+      }
+    });
+
+    it("files a chat report through submit_report, only for that conversation", async () => {
+      const bogus = await a.client.rpc("submit_report", {
+        p_reported: b.userId,
+        p_reason: "Drugo",
+        p_description: marker("bogus"),
+        p_match: "00000000-0000-4000-8000-000000000000",
       });
-      expect(isRlsRefusal(forged.error)).toBe(true);
+      expect(bogus.error).not.toBeNull();
+      const self = await a.client.rpc("submit_report", {
+        p_reported: a.userId,
+        p_reason: "Drugo",
+        p_description: marker("self"),
+        p_match: null,
+      });
+      expect(self.error).not.toBeNull();
+      // One real report per run (reports cannot be deleted through the API).
+      const filed = await a.client.rpc("submit_report", {
+        p_reported: b.userId,
+        p_reason: "Drugo",
+        p_description: marker("evidence"),
+        p_match: matchAB,
+      });
+      expect(filed.error).toBeNull();
+      expect(typeof filed.data).toBe("string");
+      // The snapshot is not readable through the API.
+      const evidence = await a.client
+        .from("report_evidence")
+        .select("body")
+        .eq("report_id", filed.data);
+      expect(evidence.error ? [] : evidence.data).toEqual([]);
     });
 
     it("hides reports from non-admins and ignores their status updates", async () => {
@@ -250,6 +341,56 @@ describe.skipIf(skip)("RLS negative access", () => {
         .eq("user_id", a.userId);
       expect(self.data).toEqual([]);
     });
+
+    it("does not let a user run the retention job", async () => {
+      const { error } = await a.client.rpc("purge_expired_data");
+      expect(error).not.toBeNull();
+    });
+
+    it("refuses the reported-conversation view to non-admins", async () => {
+      const { error } = await a.client.rpc("admin_report_conversation", {
+        p_report_id: "00000000-0000-4000-8000-000000000000",
+      });
+      expect(error).not.toBeNull();
+      const log = await a.client.from("admin_message_reads").select("id");
+      expect(log.error ? [] : log.data).toEqual([]);
+    });
+
+    it.skipIf(!adminCredentials())(
+      "records every admin read of a reported conversation",
+      async () => {
+        const admin = await signIn(adminCredentials()!);
+        const reports = await admin.client
+          .from("reports")
+          .select("id")
+          .not("match_id", "is", null)
+          .limit(1);
+        const reportId = reports.data?.[0]?.id;
+        if (reportId) {
+          const count = async () =>
+            (
+              await admin.client
+                .from("admin_message_reads")
+                .select("id", { count: "exact", head: true })
+                .eq("report_id", reportId)
+            ).count ?? 0;
+          const before = await count();
+          const read = await admin.client.rpc("admin_report_conversation", {
+            p_report_id: reportId,
+          });
+          expect(read.error).toBeNull();
+          expect(await count()).toBe(before + 1);
+          // The log is append-only, even for admins.
+          const tamper = await admin.client
+            .from("admin_message_reads")
+            .delete()
+            .eq("report_id", reportId)
+            .select("id");
+          expect(tamper.error ? [] : tamper.data).toEqual([]);
+        }
+        await admin.client.auth.signOut();
+      },
+    );
 
     it.skipIf(!adminCredentials())("lets an admin read reports", async () => {
       const admin = await signIn(adminCredentials()!);

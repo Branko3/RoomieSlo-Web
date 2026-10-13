@@ -32,9 +32,13 @@ Rules:
 ### Order of operations
 
 1. **Expand:** apply backward-compatible migrations to production (`npm run db:push` linked to production). Forward-only: never edit an applied migration.
-2. **Deploy** the web build.
-3. **Verify** (section 3): `GET /api/health` and `GET /api/health?deep=1` return 200 with the new `version`; sign in, open listings, send a test message on a staging account.
-4. **Contract:** remove old columns or policies only in a later release, after both clients have stopped using them.
+2. **Deploy** Edge Functions changed in the release, staging first:
+   `supabase functions deploy delete-account` (it reads `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`
+   from the platform; set `ALLOWED_ORIGIN` to the web origin with `supabase secrets set`). The
+   service-role key stays in the function environment, never in the web build.
+3. **Deploy** the web build.
+4. **Verify** (section 3): `GET /api/health` and `GET /api/health?deep=1` return 200 with the new `version`; sign in, open listings, send a test message on a staging account.
+5. **Contract:** remove old columns or policies only in a later release, after both clients have stopped using them.
 
 A migration that can't be made backward compatible needs a maintenance window and an Android release plan agreed before deployment.
 

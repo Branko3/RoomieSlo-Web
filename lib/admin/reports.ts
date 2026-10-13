@@ -10,10 +10,42 @@ export type AdminReport = {
   description: string;
   status: ReportStatus;
   created_at: string;
+  /** The conversation the report was filed from, if any. */
+  match_id: string | null;
+  /** The reported account was deleted (its profile is a tombstone). */
+  reported_deleted: boolean;
+};
+
+/** A report row as selected, with the reported profile embedded. */
+type AdminReportRow = Omit<AdminReport, "match_id" | "reported_deleted"> & {
+  match_id?: string | null;
+  reported?: { deleted_at: string | null } | null;
+};
+
+/** One message of a reported conversation, as `admin_report_conversation` returns it. */
+export type ConversationRow = {
+  message_id: string;
+  sender_role: "reporter" | "reported";
+  body: string;
+  sent_at: string;
+  /** "snapshot": evidence saved with the report; "live": the current conversation. */
+  source: "snapshot" | "live";
+};
+
+export type TranscriptEntry = {
+  id: string;
+  role: ConversationRow["sender_role"];
+  label: "Prijavitelj" | "Prijavljeni";
+  body: string;
+  sentAt: string;
 };
 
 /** Structural subset of the Supabase client used by the dashboard. */
 export type AdminClient = {
+  rpc: (
+    fn: "admin_report_conversation",
+    args: { p_report_id: string },
+  ) => PromiseLike<{ data: ConversationRow[] | null; error: DbError }>;
   auth: {
     getUser: () => Promise<{
       data: { user: { id: string } | null };
@@ -41,7 +73,7 @@ export type AdminClient = {
         ) => {
           limit: (
             count: number,
-          ) => PromiseLike<{ data: AdminReport[] | null; error: DbError }>;
+          ) => PromiseLike<{ data: AdminReportRow[] | null; error: DbError }>;
         };
       };
       update: (values: { status: ReportStatus }) => {
@@ -58,8 +90,9 @@ export type AdminClient = {
     });
 };
 
+// Two foreign keys point at profiles, so the embed names the column.
 export const REPORT_COLUMNS =
-  "id,reported_id,reason,description,status,created_at";
+  "id,reported_id,reason,description,status,created_at,match_id,reported:profiles!reported_id(deleted_at)";
 export const REPORT_LIMIT = 200;
 
 export const REPORT_STATUSES: readonly ReportStatus[] = [
@@ -74,6 +107,16 @@ export const statusLabel: Record<ReportStatus, string> = {
   dismissed: "Zavrnjeno",
 };
 
+/**
+ * Who was reported, as the dashboard shows it. Deleted accounts only get a
+ * label: their identity is kept in a record that only the database owner can read.
+ */
+export function reportedLabel(report: AdminReport): string {
+  return report.reported_deleted
+    ? "Izbrisan uporabnik (identiteta hranjena za varnostne namene; za razkritje kontaktiraj upravljavca baze)"
+    : `uporabnik ${report.reported_id}`;
+}
+
 export const adminCopy = {
   notAdmin: "Nimaš administratorskih pravic.",
   signedOut: "Za administratorsko ploščo se moraš prijaviti.",
@@ -81,6 +124,10 @@ export const adminCopy = {
   emptyFilter: "Ni prijav s tem statusom.",
   loadFailed: "Napaka pri nalaganju prijav.",
   updateFailed: "Statusa prijave ni bilo mogoče spremeniti.",
+  conversationLogged:
+    "Vsak ogled pogovora se zabeleži (administrator, prijava, čas).",
+  conversationEmpty: "Pogovor ni več na voljo.",
+  conversationFailed: "Pogovora ni bilo mogoče naložiti.",
   offline: "Ni povezave. Preveri internetno povezavo.",
 } as const;
 
@@ -139,7 +186,11 @@ export async function listReports(client: AdminClient): Promise<AdminReport[]> {
       .order("created_at", { ascending: false })
       .limit(REPORT_LIMIT);
     if (error) throw error;
-    return data ?? [];
+    return (data ?? []).map(({ reported, ...row }) => ({
+      ...row,
+      match_id: row.match_id ?? null,
+      reported_deleted: Boolean(reported?.deleted_at),
+    }));
   } catch (error) {
     throw toAdminError(error, "load-failed");
   }
@@ -166,6 +217,35 @@ export async function setReportStatus(
     return row.status;
   } catch (error) {
     throw toAdminError(error, "update-failed");
+  }
+}
+
+/**
+ * Reads the conversation linked to a report through the audited
+ * `admin_report_conversation` function (the only admin path to messages).
+ * Every call is recorded server-side, so call it only on an explicit request.
+ */
+export async function loadReportConversation(
+  client: AdminClient,
+  reportId: string,
+): Promise<TranscriptEntry[]> {
+  try {
+    const { data, error } = await client.rpc("admin_report_conversation", {
+      p_report_id: reportId,
+    });
+    if (error) throw error;
+    return (data ?? []).map((row) => ({
+      id: row.message_id,
+      role: row.sender_role,
+      label: row.sender_role === "reporter" ? "Prijavitelj" : "Prijavljeni",
+      body: row.body,
+      sentAt: row.sent_at,
+    }));
+  } catch (error) {
+    const mapped = toAdminError(error, "load-failed");
+    throw mapped.kind === "load-failed"
+      ? new AdminError("load-failed", adminCopy.conversationFailed)
+      : mapped;
   }
 }
 

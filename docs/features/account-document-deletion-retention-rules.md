@@ -1,6 +1,6 @@
 # Account/document deletion and retention rules
 
-- Status: Approved policy (implementation pending)
+- Status: Implemented (staging verification pending)
 - Date: 2026-10-09 (policy approved 2026-10-12)
 - Automated status: Not covered
 - Web surfaces: `/profile`, `/academic-verification`, `/admin/reports`, Supabase Auth, Postgres, Storage bucket `vpisnice`, backups and operational runbooks
@@ -15,6 +15,13 @@ retention of report evidence. It is effective from 2026-10-12 for development, s
 production. Changes require a new approval recorded in this file (change control: pull
 request against this record).
 
+**Tombstones and safety identity record (approved 2026-10-13, Branko).** A deleted account's
+`profiles` row is scrubbed into a tombstone ("Izbrisan uporabnik", every identifying field
+emptied, `deleted_at` set) instead of being removed, so matches, messages and reports keep a
+valid reference. The e-mail and name are kept in `deleted_user_safety_records`, readable only by
+the database owner, for 30 days after deletion or 12 months after the last report about the
+person closes, whichever is later (legal basis: GDPR art. 17(3)(e) and art. 6(1)(f)).
+
 This record approves the **policy**. It is the single policy source for
 `docs/operations/privacy-procedures.md` and `docs/operations/runbook.md`. The self-service
 deletion flow, the schema changes and the admin message view described below are **not
@@ -27,25 +34,40 @@ academic-document upload (`vpisnice`), reports and the admin report dashboard, t
 authorization boundary, the `/privacy` page with self-service data export and manual
 deletion procedures, and the operations runbook.
 
-Still to build (follow-up PR, in this order):
+Implementation steps (all five are implemented; none is verified on staging yet):
 
-1. **Migration: reconcile cascades with this policy.** Today `auth.users` deletion cascades
-   to the user's messages, matches and every report involving them, which contradicts rows
-   6–8. Change `messages.sender_id`, `matches.user_id_a/b` and `reports.reporter_id/
-reported_id` so the rows survive with the deleted user anonymized (nullable reference
-   or a fixed "deleted user" sentinel), and add the 12-month report-evidence retention.
-2. **Report evidence.** When a report is filed from a chat, keep the reported conversation
-   (snapshot or a hold that blocks its deletion) until the report's retention ends.
-3. **Admin message access (approved option 1).** In-app admins can read only conversations
-   linked to a report, through a security-definer function or policy, and every read is
-   recorded in an append-only audit table (admin id, conversation, time).
-4. **Self-service deletion** on `/profile` through a trusted server operation (Edge
-   Function), following the flow and contracts below.
-5. **Retention jobs**: purge closed-report evidence after 12 months, conversations whose
-   participants have all deleted their accounts, and logs after 90 days.
+1. **Done: migration `20261014000000_account_deletion_tombstones.sql`.** A `before delete`
+   trigger on `auth.users` applies the matrix and turns the profile into a tombstone; the
+   profile no longer cascades from Auth. Reports gain `match_id` and `closed_at`.
+2. **Done: migration `20261014000100_report_evidence.sql`.** Reports are filed only through
+   `submit_report`. A chat report snapshots the last 200 messages of that conversation into
+   `report_evidence` with "reporter"/"reported" roles instead of user ids; the snapshot is
+   deleted with its report.
+3. **Done: migration `20261014000200_admin_report_conversation.sql`.** In-app admins read a
+   reported conversation only through `admin_report_conversation`, which records every read
+   in the append-only `admin_message_reads` (admin, report, time) before returning the
+   evidence snapshot (or, for older reports, the linked live conversation) by role.
+   `/admin/reports` shows it on request ("Prikaži pogovor").
+4. **Done: self-service deletion.** `/profile` → "Izbriši račun" → `/profile/delete-account`
+   explains what is deleted and kept, then asks for the password and the phrase "IZBRIŠI".
+   The page signs in again (refreshing `last_sign_in_at`) and calls the `delete-account`
+   Edge Function (`supabase/functions/delete-account`), which takes the user only from the
+   token, requires the phrase and a sign-in under 10 minutes old, empties and verifies
+   `vpisnice/<uid>/`, then deletes the Auth user (the step 1 trigger does the rest). It
+   answers 200, 410 (already deleted), 400, 401 (`reauth_required` / `session_expired`) or
+   500 (`partial_failure`; safe to re-run), logs only the outcome and a request id, and
+   writes `deletion_register` (migration `20261014000300`). The page then signs out, clears
+   cached data and opens `/login?deleted=1`. Shared rules live in
+   `supabase/functions/_shared/account-deletion.ts`.
+5. **Done: migration `20261014000400_retention_jobs.sql`.** `purge_expired_data()` (not
+   callable through the API) runs daily at 03:15 UTC through `pg_cron`. It deletes reports
+   and their evidence 12 months after closing, conversations whose participants have all
+   deleted their accounts (unless a report still needs them), expired safety identity
+   records, tombstones nothing refers to any more, admin read-log rows after 12 months, and
+   `deletion_register` rows after 90 days (their `subject` after 30).
 
-Until step 1 lands, operators must not delete accounts that have reports or messages
-another user may need (see `docs/operations/privacy-procedures.md`).
+Once migration `20261014000000` is applied, operators may delete any account through the
+dashboard after emptying its `vpisnice` folder (see `docs/operations/privacy-procedures.md`).
 
 ## Behavior
 
@@ -79,20 +101,22 @@ public URLs.
 
 **Approval status: Approved 2026-10-12 (Branko, project owner).**
 
-| Data category                    | Approved behavior                                | Detail                                                                                                                                                                                                                                                                                                                                                       | Approval |
-| -------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- |
-| Supabase Auth user               | Permanently delete                               | Re-authentication is required when the last sign-in is older than 10 minutes. An expired session returns "sign in again"; an already-deleted account returns a clear already-deleted result.                                                                                                                                                                 | Approved |
-| `profiles`                       | Delete                                           | No identifying record remains. Other users see "Izbrisan uporabnik" wherever the profile was referenced.                                                                                                                                                                                                                                                     | Approved |
-| `questionnaire_answers`          | Delete                                           | Nothing is retained.                                                                                                                                                                                                                                                                                                                                         | Approved |
-| Owned listings                   | Delete                                           | Deleting a listing also removes it from other users' favorites (existing cascade).                                                                                                                                                                                                                                                                           | Approved |
-| Favorites                        | Delete                                           | The user's own favorites rows are deleted.                                                                                                                                                                                                                                                                                                                   | Approved |
-| Matches                          | Keep, anonymized                                 | The match stays for the other participant, with the deleted user shown as "Izbrisan uporabnik".                                                                                                                                                                                                                                                              | Approved |
-| Messages                         | Keep in the other participant's chat, anonymized | Messages linked to a report are retained, anonymized, for 12 months after the report is closed. Unreported conversations are deleted once all participants have deleted their accounts. The database owner (project owner, via Supabase) can read all messages. In-app admins can read only conversations linked to a report, and every such read is logged. | Approved |
-| User reports                     | Keep, anonymized                                 | Reports made by or about the user are kept, anonymized, for 12 months after the report is closed, then deleted.                                                                                                                                                                                                                                              | Approved |
-| Academic documents in `vpisnice` | Delete immediately                               | Every object under the user's UUID folder is enumerated and deleted, then verified.                                                                                                                                                                                                                                                                          | Approved |
-| Backups                          | Expire after 30 days                             | Deleted data can remain in backups for up to 30 days. If a backup is restored, every deletion recorded since the backup date is re-applied before the service reopens.                                                                                                                                                                                       | Approved |
-| Logs/analytics                   | Minimal fields, 90 days                          | Keep only the request id, date and outcome; never passwords, tokens, document contents or message text. Deleted after 90 days.                                                                                                                                                                                                                               | Approved |
-| Admin access to messages         | Reported conversations only                      | Database owner: full access through Supabase for operations and abuse handling. In-app admins: only conversations linked to a report, with an audit record for every read. The privacy notice discloses this.                                                                                                                                                | Approved |
+| Data category                    | Approved behavior                                | Detail                                                                                                                                                                                                                                                                                                                                                       | Approval            |
+| -------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------- |
+| Supabase Auth user               | Permanently delete                               | Re-authentication is required when the last sign-in is older than 10 minutes. An expired session returns "sign in again"; an already-deleted account returns a clear already-deleted result. The e-mail is kept only in the safety identity record (row below).                                                                                              | Approved            |
+| `profiles`                       | Scrub into a tombstone                           | The row keeps only its random id and `deleted_at`; name, age, faculty, bio, photo, availability and verification are cleared. Other users see "Izbrisan uporabnik" wherever the profile was referenced. The tombstone is removed by the retention job once nothing refers to it.                                                                             | Approved            |
+| Safety identity record           | Keep, database owner only                        | E-mail and name of a deleted user, for 30 days after deletion, or 12 months after the last report about them closes if longer. No in-app access; each owner lookup is logged.                                                                                                                                                                                | Approved 2026-10-13 |
+| `questionnaire_answers`          | Delete                                           | Nothing is retained.                                                                                                                                                                                                                                                                                                                                         | Approved            |
+| Owned listings                   | Delete                                           | Deleting a listing also removes it from other users' favorites (existing cascade).                                                                                                                                                                                                                                                                           | Approved            |
+| Favorites                        | Delete                                           | The user's own favorites rows are deleted.                                                                                                                                                                                                                                                                                                                   | Approved            |
+| Matches                          | Keep, anonymized                                 | The match stays for the other participant, with the deleted user shown as "Izbrisan uporabnik".                                                                                                                                                                                                                                                              | Approved            |
+| Messages                         | Keep in the other participant's chat, anonymized | Messages linked to a report are retained, anonymized, for 12 months after the report is closed. Unreported conversations are deleted once all participants have deleted their accounts. The database owner (project owner, via Supabase) can read all messages. In-app admins can read only conversations linked to a report, and every such read is logged. | Approved            |
+| User reports                     | Keep, anonymized                                 | Reports made by or about the user are kept, anonymized, for 12 months after the report is closed, then deleted.                                                                                                                                                                                                                                              | Approved            |
+| Academic documents in `vpisnice` | Delete immediately                               | Every object under the user's UUID folder is enumerated and deleted, then verified.                                                                                                                                                                                                                                                                          | Approved            |
+| Backups                          | Expire after 30 days                             | Deleted data can remain in backups for up to 30 days. If a backup is restored, every deletion recorded since the backup date is re-applied before the service reopens.                                                                                                                                                                                       | Approved            |
+| Logs/analytics                   | Minimal fields, 90 days                          | Keep only the request id, date and outcome; never passwords, tokens, document contents or message text. Deleted after 90 days. The deletion register also keeps the deleted user id for 30 days, only to re-apply deletions after a backup restore.                                                                                                          | Approved            |
+| Admin access to messages         | Reported conversations only                      | Database owner: full access through Supabase for operations and abuse handling. In-app admins: only conversations linked to a report, with an audit record for every read. The privacy notice discloses this.                                                                                                                                                | Approved            |
+| Admin message-read audit log     | Keep 12 months                                   | One row per admin read of a reported conversation (admin id, report id, time); append-only; admins can review it. Deleted 12 months after the read, like reports.                                                                                                                                                                                            | Approved 2026-10-12 |
 
 ## User flow and authorization contract
 
@@ -164,20 +188,23 @@ record as the single policy source instead of duplicating retention periods.
 
 ## Acceptance criteria
 
-- [ ] `/profile` exposes a clearly labelled deletion action for an authenticated user.
-- [ ] The flow explains immediate deletion, retained data, backup delay, and irreversibility.
-- [ ] Explicit confirmation is required and failed confirmation makes no deletion request.
-- [ ] The backend derives the target identity from the verified session.
-- [ ] Deletion executes through a trusted backend boundary with no browser service-role credential.
-- [ ] Every data category follows an approved retention-matrix decision.
-- [ ] All user-owned `vpisnice` Storage objects are explicitly deleted.
-- [ ] Successful deletion signs the user out, clears cache/query state, and blocks protected access.
-- [ ] Repeated requests are safely idempotent or return a clear already-deleted/expired result.
-- [ ] Partial failure is explicit, redacted, logged, and recoverable by operators.
+Checked items are implemented and covered by unit/static tests; none has been verified on a
+staging project yet (`integration/deletion.int.ts` and `integration/rls.int.ts` are written for it).
+
+- [x] `/profile` exposes a clearly labelled deletion action for an authenticated user.
+- [x] The flow explains immediate deletion, retained data, backup delay, and irreversibility.
+- [x] Explicit confirmation is required and failed confirmation makes no deletion request.
+- [x] The backend derives the target identity from the verified session.
+- [x] Deletion executes through a trusted backend boundary with no browser service-role credential.
+- [x] Every data category follows an approved retention-matrix decision.
+- [x] All user-owned `vpisnice` Storage objects are explicitly deleted.
+- [x] Successful deletion signs the user out, clears cache/query state, and blocks protected access.
+- [x] Repeated requests are safely idempotent or return a clear already-deleted/expired result.
+- [x] Partial failure is explicit, redacted, logged, and recoverable by operators.
 - [ ] RLS and private Storage policies reject cross-user access before and after deletion.
-- [ ] Admin procedures cover retained reports/messages, anonymization, backups, restoration, and document access.
+- [x] Admin procedures cover retained reports/messages, anonymization, backups, restoration, and document access.
 - [ ] Development, staging, and production procedures are documented and tested.
-- [ ] Android transition behavior is verified and documented.
+- [x] ~~Android transition behavior is verified and documented.~~ Not required: on 2026-10-13 the owner made the web the priority and Android no longer a constraint. Android's direct report insert is refused since `20261014000100`.
 
 ## Testing contract
 

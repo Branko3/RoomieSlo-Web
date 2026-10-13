@@ -5,6 +5,7 @@ import {
   initialsFor,
   profileErrorMessages,
   ProfileRequestError,
+  updateAvailability,
   updateOwnProfile,
   validateProfileDraft,
   type ProfileClient,
@@ -203,6 +204,38 @@ describe("updateOwnProfile", () => {
       message: profileErrorMessages.unknown,
     });
     expect((error as Error).message).not.toContain("check failed");
+  });
+});
+
+describe("updateAvailability (Android setAvailability)", () => {
+  it("writes only is_available on the user's own row", async () => {
+    const updated = { ...row, is_available: false };
+    const { client, calls } = makeClient({
+      update: { data: updated, error: null },
+    });
+    await expect(
+      updateAvailability(client, "user-1", false),
+    ).resolves.toMatchObject({ is_available: false });
+    expect(calls).toEqual([
+      ["from", ["profiles"]],
+      ["update", [{ is_available: false }]],
+      ["eq", ["id", "user-1"]],
+      ["select", ["*"]],
+    ]);
+  });
+
+  it("treats an RLS-hidden row as a permission error", async () => {
+    const { client } = makeClient({ update: { data: null, error: null } });
+    await expect(
+      updateAvailability(client, "user-1", true),
+    ).rejects.toMatchObject({ kind: "permission" });
+  });
+
+  it("maps network failures to the offline message", async () => {
+    const { client } = makeClient({ update: new TypeError("Failed to fetch") });
+    await expect(
+      updateAvailability(client, "user-1", true),
+    ).rejects.toMatchObject({ kind: "offline" });
   });
 });
 

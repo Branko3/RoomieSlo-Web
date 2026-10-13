@@ -13,12 +13,14 @@ import {
   nextStatus,
   REPORT_LIMIT,
   replaceStatus,
+  reportedLabel,
   setReportStatus,
   statusLabel,
   type AdminClient,
   type AdminReport,
   type StatusFilter,
 } from "../../../lib/admin/reports";
+import { AdminReportConversation } from "../../../components/admin-report-conversation";
 import { createSupabaseBrowserClient } from "../../../lib/supabase/browser";
 import type { ReportStatus } from "../../../lib/supabase/types";
 
@@ -155,9 +157,12 @@ export default function AdminReportsPage() {
                   </p>
                 )}
                 <small className="muted">
-                  {dateFormat.format(new Date(report.created_at))} · prijavljen
-                  uporabnik {report.reported_id}
+                  {dateFormat.format(new Date(report.created_at))} · prijavljen{" "}
+                  {reportedLabel(report)}
                 </small>
+                {report.match_id && (
+                  <AdminReportConversation reportId={report.id} />
+                )}
               </div>
               <div className="admin-report-actions">
                 <button

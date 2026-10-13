@@ -125,6 +125,35 @@ describe("loadConversation", () => {
     expect(calls).toContainEqual(["listings.limit", [PEER_LISTING_LIMIT]]);
   });
 
+  it("marks a deleted peer and still opens the conversation", async () => {
+    const { client, calls } = makeClient({
+      peer: {
+        data: {
+          id: PEER,
+          display_name: "Izbrisan uporabnik",
+          academic_status_verified: false,
+          faculty: "",
+          deleted_at: "2026-10-14T00:00:00Z",
+        },
+        error: null,
+      },
+    });
+    await expect(loadConversation(client, MATCH)).resolves.toMatchObject({
+      status: "accepted",
+      peer: { name: "Izbrisan uporabnik", deleted: true, verified: false },
+    });
+    expect(calls).toContainEqual([
+      "profiles.select",
+      ["id,display_name,academic_status_verified,faculty,deleted_at"],
+    ]);
+  });
+
+  it("treats a profile without deleted_at as active", async () => {
+    await expect(
+      loadConversation(makeClient().client, MATCH),
+    ).resolves.toMatchObject({ peer: { deleted: false } });
+  });
+
   it("identifies the peer when I sent the request", async () => {
     const { client } = makeClient({
       match: {
@@ -241,7 +270,13 @@ describe("loadConversation", () => {
 describe("conversationNotice", () => {
   const base = {
     matchId: MATCH,
-    peer: { id: PEER, name: "Ana", verified: false, faculty: "" },
+    peer: {
+      id: PEER,
+      name: "Ana",
+      verified: false,
+      faculty: "",
+      deleted: false,
+    },
     peerListings: [],
   };
 

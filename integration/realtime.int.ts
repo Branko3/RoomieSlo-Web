@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   anonClient,
   marker,
+  ensureAcceptedMatch,
   signInA,
   signInB,
   skip,
@@ -72,22 +73,7 @@ describe.skipIf(skip)("Realtime (messages)", () => {
     b.client.realtime.setAuth(
       (await b.client.auth.getSession()).data.session?.access_token ?? null,
     );
-    const { data } = await a.client
-      .from("matches")
-      .select("id")
-      .or(
-        `and(user_id_a.eq.${a.userId},user_id_b.eq.${b.userId}),and(user_id_a.eq.${b.userId},user_id_b.eq.${a.userId})`,
-      )
-      .limit(1);
-    matchAB = data?.[0]?.id ?? null;
-    if (!matchAB) {
-      const created = await a.client
-        .from("matches")
-        .insert({ user_id_a: a.userId, user_id_b: b.userId })
-        .select("id")
-        .single();
-      matchAB = created.data?.id ?? null;
-    }
+    matchAB = (await ensureAcceptedMatch(a, b)).id;
   });
 
   afterAll(async () => {
