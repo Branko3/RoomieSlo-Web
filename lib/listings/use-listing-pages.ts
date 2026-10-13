@@ -3,6 +3,9 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { createSupabaseBrowserClient } from "../supabase/browser";
+import { readSessionUserId } from "../supabase/hooks";
+import { fetchPageAndCache } from "./cache-sync";
+import { getListingCacheStore } from "./indexeddb-store";
 import {
   DEFAULT_PAGE_SIZE,
   fetchListingsPage,
@@ -11,7 +14,10 @@ import {
   type ListingPageClient,
 } from "./pagination";
 
-/** Paged listing feed for the given filters; a filter change starts again from the first page. */
+/**
+ * Paged listing feed for the given filters; a filter change starts again from
+ * the first page. Every fetched page is also written to the offline cache.
+ */
 export function useListingPages(filters: {
   location?: string;
   maxPrice?: number;
@@ -21,14 +27,19 @@ export function useListingPages(filters: {
     queryKey: ["listings", "feed", location, filters.maxPrice ?? null],
     initialPageParam: null as ListingCursor | null,
     queryFn: ({ pageParam }) =>
-      fetchListingsPage(
-        createSupabaseBrowserClient() as unknown as ListingPageClient,
-        {
-          location,
-          maxPrice: filters.maxPrice,
-          cursor: pageParam,
-          pageSize: DEFAULT_PAGE_SIZE,
-        },
+      fetchPageAndCache(
+        () =>
+          fetchListingsPage(
+            createSupabaseBrowserClient() as unknown as ListingPageClient,
+            {
+              location,
+              maxPrice: filters.maxPrice,
+              cursor: pageParam,
+              pageSize: DEFAULT_PAGE_SIZE,
+            },
+          ),
+        readSessionUserId,
+        getListingCacheStore(),
       ),
     getNextPageParam: (lastPage) => lastPage.nextCursor,
   });

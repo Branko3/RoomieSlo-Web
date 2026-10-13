@@ -179,3 +179,14 @@ export function expressedCount(answers: Answers): number {
     return key !== undefined && isExpressed(key);
   }).length;
 }
+
+/** Questionnaire progress for the profile card (Android "Izpolnjenih X od N trditev"). */
+export function questionnaireProgress(answers: Answers): {
+  answered: number;
+  total: number;
+  percent: number;
+} {
+  const answered = expressedCount(answers);
+  const total = STATEMENTS.length;
+  return { answered, total, percent: Math.round((answered / total) * 100) };
+}
