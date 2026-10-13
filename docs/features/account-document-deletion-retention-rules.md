@@ -39,8 +39,10 @@ Still to build (follow-up PR, in this order):
 1. **Done: migration `20261014000000_account_deletion_tombstones.sql`.** A `before delete`
    trigger on `auth.users` applies the matrix and turns the profile into a tombstone; the
    profile no longer cascades from Auth. Reports gain `match_id` and `closed_at`.
-2. **Report evidence.** When a report is filed from a chat, keep the reported conversation
-   (snapshot or a hold that blocks its deletion) until the report's retention ends.
+2. **Done: migration `20261014000100_report_evidence.sql`.** Reports are filed only through
+   `submit_report`. A chat report snapshots the last 200 messages of that conversation into
+   `report_evidence` with "reporter"/"reported" roles instead of user ids; the snapshot is
+   deleted with its report.
 3. **Admin message access (approved option 1).** In-app admins can read only conversations
    linked to a report, through a security-definer function or policy, and every read is
    recorded in an append-only audit table (admin id, conversation, time).

@@ -246,14 +246,48 @@ describe.skipIf(skip)("RLS negative access", () => {
   });
 
   describe("reports and admins", () => {
-    it("lets a user file a report only as themselves", async () => {
-      const forged = await a.client.from("reports").insert({
-        reporter_id: b.userId,
-        reported_id: a.userId,
-        reason: "Drugo",
-        description: marker("forged"),
+    it("refuses direct report inserts, even in one's own name", async () => {
+      for (const reporter of [b.userId, a.userId]) {
+        const direct = await a.client.from("reports").insert({
+          reporter_id: reporter,
+          reported_id: reporter === a.userId ? b.userId : a.userId,
+          reason: "Drugo",
+          description: marker("direct"),
+        });
+        expect(isRlsRefusal(direct.error)).toBe(true);
+      }
+    });
+
+    it("files a chat report through submit_report, only for that conversation", async () => {
+      const bogus = await a.client.rpc("submit_report", {
+        p_reported: b.userId,
+        p_reason: "Drugo",
+        p_description: marker("bogus"),
+        p_match: "00000000-0000-4000-8000-000000000000",
       });
-      expect(isRlsRefusal(forged.error)).toBe(true);
+      expect(bogus.error).not.toBeNull();
+      const self = await a.client.rpc("submit_report", {
+        p_reported: a.userId,
+        p_reason: "Drugo",
+        p_description: marker("self"),
+        p_match: null,
+      });
+      expect(self.error).not.toBeNull();
+      // One real report per run (reports cannot be deleted through the API).
+      const filed = await a.client.rpc("submit_report", {
+        p_reported: b.userId,
+        p_reason: "Drugo",
+        p_description: marker("evidence"),
+        p_match: matchAB,
+      });
+      expect(filed.error).toBeNull();
+      expect(typeof filed.data).toBe("string");
+      // The snapshot is not readable through the API.
+      const evidence = await a.client
+        .from("report_evidence")
+        .select("body")
+        .eq("report_id", filed.data);
+      expect(evidence.error ? [] : evidence.data).toEqual([]);
     });
 
     it("hides reports from non-admins and ignores their status updates", async () => {
