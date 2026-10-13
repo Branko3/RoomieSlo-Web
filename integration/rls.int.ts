@@ -313,6 +313,11 @@ describe.skipIf(skip)("RLS negative access", () => {
       expect(self.data).toEqual([]);
     });
 
+    it("does not let a user run the retention job", async () => {
+      const { error } = await a.client.rpc("purge_expired_data");
+      expect(error).not.toBeNull();
+    });
+
     it("refuses the reported-conversation view to non-admins", async () => {
       const { error } = await a.client.rpc("admin_report_conversation", {
         p_report_id: "00000000-0000-4000-8000-000000000000",
