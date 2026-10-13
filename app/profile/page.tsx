@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { OwnProfileSection } from "../../components/own-profile-section";
 import {
   AvailabilityCard,
@@ -26,6 +27,12 @@ export default function ProfilePage() {
         </>
       )}
       <LogoutButton />
+      <Link
+        className="text-link danger-link delete-account-link"
+        href="/profile/delete-account"
+      >
+        Izbriši račun
+      </Link>
     </div>
   );
 }

@@ -48,8 +48,17 @@ Still to build (follow-up PR, in this order):
    in the append-only `admin_message_reads` (admin, report, time) before returning the
    evidence snapshot (or, for older reports, the linked live conversation) by role.
    `/admin/reports` shows it on request ("Prikaži pogovor").
-4. **Self-service deletion** on `/profile` through a trusted server operation (Edge
-   Function), following the flow and contracts below.
+4. **Done: self-service deletion.** `/profile` → "Izbriši račun" → `/profile/delete-account`
+   explains what is deleted and kept, then asks for the password and the phrase "IZBRIŠI".
+   The page signs in again (refreshing `last_sign_in_at`) and calls the `delete-account`
+   Edge Function (`supabase/functions/delete-account`), which takes the user only from the
+   token, requires the phrase and a sign-in under 10 minutes old, empties and verifies
+   `vpisnice/<uid>/`, then deletes the Auth user (the step 1 trigger does the rest). It
+   answers 200, 410 (already deleted), 400, 401 (`reauth_required` / `session_expired`) or
+   500 (`partial_failure`; safe to re-run), logs only the outcome and a request id, and
+   writes `deletion_register` (migration `20261014000300`). The page then signs out, clears
+   cached data and opens `/login?deleted=1`. Shared rules live in
+   `supabase/functions/_shared/account-deletion.ts`.
 5. **Retention jobs**: purge closed-report evidence after 12 months, conversations whose
    participants have all deleted their accounts, and logs after 90 days.
 
@@ -175,20 +184,23 @@ record as the single policy source instead of duplicating retention periods.
 
 ## Acceptance criteria
 
-- [ ] `/profile` exposes a clearly labelled deletion action for an authenticated user.
-- [ ] The flow explains immediate deletion, retained data, backup delay, and irreversibility.
-- [ ] Explicit confirmation is required and failed confirmation makes no deletion request.
-- [ ] The backend derives the target identity from the verified session.
-- [ ] Deletion executes through a trusted backend boundary with no browser service-role credential.
-- [ ] Every data category follows an approved retention-matrix decision.
-- [ ] All user-owned `vpisnice` Storage objects are explicitly deleted.
-- [ ] Successful deletion signs the user out, clears cache/query state, and blocks protected access.
-- [ ] Repeated requests are safely idempotent or return a clear already-deleted/expired result.
-- [ ] Partial failure is explicit, redacted, logged, and recoverable by operators.
+Checked items are implemented and covered by unit/static tests; none has been verified on a
+staging project yet (`integration/deletion.int.ts` and `integration/rls.int.ts` are written for it).
+
+- [x] `/profile` exposes a clearly labelled deletion action for an authenticated user.
+- [x] The flow explains immediate deletion, retained data, backup delay, and irreversibility.
+- [x] Explicit confirmation is required and failed confirmation makes no deletion request.
+- [x] The backend derives the target identity from the verified session.
+- [x] Deletion executes through a trusted backend boundary with no browser service-role credential.
+- [x] Every data category follows an approved retention-matrix decision.
+- [x] All user-owned `vpisnice` Storage objects are explicitly deleted.
+- [x] Successful deletion signs the user out, clears cache/query state, and blocks protected access.
+- [x] Repeated requests are safely idempotent or return a clear already-deleted/expired result.
+- [x] Partial failure is explicit, redacted, logged, and recoverable by operators.
 - [ ] RLS and private Storage policies reject cross-user access before and after deletion.
-- [ ] Admin procedures cover retained reports/messages, anonymization, backups, restoration, and document access.
+- [x] Admin procedures cover retained reports/messages, anonymization, backups, restoration, and document access.
 - [ ] Development, staging, and production procedures are documented and tested.
-- [ ] Android transition behavior is verified and documented.
+- [x] ~~Android transition behavior is verified and documented.~~ Not required: on 2026-10-13 the owner made the web the priority and Android no longer a constraint. Android's direct report insert is refused since `20261014000100`.
 
 ## Testing contract
 

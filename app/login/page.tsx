@@ -64,6 +64,11 @@ export default function LoginPage() {
       <form className="auth-card" onSubmit={submit} noValidate>
         <p className="eyebrow">DOBRODOŠEL NAZAJ</p>
         <h1>Prijavi se v svoj račun</h1>
+        {params.get("deleted") === "1" && (
+          <p className="success-message" role="status">
+            Račun je izbrisan.
+          </p>
+        )}
         <p className="muted">Nadaljuj z iskanjem svojega idealnega doma.</p>
         <label htmlFor="email">E-naslov</label>
         <input

@@ -98,9 +98,10 @@ describe("integration suite layout", () => {
   const dir = join(process.cwd(), "integration");
   const suites = readdirSync(dir).filter((f) => f.endsWith(".int.ts"));
 
-  it("covers auth, RLS, Storage, and Realtime", () => {
+  it("covers auth, account deletion, RLS, Storage, and Realtime", () => {
     expect(suites.sort()).toEqual([
       "auth.int.ts",
+      "deletion.int.ts",
       "realtime.int.ts",
       "rls.int.ts",
       "storage.int.ts",
