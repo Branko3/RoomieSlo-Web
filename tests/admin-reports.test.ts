@@ -5,6 +5,7 @@ import {
   filterReports,
   isAdmin,
   listReports,
+  loadReportConversation,
   nextStatus,
   REPORT_COLUMNS,
   REPORT_LIMIT,
@@ -26,6 +27,7 @@ function makeClient({
   admins = { data: { user_id: ME }, error: null } as Outcome,
   reports = { data: [], error: null } as Outcome,
   update = { data: [{ id: "r1", status: "reviewed" }], error: null } as Outcome,
+  conversation = { data: [], error: null } as Outcome,
 } = {}) {
   const calls: Array<[string, ...unknown[]]> = [];
   const chain = (outcome: Outcome) => {
@@ -46,6 +48,10 @@ function makeClient({
   };
   const client = {
     auth: { getUser: vi.fn(async () => ({ data: { user }, error: null })) },
+    rpc: (fn: string, args: unknown) => {
+      calls.push(["rpc", fn, args]);
+      return settle(conversation);
+    },
     from: (table: string) => {
       calls.push(["from", table]);
       if (table === "admins") return chain(admins);
@@ -180,6 +186,84 @@ describe("deleted reported accounts", () => {
     );
     expect(REPORT_COLUMNS).not.toContain("reporter");
     expect(reportedLabel(report("r3", "open"))).toBe("uporabnik u1");
+  });
+});
+
+describe("loadReportConversation (audited admin read)", () => {
+  it("reads only through admin_report_conversation and labels the roles", async () => {
+    const { client, calls } = makeClient({
+      conversation: {
+        data: [
+          {
+            message_id: "m1",
+            sender_role: "reporter",
+            body: "Pusti me.",
+            sent_at: "2026-10-11T10:00:00Z",
+            source: "snapshot",
+          },
+          {
+            message_id: "m2",
+            sender_role: "reported",
+            body: "Ne.",
+            sent_at: "2026-10-11T10:01:00Z",
+            source: "snapshot",
+          },
+        ],
+        error: null,
+      },
+    });
+    await expect(loadReportConversation(client, "r1")).resolves.toEqual([
+      {
+        id: "m1",
+        role: "reporter",
+        label: "Prijavitelj",
+        body: "Pusti me.",
+        sentAt: "2026-10-11T10:00:00Z",
+      },
+      {
+        id: "m2",
+        role: "reported",
+        label: "Prijavljeni",
+        body: "Ne.",
+        sentAt: "2026-10-11T10:01:00Z",
+      },
+    ]);
+    expect(calls).toEqual([
+      ["rpc", "admin_report_conversation", { p_report_id: "r1" }],
+    ]);
+  });
+
+  it("returns an empty transcript when nothing is left", async () => {
+    await expect(
+      loadReportConversation(
+        makeClient({ conversation: { data: null, error: null } }).client,
+        "r1",
+      ),
+    ).resolves.toEqual([]);
+  });
+
+  it("maps refusals and failures to safe copy", async () => {
+    await expect(
+      loadReportConversation(
+        makeClient({ conversation: { data: null, error: { code: "42501" } } })
+          .client,
+        "r1",
+      ),
+    ).rejects.toMatchObject({ kind: "not-admin" });
+    const failed = await loadReportConversation(
+      makeClient({
+        conversation: {
+          data: null,
+          error: { code: "P0002", message: "secret" },
+        },
+      }).client,
+      "r1",
+    ).catch((e: Error) => e);
+    expect(failed).toMatchObject({
+      kind: "load-failed",
+      message: adminCopy.conversationFailed,
+    });
+    expect((failed as Error).message).not.toContain("secret");
   });
 });
 

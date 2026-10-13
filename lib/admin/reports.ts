@@ -22,8 +22,30 @@ type AdminReportRow = Omit<AdminReport, "match_id" | "reported_deleted"> & {
   reported?: { deleted_at: string | null } | null;
 };
 
+/** One message of a reported conversation, as `admin_report_conversation` returns it. */
+export type ConversationRow = {
+  message_id: string;
+  sender_role: "reporter" | "reported";
+  body: string;
+  sent_at: string;
+  /** "snapshot": evidence saved with the report; "live": the current conversation. */
+  source: "snapshot" | "live";
+};
+
+export type TranscriptEntry = {
+  id: string;
+  role: ConversationRow["sender_role"];
+  label: "Prijavitelj" | "Prijavljeni";
+  body: string;
+  sentAt: string;
+};
+
 /** Structural subset of the Supabase client used by the dashboard. */
 export type AdminClient = {
+  rpc: (
+    fn: "admin_report_conversation",
+    args: { p_report_id: string },
+  ) => PromiseLike<{ data: ConversationRow[] | null; error: DbError }>;
   auth: {
     getUser: () => Promise<{
       data: { user: { id: string } | null };
@@ -102,6 +124,10 @@ export const adminCopy = {
   emptyFilter: "Ni prijav s tem statusom.",
   loadFailed: "Napaka pri nalaganju prijav.",
   updateFailed: "Statusa prijave ni bilo mogoče spremeniti.",
+  conversationLogged:
+    "Vsak ogled pogovora se zabeleži (administrator, prijava, čas).",
+  conversationEmpty: "Pogovor ni več na voljo.",
+  conversationFailed: "Pogovora ni bilo mogoče naložiti.",
   offline: "Ni povezave. Preveri internetno povezavo.",
 } as const;
 
@@ -191,6 +217,35 @@ export async function setReportStatus(
     return row.status;
   } catch (error) {
     throw toAdminError(error, "update-failed");
+  }
+}
+
+/**
+ * Reads the conversation linked to a report through the audited
+ * `admin_report_conversation` function (the only admin path to messages).
+ * Every call is recorded server-side, so call it only on an explicit request.
+ */
+export async function loadReportConversation(
+  client: AdminClient,
+  reportId: string,
+): Promise<TranscriptEntry[]> {
+  try {
+    const { data, error } = await client.rpc("admin_report_conversation", {
+      p_report_id: reportId,
+    });
+    if (error) throw error;
+    return (data ?? []).map((row) => ({
+      id: row.message_id,
+      role: row.sender_role,
+      label: row.sender_role === "reporter" ? "Prijavitelj" : "Prijavljeni",
+      body: row.body,
+      sentAt: row.sent_at,
+    }));
+  } catch (error) {
+    const mapped = toAdminError(error, "load-failed");
+    throw mapped.kind === "load-failed"
+      ? new AdminError("load-failed", adminCopy.conversationFailed)
+      : mapped;
   }
 }
 

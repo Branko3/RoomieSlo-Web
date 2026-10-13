@@ -20,6 +20,7 @@ import {
   type AdminReport,
   type StatusFilter,
 } from "../../../lib/admin/reports";
+import { AdminReportConversation } from "../../../components/admin-report-conversation";
 import { createSupabaseBrowserClient } from "../../../lib/supabase/browser";
 import type { ReportStatus } from "../../../lib/supabase/types";
 
@@ -159,6 +160,9 @@ export default function AdminReportsPage() {
                   {dateFormat.format(new Date(report.created_at))} · prijavljen{" "}
                   {reportedLabel(report)}
                 </small>
+                {report.match_id && (
+                  <AdminReportConversation reportId={report.id} />
+                )}
               </div>
               <div className="admin-report-actions">
                 <button
