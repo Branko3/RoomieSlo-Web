@@ -2,6 +2,10 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
+import {
+  markAcceptedDelivered,
+  type DeliveryClient,
+} from "../lib/chat/delivery";
 import { getSupabaseConfig } from "../lib/config";
 import {
   acceptMatchAtomically,
@@ -48,7 +52,16 @@ export function MatchRequestsPanel() {
   const query = useQuery({
     queryKey: MATCHES_KEY,
     enabled: configured,
-    queryFn: () => loadMyMatches(client()),
+    queryFn: async () => {
+      const rows = await loadMyMatches(client());
+      // Opening the list means the other person's messages reached this device
+      // (Android ChatListViewModel). A failure must not break the list.
+      void markAcceptedDelivered(
+        createSupabaseBrowserClient() as unknown as DeliveryClient,
+        rows,
+      );
+      return rows;
+    },
   });
   const respond = useMutation({
     mutationFn: async ({
