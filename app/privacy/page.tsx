@@ -69,6 +69,12 @@ export default function PrivacyPage() {
             uporabnik«, prijave pa se anonimizirane hranijo 12 mesecev po
             zaključku.
           </p>
+          <p>
+            Če je bil račun prijavljen zaradi zlorabe, njegove kontaktne podatke
+            (e-naslov, ime) hranimo do 12 mesecev po zaključku prijave; sicer
+            jih izbrišemo 30 dni po izbrisu računa. Dostop ima le upravljavec
+            baze.
+          </p>
         </div>
       </section>
 

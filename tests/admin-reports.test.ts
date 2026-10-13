@@ -9,6 +9,7 @@ import {
   REPORT_COLUMNS,
   REPORT_LIMIT,
   replaceStatus,
+  reportedLabel,
   setReportStatus,
   type AdminClient,
   type AdminReport,
@@ -69,6 +70,8 @@ const report = (id: string, status: AdminReport["status"]): AdminReport => ({
   description: "",
   status,
   created_at: "2026-10-11T10:00:00Z",
+  match_id: null,
+  reported_deleted: false,
 });
 
 describe("isAdmin", () => {
@@ -112,7 +115,20 @@ describe("listReports", () => {
   it("selects the dashboard columns, newest first, with a limit", async () => {
     const rows = [report("r1", "open")];
     const { client, calls } = makeClient({
-      reports: { data: rows, error: null },
+      reports: {
+        data: [
+          {
+            id: "r1",
+            reported_id: "u1",
+            reason: "Nadlegovanje",
+            description: "",
+            status: "open",
+            created_at: "2026-10-11T10:00:00Z",
+            reported: { deleted_at: null },
+          },
+        ],
+        error: null,
+      },
     });
     await expect(listReports(client)).resolves.toEqual(rows);
     expect(calls).toEqual([
@@ -134,6 +150,36 @@ describe("listReports", () => {
           .client,
       ),
     ).rejects.toMatchObject({ kind: "not-admin", message: adminCopy.notAdmin });
+  });
+});
+
+describe("deleted reported accounts", () => {
+  it("flags reports about a deleted account and keeps the conversation link", async () => {
+    const { client } = makeClient({
+      reports: {
+        data: [
+          {
+            ...report("r2", "open"),
+            match_id: "m1",
+            reported: { deleted_at: "2026-10-14T00:00:00Z" },
+          },
+        ],
+        error: null,
+      },
+    });
+    const [row] = await listReports(client);
+    expect(row).toMatchObject({ match_id: "m1", reported_deleted: true });
+    expect(row).not.toHaveProperty("reported");
+    expect(reportedLabel(row)).toMatch(/^Izbrisan uporabnik/);
+    expect(reportedLabel(row)).not.toContain("u1");
+  });
+
+  it("embeds only deleted_at from the reported profile, never the reporter", () => {
+    expect(REPORT_COLUMNS).toContain(
+      "reported:profiles!reported_id(deleted_at)",
+    );
+    expect(REPORT_COLUMNS).not.toContain("reporter");
+    expect(reportedLabel(report("r3", "open"))).toBe("uporabnik u1");
   });
 });
 

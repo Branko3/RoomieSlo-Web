@@ -182,7 +182,9 @@ describe("privacy procedures document", () => {
     expect(doc).toContain("72 hours");
     expect(doc).toContain("account-document-deletion-retention-rules.md");
     expect(doc).toMatch(/approved on\s+2026-10-12/);
-    // Until the cascade migration lands, accounts with chats or reports are not fully deleted.
-    expect(doc).toContain("awaiting migration");
+    // The tombstone trigger replaced the cascade; old "awaiting migration" requests are finished with it.
+    expect(doc).toContain("on_auth_user_deleted");
+    expect(doc).toContain("deleted_user_safety_records");
+    expect(doc).not.toMatch(/on delete cascade. this removes/i);
   });
 });

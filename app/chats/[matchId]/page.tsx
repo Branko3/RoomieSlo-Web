@@ -18,6 +18,7 @@ import { getSupabaseConfig } from "../../../lib/config";
 import {
   ConversationError,
   conversationNotice,
+  deletedPeerNotice,
   loadConversation,
   type ConversationClient,
 } from "../../../lib/chat/conversation";
@@ -168,6 +169,7 @@ export default function ConversationPage({
         peerId={peer.id}
         matchId={conversation.matchId}
         state={blockState}
+        canBlock={!peer.deleted}
       />
 
       {conversation.peerListings.length > 0 && (
@@ -213,7 +215,11 @@ export default function ConversationPage({
               {liveNotice(liveStatus)}
             </p>
           )}
-          {blockState.blocked ? (
+          {peer.deleted ? (
+            <p className="conversation-notice" role="status">
+              {deletedPeerNotice}
+            </p>
+          ) : blockState.blocked ? (
             <p className="conversation-notice" role="status">
               {blockCopy.blocked}
             </p>

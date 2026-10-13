@@ -53,10 +53,13 @@ export function ChatSafetyControls({
   peerId,
   matchId,
   state,
+  canBlock = true,
 }: {
   peerId: string;
   matchId: string;
   state: ReturnType<typeof useBlockState>;
+  /** False for a deleted account: there is nobody left to block, but reporting stays. */
+  canBlock?: boolean;
 }) {
   const [confirming, setConfirming] = useState(false);
 
@@ -66,7 +69,7 @@ export function ChatSafetyControls({
         <Link className="text-link" href={reportHref(peerId, matchId)}>
           Prijavi
         </Link>
-        {state.blocked ? (
+        {!canBlock ? null : state.blocked ? (
           <button
             type="button"
             className="text-link"
@@ -87,7 +90,7 @@ export function ChatSafetyControls({
           </button>
         )}
       </div>
-      {confirming && !state.blocked && (
+      {canBlock && confirming && !state.blocked && (
         <div
           className="confirm-panel"
           role="alertdialog"
