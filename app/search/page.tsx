@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ListingCard } from "../../components/listing-card";
+import { listingCountLabel } from "../../lib/listings/result-label";
 import { useListingPages } from "../../lib/listings/use-listing-pages";
 import { useCachedListingsFallback } from "../../lib/listings/use-offline-listings";
 import { CacheNotice } from "../../components/cache-notice";
@@ -85,12 +86,7 @@ export default function SearchPage() {
             : 0,
     );
   }, [cachedListings, listings, location, maxPrice, sort]);
-  const resultLabel =
-    results.length === 1
-      ? "oglas"
-      : results.length >= 2 && results.length <= 4
-        ? "oglasi"
-        : "oglasov";
+  const resultLabel = listingCountLabel(results.length);
   return (
     <div className="content-wrap">
       <header className="topbar">
