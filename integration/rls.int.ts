@@ -1,12 +1,14 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   adminCredentials,
+  ensureAcceptedMatch,
   isRlsRefusal,
   marker,
   signIn,
   signInA,
   signInB,
   skip,
+  type PairMatch,
   type Session,
 } from "./clients";
 
@@ -20,6 +22,7 @@ describe.skipIf(skip)("RLS negative access", () => {
   let b: Session;
   let listingB: string;
   let matchAB: string;
+  let requesterAnswer: PairMatch["requesterAnswer"] = null;
   const createdListings: Array<{ session: () => Session; id: string }> = [];
 
   beforeAll(async () => {
@@ -39,25 +42,9 @@ describe.skipIf(skip)("RLS negative access", () => {
     listingB = listing.data.id;
     createdListings.push({ session: () => b, id: listingB });
 
-    const existing = await a.client
-      .from("matches")
-      .select("id")
-      .or(
-        `and(user_id_a.eq.${a.userId},user_id_b.eq.${b.userId}),and(user_id_a.eq.${b.userId},user_id_b.eq.${a.userId})`,
-      )
-      .limit(1);
-    if (existing.error) throw existing.error;
-    if (existing.data.length) {
-      matchAB = existing.data[0].id;
-    } else {
-      const created = await a.client
-        .from("matches")
-        .insert({ user_id_a: a.userId, user_id_b: b.userId })
-        .select("id")
-        .single();
-      if (created.error) throw created.error;
-      matchAB = created.data.id;
-    }
+    const match = await ensureAcceptedMatch(a, b);
+    matchAB = match.id;
+    requesterAnswer = match.requesterAnswer;
   });
 
   afterAll(async () => {
@@ -189,7 +176,7 @@ describe.skipIf(skip)("RLS negative access", () => {
       expect(isRlsRefusal(error)).toBe(true);
     });
 
-    // Known gap noted in PR #42: `messages_update` has no sender check.
+    // Gap noted in PR #42, closed by migration 20261013000000.
     it("does not let a participant rewrite the other person's message", async () => {
       const sent = await b.client
         .from("messages")
@@ -214,6 +201,47 @@ describe.skipIf(skip)("RLS negative access", () => {
         .eq("id", sent.data.id)
         .single();
       expect(after.data?.body).toBe(sent.data.body);
+    });
+    it("does not let the requester accept their own request", () => {
+      // Only observable when this run created the match (it is reused later).
+      if (!requesterAnswer) return;
+      expect(requesterAnswer.rpcError).not.toBeNull();
+      expect(requesterAnswer.updatedRows).toBe(0);
+    });
+
+    it("lets the recipient mark a message read but not move it backwards", async () => {
+      const sent = await a.client
+        .from("messages")
+        .insert({ match_id: matchAB, sender_id: a.userId, body: marker("dl") })
+        .select("id")
+        .single();
+      expect(sent.error).toBeNull();
+      const read = await b.client
+        .from("messages")
+        .update({ delivery_status: "read" })
+        .eq("id", sent.data!.id)
+        .select("delivery_status");
+      expect(read.data).toEqual([{ delivery_status: "read" }]);
+      const back = await b.client
+        .from("messages")
+        .update({ delivery_status: "sent" })
+        .eq("id", sent.data!.id)
+        .select("id");
+      expect(back.error).not.toBeNull();
+    });
+
+    it("does not let the sender change their own message's delivery status", async () => {
+      const sent = await a.client
+        .from("messages")
+        .insert({ match_id: matchAB, sender_id: a.userId, body: marker("own") })
+        .select("id")
+        .single();
+      const update = await a.client
+        .from("messages")
+        .update({ delivery_status: "read" })
+        .eq("id", sent.data!.id)
+        .select("id");
+      expect(update.error ? [] : update.data).toEqual([]);
     });
   });
 
