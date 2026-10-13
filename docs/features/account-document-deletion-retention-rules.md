@@ -43,9 +43,11 @@ Still to build (follow-up PR, in this order):
    `submit_report`. A chat report snapshots the last 200 messages of that conversation into
    `report_evidence` with "reporter"/"reported" roles instead of user ids; the snapshot is
    deleted with its report.
-3. **Admin message access (approved option 1).** In-app admins can read only conversations
-   linked to a report, through a security-definer function or policy, and every read is
-   recorded in an append-only audit table (admin id, conversation, time).
+3. **Done: migration `20261014000200_admin_report_conversation.sql`.** In-app admins read a
+   reported conversation only through `admin_report_conversation`, which records every read
+   in the append-only `admin_message_reads` (admin, report, time) before returning the
+   evidence snapshot (or, for older reports, the linked live conversation) by role.
+   `/admin/reports` shows it on request ("Prikaži pogovor").
 4. **Self-service deletion** on `/profile` through a trusted server operation (Edge
    Function), following the flow and contracts below.
 5. **Retention jobs**: purge closed-report evidence after 12 months, conversations whose
@@ -101,6 +103,7 @@ public URLs.
 | Backups                          | Expire after 30 days                             | Deleted data can remain in backups for up to 30 days. If a backup is restored, every deletion recorded since the backup date is re-applied before the service reopens.                                                                                                                                                                                       | Approved            |
 | Logs/analytics                   | Minimal fields, 90 days                          | Keep only the request id, date and outcome; never passwords, tokens, document contents or message text. Deleted after 90 days.                                                                                                                                                                                                                               | Approved            |
 | Admin access to messages         | Reported conversations only                      | Database owner: full access through Supabase for operations and abuse handling. In-app admins: only conversations linked to a report, with an audit record for every read. The privacy notice discloses this.                                                                                                                                                | Approved            |
+| Admin message-read audit log     | Keep 12 months                                   | One row per admin read of a reported conversation (admin id, report id, time); append-only; admins can review it. Deleted 12 months after the read, like reports.                                                                                                                                                                                            | Approved 2026-10-12 |
 
 ## User flow and authorization contract
 

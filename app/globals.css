@@ -1930,6 +1930,33 @@ button {
 .admin-report-body small {
   overflow-wrap: anywhere;
 }
+.admin-conversation {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+}
+.admin-transcript {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+  max-height: 420px;
+  overflow-y: auto;
+  width: 100%;
+}
+.admin-transcript li {
+  border-left: 3px solid var(--line);
+  padding: 4px 10px;
+}
+.admin-transcript-reported {
+  border-left-color: var(--amber) !important;
+}
+.admin-transcript p {
+  margin: 2px 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 .admin-report-actions {
   display: flex;
   align-items: center;

@@ -313,6 +313,51 @@ describe.skipIf(skip)("RLS negative access", () => {
       expect(self.data).toEqual([]);
     });
 
+    it("refuses the reported-conversation view to non-admins", async () => {
+      const { error } = await a.client.rpc("admin_report_conversation", {
+        p_report_id: "00000000-0000-4000-8000-000000000000",
+      });
+      expect(error).not.toBeNull();
+      const log = await a.client.from("admin_message_reads").select("id");
+      expect(log.error ? [] : log.data).toEqual([]);
+    });
+
+    it.skipIf(!adminCredentials())(
+      "records every admin read of a reported conversation",
+      async () => {
+        const admin = await signIn(adminCredentials()!);
+        const reports = await admin.client
+          .from("reports")
+          .select("id")
+          .not("match_id", "is", null)
+          .limit(1);
+        const reportId = reports.data?.[0]?.id;
+        if (reportId) {
+          const count = async () =>
+            (
+              await admin.client
+                .from("admin_message_reads")
+                .select("id", { count: "exact", head: true })
+                .eq("report_id", reportId)
+            ).count ?? 0;
+          const before = await count();
+          const read = await admin.client.rpc("admin_report_conversation", {
+            p_report_id: reportId,
+          });
+          expect(read.error).toBeNull();
+          expect(await count()).toBe(before + 1);
+          // The log is append-only, even for admins.
+          const tamper = await admin.client
+            .from("admin_message_reads")
+            .delete()
+            .eq("report_id", reportId)
+            .select("id");
+          expect(tamper.error ? [] : tamper.data).toEqual([]);
+        }
+        await admin.client.auth.signOut();
+      },
+    );
+
     it.skipIf(!adminCredentials())("lets an admin read reports", async () => {
       const admin = await signIn(adminCredentials()!);
       const { error } = await admin.client
