@@ -29,9 +29,9 @@ date closed. Store no copies of the user's data in the log.
 
 ## 3. Account deletion procedure (operator)
 
-There's no self-service deletion yet (Android has none; it is follow-up work in the retention
-record). Operators delete accounts manually in the Supabase dashboard of the **production**
-project, with two people where possible.
+Until self-service deletion ships, operators delete accounts in the Supabase dashboard of the
+**production** project, with two people where possible. The same database trigger runs for
+both, so the outcome is identical.
 
 1. **Verify** the request (section 2) and record it.
 2. **Check open safety cases:** in `/admin/reports`, or with the SQL editor `select id, status from reports where reported_id = '<uid>' and status = 'open'`.
@@ -39,28 +39,50 @@ project, with two people where possible.
 3. **Delete academic documents:** Storage → `vpisnice` → folder `<uid>/` → select all → delete.
    - This is mandatory: database deletion does **not** remove Storage files.
    - Confirm the folder is empty.
-4. **Delete the Auth user:** Authentication → Users → the user → Delete user. Through `on delete cascade` this removes:
-   - their `profiles` row;
-   - `questionnaire_answers`, owned `listings` (and other users' favorites of them) and `favorites`;
-   - `matches` they took part in, and every message in those matches, including the other participant's;
-   - reports they filed or that name them.
+4. **Delete the Auth user:** Authentication → Users → the user → Delete user. The
+   `on_auth_user_deleted` trigger (migration `20261014000000`) then applies the approved
+   matrix in the same transaction:
+   - saves the e-mail and name in `deleted_user_safety_records` (database owner only);
+   - deletes `questionnaire_answers`, `favorites`, owned `listings` (with other users'
+     favorites of them), `blocks` and any admin role;
+   - rejects pending match requests;
+   - scrubs `profiles` into a tombstone ("Izbrisan uporabnik", empty details,
+     `deleted_at` set). Matches, messages and reports stay for the other participant.
 
-   **This contradicts the approved matrix**, which keeps matches, messages and reports for the other participant (anonymized). Until the cascade migration from the retention record lands:
-   - if the user has **no** matches and is named in **no** reports, run this step as written;
-   - otherwise, do steps 3 and 5's document check, delete the user's `questionnaire_answers`, `favorites` and owned `listings` in the SQL editor, record the request as "awaiting migration", and finish this step only after the migration is applied. Tell the user what was deleted and when the rest will follow, within the one-month deadline (extendable by two months under GDPR art. 12(3) with a reason).
+   Requests logged as "awaiting migration" before this migration: finish them with this step.
 
-5. **Verify** in the SQL editor that each count is 0:
+5. **Verify** in the SQL editor that the profile is a tombstone and the owned data is gone
+   (`tombstone` = true, every other column 0):
 
    ```sql
    select
-     (select count(*) from profiles where id = '<uid>') as profiles,
+     (select deleted_at is not null and display_name = 'Izbrisan uporabnik'
+        and faculty = '' and bio = '' and avatar_url = '' and age is null
+      from profiles where id = '<uid>') as tombstone,
+     (select count(*) from auth.users where id = '<uid>') as auth_users,
+     (select count(*) from questionnaire_answers where profile_id = '<uid>') as answers,
+     (select count(*) from favorites where profile_id = '<uid>') as favorites,
      (select count(*) from listings where owner_id = '<uid>') as listings,
-     (select count(*) from matches where user_id_a = '<uid>' or user_id_b = '<uid>') as matches,
      (select count(*) from storage.objects where bucket_id = 'vpisnice' and name like '<uid>/%') as documents;
    ```
 
 6. **Backups:** deleted data remains in backups until they expire (30 days, approved matrix; see the runbook's section 4). If a backup is ever restored, re-apply all deletions recorded in the request log since the backup date before reopening the service.
 7. **Reply** to the user confirming deletion and the backup-expiry date. Close the log entry.
+
+### Looking up a deleted user's identity (safety cases)
+
+A report about a deleted account shows "Izbrisan uporabnik" everywhere, including
+`/admin/reports`. If a harassment case needs the person's identity (GDPR art. 17(3)(e) legal
+claims, art. 6(1)(f) user safety), only the **database owner** may look it up:
+
+```sql
+select * from deleted_user_safety_records where profile_id = '<reported_id>';
+```
+
+Record every lookup in the request log with the report id and the reason. In-app admins have
+no access: no policy, RPC or dashboard view reads this table. Retention: 30 days after the
+deletion, or 12 months after the last report about the person closes, whichever is later
+(enforced by the retention job).
 
 ## 4. Data minimisation in operations
 
@@ -98,4 +120,4 @@ project, with two people where possible.
 
 - `NEXT_PUBLIC_PRIVACY_CONTACT` (the privacy email shown on `/privacy`) and the request owner.
 - Locations of the request log and breach register.
-- Decided 2026-10-12 (retention record): backup retention 30 days; the full retention matrix; admin message access limited to reported conversations. Still to build: the cascade migration, report evidence, the admin message view with audit log, and self-service deletion.
+- Decided 2026-10-12 (retention record): backup retention 30 days; the full retention matrix; admin message access limited to reported conversations. Decided 2026-10-13: profile tombstones and the safety identity record (migration `20261014000000`). Still to build: report evidence, the admin message view with audit log, self-service deletion and the retention jobs.

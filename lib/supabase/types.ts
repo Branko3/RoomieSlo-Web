@@ -17,6 +17,8 @@ export type Database = {
           faculty: string;
           bio: string;
           avatar_url: string;
+          /** Set when the account was deleted; the row is then a scrubbed tombstone. */
+          deleted_at?: string | null;
         };
         Insert: Partial<
           Omit<Database["public"]["Tables"]["profiles"]["Row"], "id">

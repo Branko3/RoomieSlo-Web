@@ -13,6 +13,7 @@ import {
   nextStatus,
   REPORT_LIMIT,
   replaceStatus,
+  reportedLabel,
   setReportStatus,
   statusLabel,
   type AdminClient,
@@ -155,8 +156,8 @@ export default function AdminReportsPage() {
                   </p>
                 )}
                 <small className="muted">
-                  {dateFormat.format(new Date(report.created_at))} · prijavljen
-                  uporabnik {report.reported_id}
+                  {dateFormat.format(new Date(report.created_at))} · prijavljen{" "}
+                  {reportedLabel(report)}
                 </small>
               </div>
               <div className="admin-report-actions">

@@ -10,6 +10,16 @@ export type AdminReport = {
   description: string;
   status: ReportStatus;
   created_at: string;
+  /** The conversation the report was filed from, if any. */
+  match_id: string | null;
+  /** The reported account was deleted (its profile is a tombstone). */
+  reported_deleted: boolean;
+};
+
+/** A report row as selected, with the reported profile embedded. */
+type AdminReportRow = Omit<AdminReport, "match_id" | "reported_deleted"> & {
+  match_id?: string | null;
+  reported?: { deleted_at: string | null } | null;
 };
 
 /** Structural subset of the Supabase client used by the dashboard. */
@@ -41,7 +51,7 @@ export type AdminClient = {
         ) => {
           limit: (
             count: number,
-          ) => PromiseLike<{ data: AdminReport[] | null; error: DbError }>;
+          ) => PromiseLike<{ data: AdminReportRow[] | null; error: DbError }>;
         };
       };
       update: (values: { status: ReportStatus }) => {
@@ -58,8 +68,9 @@ export type AdminClient = {
     });
 };
 
+// Two foreign keys point at profiles, so the embed names the column.
 export const REPORT_COLUMNS =
-  "id,reported_id,reason,description,status,created_at";
+  "id,reported_id,reason,description,status,created_at,match_id,reported:profiles!reported_id(deleted_at)";
 export const REPORT_LIMIT = 200;
 
 export const REPORT_STATUSES: readonly ReportStatus[] = [
@@ -73,6 +84,16 @@ export const statusLabel: Record<ReportStatus, string> = {
   reviewed: "Rešeno",
   dismissed: "Zavrnjeno",
 };
+
+/**
+ * Who was reported, as the dashboard shows it. Deleted accounts only get a
+ * label: their identity is kept in a record that only the database owner can read.
+ */
+export function reportedLabel(report: AdminReport): string {
+  return report.reported_deleted
+    ? "Izbrisan uporabnik (identiteta hranjena za varnostne namene; za razkritje kontaktiraj upravljavca baze)"
+    : `uporabnik ${report.reported_id}`;
+}
 
 export const adminCopy = {
   notAdmin: "Nimaš administratorskih pravic.",
@@ -139,7 +160,11 @@ export async function listReports(client: AdminClient): Promise<AdminReport[]> {
       .order("created_at", { ascending: false })
       .limit(REPORT_LIMIT);
     if (error) throw error;
-    return data ?? [];
+    return (data ?? []).map(({ reported, ...row }) => ({
+      ...row,
+      match_id: row.match_id ?? null,
+      reported_deleted: Boolean(reported?.deleted_at),
+    }));
   } catch (error) {
     throw toAdminError(error, "load-failed");
   }

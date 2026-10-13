@@ -21,6 +21,7 @@ type PeerRow = {
   display_name: string | null;
   academic_status_verified: boolean;
   faculty: string | null;
+  deleted_at?: string | null;
 };
 
 export type ConversationPeer = {
@@ -28,7 +29,11 @@ export type ConversationPeer = {
   name: string;
   verified: boolean;
   faculty: string;
+  /** The other person deleted their account; history stays, nothing new can be sent. */
+  deleted: boolean;
 };
+
+export const deletedPeerNotice = "Ta uporabnik je izbrisal račun.";
 
 export type Conversation =
   | { status: "signed-out" }
@@ -136,7 +141,7 @@ export async function loadConversation(
     const [peer, listings] = await Promise.all([
       client
         .from("profiles")
-        .select("id,display_name,academic_status_verified,faculty")
+        .select("id,display_name,academic_status_verified,faculty,deleted_at")
         .eq("id", peerId)
         .maybeSingle(),
       client
@@ -168,6 +173,7 @@ export async function loadConversation(
         name: peer.data?.display_name?.trim() || "Uporabnik",
         verified: peer.data?.academic_status_verified === true,
         faculty: peer.data?.faculty ?? "",
+        deleted: Boolean(peer.data?.deleted_at),
       },
       peerListings,
     };
