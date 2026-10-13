@@ -1,9 +1,14 @@
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+  // Next.js compiles JSX itself (tsconfig "preserve"); component tests need the React 17+ runtime.
+  esbuild: { jsx: "automatic" },
   test: {
-    include: ["tests/**/*.test.ts"],
+    include: ["tests/**/*.test.ts", "tests/components/**/*.test.tsx"],
     exclude: ["node_modules", ".next"],
+    // Logic tests stay in Node; only component tests get a DOM.
+    environmentMatchGlobs: [["tests/components/**", "jsdom"]],
+    setupFiles: ["tests/components/setup.ts"],
     coverage: {
       provider: "v8",
       reporter: ["text-summary", "text"],
