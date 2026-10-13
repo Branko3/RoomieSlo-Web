@@ -50,6 +50,6 @@ describe("feed keyset index", () => {
     // Both columns of the condition are the index columns, in index order.
     expect(
       cursorFilter({ createdAt: "2026-10-01T00:00:00Z", id: "x" }),
-    ).toMatch(/^created_at\.lt\..*,and\(created_at\.eq\..*,id\.lt\.x\)$/);
+    ).toMatch(/^created_at\.lt\..*,and\(created_at\.eq\..*,id\.lt\."x"\)$/);
   });
 });
