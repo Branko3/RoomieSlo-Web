@@ -5,190 +5,193 @@ Android-to-web migration. The technical execution requirements are consolidated 
 [`web-implementation-plan.md`](./web-implementation-plan.md), which is maintained locally in
 this web repository.
 
-The source Android project currently provides the complete product behavior, while this web
-repository is a responsive Next.js prototype using preview data from `lib/data.ts`. A feature
-is only considered complete when it is implemented, covered by automated tests, and verified
-manually in a browser.
+The source Android project provides the complete product behavior. The web application now
+reads and writes the shared Supabase project for every feature; the preview data in
+`lib/data.ts` is no longer used by any page. A feature is only considered complete when it is
+implemented, covered by automated tests, and verified manually in a browser.
+
+Last reviewed: 2026-10-14, against `main` after PRs #1–#77, and cross-checked with every record
+in `docs/features/`. The notes name the PR that closed each gap.
 
 ## Status meanings
 
-- **Backlog** — required work remains; the web implementation is missing or incomplete.
-- **Implemented** — the web surface and behavior exist in the current repository.
-- **Autotested** — automated unit, integration, or Playwright coverage verifies the behavior.
-- **Handtested** — the behavior has been exercised manually in a browser at a supported
-  viewport or workflow.
+- **Backlog**: required work remains. `Partial` means only verification remains (a
+  staging Supabase project, installed browsers, or a manual check); `Yes` means code or a
+  decision is still missing.
+- **Implemented**: the web surface and behavior exist on `main`.
+- **Autotested**: automated coverage verifies the behavior. `Partial` means unit or static
+  tests pass but the integration (staging) or Playwright (browser) suites written for it
+  have not been executed yet.
+- **Handtested**: the behavior has been exercised manually in a browser. The 2026-10-07
+  checks were made against preview data; features rebuilt on Supabase since then are
+  `No` until they are checked again.
 
-The four state columns are independent. For example, a prototype feature can be implemented
-and handtested while still lacking automated coverage.
+The four state columns are independent.
 
 ## Current status summary
 
-| Area                                     | Backlog |         Implemented         | Autotested | Handtested |
-| ---------------------------------------- | :-----: | :-------------------------: | :--------: | :--------: |
-| Web foundation and responsive shell      | Partial |             Yes             |     No     |    Yes     |
-| Authentication and academic verification |   Yes   |           Partial           |     No     |  Partial   |
-| Profile and questionnaire                |   Yes   |           Partial           |     No     |  Partial   |
-| Listings and search                      | Partial |           Partial           |     No     |    Yes     |
-| Recommendations and matching             |   Yes   |           Partial           |     No     |    Yes     |
-| Chat and realtime messaging              |   Yes   |           Partial           |     No     |     No     |
-| Favorites                                |   No    | Yes (prototype persistence) |     No     |    Yes     |
-| Reports and administration               |   Yes   |             No              |     No     |     No     |
-| Offline/cache behavior                   |   Yes   |             No              |     No     |     No     |
-| Production hardening                     |   Yes   |             No              |     No     |     No     |
+| Area                                     | Backlog | Implemented | Autotested | Handtested |
+| ---------------------------------------- | :-----: | :---------: | :--------: | :--------: |
+| Web foundation and responsive shell      | Partial |     Yes     |  Partial   |  Partial   |
+| Authentication and academic verification | Partial |     Yes     |  Partial   |     No     |
+| Profile and questionnaire                | Partial |     Yes     |  Partial   |     No     |
+| Listings and search                      | Partial |     Yes     |  Partial   |  Partial   |
+| Recommendations and matching             | Partial |     Yes     |  Partial   |     No     |
+| Chat and realtime messaging              | Partial |     Yes     |  Partial   |     No     |
+| Favorites                                | Partial |     Yes     |  Partial   |  Partial   |
+| Reports and administration               | Partial |     Yes     |  Partial   |     No     |
+| Offline/cache behavior                   | Partial |     Yes     |  Partial   |     No     |
+| Production hardening                     |   Yes   |   Partial   |  Partial   |     No     |
+
+What blocks most `Partial` rows is the same: no staging Supabase project (none of the
+migrations has been applied, and the integration suite has never run), and no installed
+browsers (the Playwright suite has never run). See "Automated verification" below.
 
 ## Feature checklist
 
 ### Phase 0 — product and backend preparation
 
-| Feature                                               | Backlog | Implemented | Autotested | Handtested | Current web state / acceptance notes                                                                                                                                                                                                                                                                                                           |
-| ----------------------------------------------------- | :-----: | :---------: | :--------: | :--------: | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Shared Supabase data contract                         |   Yes   |   Partial   |  Partial   |     No     | Deferred: Yes — typed contract, mappers, query boundary, listing-route integration, and `playwright.config.ts` are implemented; final completion is blocked on staging RLS/Storage/Realtime verification, Supabase CLI migration checks, and unavailable local Chromium.                                                                       |
-| Reproducible SQL migrations                           |   Yes   |   Partial   |     No     |     No     | Ordered production migrations, RLS/Storage/Realtime SQL, opt-in seed boundary, and recovery documentation now live in `supabase/`; fresh-project and security validation remain blocked on a disposable/staging project.                                                                                                                       |
-| Development, staging, and production environments     |   Yes   |     No      |     No     |     No     | `.env.example` documents public browser configuration; environments are not established.                                                                                                                                                                                                                                                       |
-| RLS and Storage policy review                         |   Yes   |   Partial   |  Partial   |     No     | Migration security contract tests (`tests/supabase-security-contract.test.ts`) pass; the opt-in negative-access suite (`tests/supabase-security.integration.test.ts`) for profiles, listings, matches, messages, reports, and academic documents is blocked on a disposable/staging project. See `docs/features/rls-storage-policy-review.md`. |
-| Account/document deletion and retention rules         |   Yes   |     No      |     No     |     No     | Policy approved 2026-10-12 (retention matrix, admin access to reported conversations only) in `docs/features/account-document-deletion-retention-rules.md`; cascade migration, report evidence, admin message view with audit log, and self-service deletion are follow-up work.                                                               |
-| Responsive breakpoints and accessibility requirements |   No    |     Yes     |     No     |    Yes     | Desktop sidebar, mobile bottom navigation, skip link, semantic landmarks, and visible focus styling exist.                                                                                                                                                                                                                                     |
+| Feature                                               | Backlog | Implemented | Autotested | Handtested | Current web state / acceptance notes                                                                                                                                                                                           |
+| ----------------------------------------------------- | :-----: | :---------: | :--------: | :--------: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Shared Supabase data contract                         | Partial |     Yes     |  Partial   |     No     | Typed contract, mappers and query boundary are used by every page. Staging RLS/Storage/Realtime verification remains.                                                                                                          |
+| Reproducible SQL migrations                           | Partial |     Yes     |  Partial   |     No     | Ordered, forward-only migrations in `supabase/migrations` (7 on `main`). Fresh-project apply and `db:status` need a staging project and the Supabase CLI.                                                                      |
+| Development, staging, and production environments     |   Yes   |   Partial   |  Partial   |     No     | Deferred: Yes — owner decision (host, Supabase staging project). Environment validation (`npm run validate:env`, prebuild) is implemented. No staging or production environment exists yet; the host is an owner decision.     |
+| RLS and Storage policy review                         | Partial |     Yes     |  Partial   |     No     | Chat/match gaps closed by `20261013000000` (#63); questionnaire answers owner-only by `20261015000000` (#77). Static security tests pass; none of the migrations is applied on staging yet.                                    |
+| Account/document deletion and retention rules         | Partial |     Yes     |  Partial   |     No     | Implemented (#72–#76): tombstones and owner-only safety record, report evidence, audited admin view, self-service deletion Edge Function, daily retention job. Migrations not applied and functions not deployed (no staging). |
+| Responsive breakpoints and accessibility requirements | Partial |     Yes     |  Partial   |    Yes     | Sidebar, bottom navigation, skip link, landmarks and focus styling. Viewport and keyboard Playwright specs are written but not run.                                                                                            |
 
 ### Phase 1 — web foundation
 
-| Feature                                              | Backlog | Implemented | Autotested | Handtested | Current web state / acceptance notes                                                                                                                                                                                                                 |
-| ---------------------------------------------------- | :-----: | :---------: | :--------: | :--------: | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Next.js TypeScript application                       |   No    |     Yes     |     No     |    Yes     | App routes, TypeScript, and shared layout are present.                                                                                                                                                                                               |
-| Responsive desktop/tablet/mobile shell               | Partial |     Yes     |     No     |    Yes     | Responsive CSS exists; dedicated viewport automation is still missing.                                                                                                                                                                               |
-| Shared design tokens and navigation                  |   No    |     Yes     |     No     |    Yes     | Green/amber palette, cards, desktop navigation, and mobile navigation are implemented.                                                                                                                                                               |
-| Authenticated and unauthenticated route guards       |   No    |     Yes     |  Partial   |     No     | Middleware, browser session restoration, auth-change handling, safe return URLs, auth forms, and an RLS-backed admin denied state are implemented; staging-auth and browser workflow coverage remain gated.                                          |
-| Loading states                                       | Partial |     Yes     |     No     |  Partial   | Shared route loading component exists; data-backed skeleton states are not connected.                                                                                                                                                                |
-| Empty, error, offline, and permission-denied states  | Partial |   Partial   |     No     |  Partial   | Not-found and route error foundations exist; offline and permission-denied flows remain.                                                                                                                                                             |
-| TanStack Query server-state foundation               | Partial |     Yes     |     No     |     No     | Provider is configured, but current pages do not use it for Supabase data.                                                                                                                                                                           |
-| Linting, formatting, typecheck, and production build |   No    |     Yes     |     No     |    Yes     | `typecheck` and `build` pass; feature-level test coverage is not yet present.                                                                                                                                                                        |
-| CI pipeline                                          |   Yes   |     Yes     |  Partial   |     No     | `.github/workflows/quality.yml` runs typecheck, lint, format check, unit tests, build and Playwright (Chromium) on pull requests and pushes to `main`; staging-gated e2e scenarios skip without secrets, and the workflow has not run on GitHub yet. |
+| Feature                                              | Backlog | Implemented | Autotested | Handtested | Current web state / acceptance notes                                                                                   |
+| ---------------------------------------------------- | :-----: | :---------: | :--------: | :--------: | ---------------------------------------------------------------------------------------------------------------------- |
+| Next.js TypeScript application                       |   No    |     Yes     |    Yes     |    Yes     | Typecheck, lint, unit tests and build run in CI (`quality.yml`).                                                       |
+| Responsive desktop/tablet/mobile shell               | Partial |     Yes     |  Partial   |    Yes     | Viewport matrix specs (390/820/1440) exist; not executed (no browsers).                                                |
+| Shared design tokens and navigation                  |   No    |     Yes     |    Yes     |    Yes     | Contrast-checked tokens (`tests/contrast.test.ts`).                                                                    |
+| Authenticated and unauthenticated route guards       | Partial |     Yes     |  Partial   |     No     | Middleware plus client guard, open/public/auth route classes, safe return paths. Staging auth and browser runs remain. |
+| Loading states                                       | Partial |     Yes     |  Partial   |     No     | Shared loading and data-state components are used by the data pages.                                                   |
+| Empty, error, offline, and permission-denied states  | Partial |     Yes     |  Partial   |     No     | `DataState` surfaces on all data pages; browser offline runs remain.                                                   |
+| TanStack Query server-state foundation               |   No    |     Yes     |  Partial   |     No     | Used by listings, favorites, matches, chat, profile and admin.                                                         |
+| Linting, formatting, typecheck, and production build |   No    |     Yes     |    Yes     |    Yes     | All enforced in CI.                                                                                                    |
+| CI pipeline                                          | Partial |     Yes     |  Partial   |     No     | `.github/workflows/quality.yml`; staging-gated e2e scenarios skip without secrets.                                     |
 
 ### Phase 2 — authentication and profile
 
-| Feature                                     | Backlog |   Implemented   | Autotested | Handtested | Current web state / acceptance notes                                                                                                                                                                                                |
-| ------------------------------------------- | :-----: | :-------------: | :--------: | :--------: | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Email/password registration                 |   Yes   |       Yes       |  Partial   |     No     | `/register` validates name, e-mail and password, calls Supabase `signUp` with `display_name` metadata, maps duplicate accounts, and shows the confirmation-sent state; Playwright spec and staging Auth-trigger checks are pending. |
-| Email/password login                        |   Yes   |       Yes       |  Partial   |     No     | `/login` validates input, signs in through the shared `AuthProvider`, maps Supabase errors to Slovenian copy and returns to the safe `returnTo` path; Playwright and staging sign-in checks are pending.                            |
-| Session restoration after refresh           |   Yes   |       No        |     No     |     No     | No auth session is currently restored.                                                                                                                                                                                              |
-| Email confirmation flow                     |   Yes   |       No        |     No     |     No     | Not implemented.                                                                                                                                                                                                                    |
-| Logout                                      |   Yes   |     Partial     |     No     |     No     | Profile contains a logout-looking control, but it is not wired to Supabase Auth.                                                                                                                                                    |
-| Profile loading and editing                 |   Yes   |     Partial     |     No     |  Partial   | Profile summary UI exists; persistence and edit flow are missing.                                                                                                                                                                   |
-| Availability toggle                         | Partial | Yes (local UI)  |     No     |    Yes     | Toggle behavior is available locally; server persistence is still backlog.                                                                                                                                                          |
-| Verified-student indicator                  | Partial | Yes (static UI) |     No     |    Yes     | Static “Preverjen študent” presentation exists; academic verification is not connected.                                                                                                                                             |
-| Academic document upload                    |   Yes   |       No        |     No     |     No     | Browser file input, type/size validation, upload progress, and protected Storage access are missing.                                                                                                                                |
-| Lifestyle questionnaire                     |   Yes   |       No        |     No     |     No     | Route and persistence for question IDs, values, weights, and skip behavior are missing.                                                                                                                                             |
-| Questionnaire conversion and skip semantics |   Yes   |       No        |     No     |     No     | Requires porting Android behavior and unit tests.                                                                                                                                                                                   |
+| Feature                                     | Backlog | Implemented | Autotested | Handtested | Current web state / acceptance notes                                                                                                                            |
+| ------------------------------------------- | :-----: | :---------: | :--------: | :--------: | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Email/password registration                 | Partial |     Yes     |  Partial   |     No     | `/register` with validation, `emailRedirectTo`, duplicate-account mapping. Staging Auth-trigger check remains.                                                  |
+| Email/password login                        | Partial |     Yes     |  Partial   |     No     | `/login` with Slovenian errors and safe `returnTo`.                                                                                                             |
+| Session restoration after refresh           | Partial |     Yes     |  Partial   |     No     | Single `AuthProvider`; a late `getSession` result can't overwrite newer auth events.                                                                            |
+| Email confirmation flow                     | Partial |     Yes     |  Partial   |     No     | `/auth/confirm` and `/auth/confirmation` (open routes). The Supabase e-mail template needs staging.                                                             |
+| Logout                                      | Partial |     Yes     |  Partial   |     No     | Local-scope sign-out that clears the query cache, favorites and storage.                                                                                        |
+| Profile loading and editing                 | Partial |     Yes     |  Partial   |     No     | Own profile loads and saves; verification is protected by the #51 trigger.                                                                                      |
+| Availability toggle                         | Partial |     Yes     |  Partial   |     No     | Saved to `profiles.is_available` with optimistic rollback (#65). Staging check remains.                                                                         |
+| Verified-student indicator                  | Partial |     Yes     |  Partial   |     No     | The badge reads `academic_status_verified`. Only an admin or the database owner can set it; there is no in-app verification queue, and Android has none either. |
+| Academic document upload                    | Partial |     Yes     |  Partial   |     No     | `/academic-verification` uploads to private `vpisnice/<uid>/`. Storage negative tests need staging.                                                             |
+| Lifestyle questionnaire                     | Partial |     Yes     |  Partial   |     No     | `/profile/questionnaire` saves all statements; the profile card shows real progress (#65).                                                                      |
+| Questionnaire conversion and skip semantics |   No    |     Yes     |    Yes     |     No     | Android parity tests pass.                                                                                                                                      |
 
 ### Phase 3 — listings and search
 
-| Feature                               | Backlog |         Implemented          | Autotested | Handtested | Current web state / acceptance notes                                                |
-| ------------------------------------- | :-----: | :--------------------------: | :--------: | :--------: | ----------------------------------------------------------------------------------- |
-| Listings feed                         | Partial |      Yes (preview data)      |     No     |    Yes     | `/listings` renders cards from `lib/data.ts`; Supabase feed is not connected.       |
-| Listing detail                        | Partial |      Yes (preview data)      |     No     |    Yes     | `/listings/[id]` renders detail content and an invalid-ID recovery state.           |
-| Owner listing creation                |   Yes   |              No              |     No     |     No     | `/listings/new` and its validation are missing.                                     |
-| Owner listing editing                 |   Yes   |              No              |     No     |     No     | `/listings/[listingId]/edit` is missing.                                            |
-| Owner listing deletion                |   Yes   |              No              |     No     |     No     | Not implemented.                                                                    |
-| Filled/available listing state        |   Yes   |           Partial            |     No     |     No     | Availability copy is displayed, but owner state changes are missing.                |
-| Location filtering                    | Partial |         Yes (local)          |     No     |    Yes     | Search filters preview listings and persists the location in the URL.               |
-| Price filtering                       | Partial |         Yes (local)          |     No     |    Yes     | Budget slider filters preview listings and persists the maximum price in the URL.   |
-| Listing sorting                       | Partial |         Yes (local)          |     No     |    Yes     | Relevance, newest, price ascending, and price descending are available.             |
-| Active filter chips and clear filters |   No    |             Yes              |     No     |    Yes     | Removable chips and “Počisti filtre” are implemented.                               |
-| Slovenian result pluralization        |   No    |             Yes              |     No     |    Yes     | Search displays `oglas`, `oglasi`, or `oglasov` according to result count.          |
-| Cursor/keyset pagination              |   Yes   |              No              |     No     |     No     | Must be based on `created_at` when the Supabase feed is connected.                  |
-| IndexedDB listing cache               |   Yes   |              No              |     No     |     No     | The migration plan requires caching listings only; no Dexie/IndexedDB layer exists. |
-| Stale-cache and offline listing view  |   Yes   |              No              |     No     |     No     | Not implemented.                                                                    |
-| Listing cards with real photos        |   Yes   |              No              |     No     |     No     | Cards currently use emoji preview illustrations.                                    |
-| Favorite listing action               |   No    | Yes (localStorage prototype) |     No     |    Yes     | Shared favorite context connects cards, details, favorites, and reload persistence. |
-| Favorite mutations against Supabase   |   Yes   |              No              |     No     |     No     | Local storage must be replaced or supplemented by authenticated Supabase mutations. |
+| Feature                               | Backlog | Implemented | Autotested | Handtested | Current web state / acceptance notes                                                                                                                                                                  |
+| ------------------------------------- | :-----: | :---------: | :--------: | :--------: | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Listings feed                         | Partial |     Yes     |  Partial   |     No     | Supabase feed with offline fallback.                                                                                                                                                                  |
+| Listing detail                        | Partial |     Yes     |  Partial   |     No     | Supabase detail with owner actions, request button and report link. `/listings/[id]` is at 195.5 of 200 kB; lazy-loading owner controls made it larger, so headroom must come from the shared bundle. |
+| Owner listing creation                | Partial |     Yes     |  Partial   |     No     | `/listings/new`. RLS insert check needs staging.                                                                                                                                                      |
+| Owner listing editing                 | Partial |     Yes     |  Partial   |     No     | Optimistic version check; every change bumps `listings.version` by trigger (#66), so Android edits are detected.                                                                                      |
+| Owner listing deletion                | Partial |     Yes     |  Partial   |     No     | Confirmation; the favorites cascade needs staging.                                                                                                                                                    |
+| Filled/available listing state        | Partial |     Yes     |  Partial   |     No     | Owner toggle; filled listings can't be requested.                                                                                                                                                     |
+| Location filtering                    | Partial |     Yes     |  Partial   |  Partial   | Server-side `ilike` filter, kept in the URL. The earlier hand-check was against preview data.                                                                                                         |
+| Price filtering                       | Partial |     Yes     |  Partial   |  Partial   | Server-side maximum price, kept in the URL.                                                                                                                                                           |
+| Listing sorting                       | Partial |     Yes     |  Partial   |  Partial   | Client-side sort over the loaded pages.                                                                                                                                                               |
+| Active filter chips and clear filters |   No    |     Yes     |  Partial   |    Yes     | Removable chips and "Počisti filtre".                                                                                                                                                                 |
+| Slovenian result pluralization        |   No    |     Yes     |    Yes     |    Yes     | `oglas` / `oglasa` / `oglasi` / `oglasov` by the mod-100 rule (#69).                                                                                                                                  |
+| Cursor/keyset pagination              | Partial |     Yes     |  Partial   |     No     | `(created_at desc, id desc)` cursor with a matching partial index (#66); real PostgREST `or` filter check on staging.                                                                                 |
+| IndexedDB listing cache               | Partial |     Yes     |  Partial   |     No     | Per-user cache with 7-day expiry, written by `/listings` and `/search` (#67). Native IndexedDB untested (no browser run).                                                                             |
+| Stale-cache and offline listing view  | Partial |     Yes     |  Partial   |     No     | Cached fallback with a stale notice on `/listings` and `/search`.                                                                                                                                     |
+| Listing cards with real photos        | Partial |     Yes     |  Partial   |     No     | https-only photo URLs with fallback; photo upload is out of scope (Android has none).                                                                                                                 |
+| Favorite listing action               | Partial |     Yes     |  Partial   |  Partial   | Supabase-backed with optimistic toggle.                                                                                                                                                               |
+| Favorite mutations against Supabase   | Partial |     Yes     |  Partial   |     No     | RLS needs staging.                                                                                                                                                                                    |
 
 ### Phase 4 — recommendations and matching
 
-| Feature                                       | Backlog |       Implemented        | Autotested | Handtested | Current web state / acceptance notes                                                              |
-| --------------------------------------------- | :-----: | :----------------------: | :--------: | :--------: | ------------------------------------------------------------------------------------------------- |
-| Compatibility-ranked recommendations          |   Yes   |         Partial          |     No     |     No     | Dashboard contains static recommendation preview data; no questionnaire-based calculation exists. |
-| Compatibility calculation parity with Android |   Yes   |            No            |     No     |     No     | Must port and test equal, opposite, ignored, zero-weight, weighted, and normalized cases.         |
-| Insufficient-answer empty state               |   Yes   |            No            |     No     |     No     | Not implemented.                                                                                  |
-| Match-request creation                        | Partial | Yes (prototype feedback) |     No     |    Yes     | Detail page accepts an optional message and shows a success state locally.                        |
-| Pending/accepted/rejected request states      |   Yes   |            No            |     No     |     No     | Supabase-backed state and conflict handling are missing.                                          |
-| Match acceptance conflict handling            |   Yes   |            No            |     No     |     No     | Should be atomic through an RPC or constrained update.                                            |
-| Duplicate-request prevention                  |   Yes   |            No            |     No     |     No     | Requires database constraint and client error handling.                                           |
-| Open chat after successful match request      | Partial |         Partial          |     No     |    Yes     | Success state links to `/chats`, but no request-to-chat backend flow exists.                      |
+| Feature                                       | Backlog | Implemented | Autotested | Handtested | Current web state / acceptance notes                                                                                                                                |
+| --------------------------------------------- | :-----: | :---------: | :--------: | :--------: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Compatibility-ranked recommendations          | Partial |     Yes     |  Partial   |     No     | Ranked in the `recommendations` Edge Function with the shared parity-tested code; answers stay private (#77). Deploy the function before applying `20261015000000`. |
+| Compatibility calculation parity with Android |   No    |     Yes     |    Yes     |     No     | Parity tests pass.                                                                                                                                                  |
+| Insufficient-answer empty state               | Partial |     Yes     |  Partial   |     No     | Shown below the minimum number of answers.                                                                                                                          |
+| Match-request creation                        | Partial |     Yes     |  Partial   |     No     | Real request from the listing; filled listings refused.                                                                                                             |
+| Pending/accepted/rejected request states      | Partial |     Yes     |  Partial   |     No     | Only the recipient can answer, in the UI and the database (#63).                                                                                                    |
+| Match acceptance conflict handling            | Partial |     Yes     |  Partial   |     No     | Atomic `accept_match` RPC with conflict re-read.                                                                                                                    |
+| Duplicate-request prevention                  | Partial |     Yes     |  Partial   |     No     | Unique pair index plus 23505 handling.                                                                                                                              |
+| Open chat after successful match request      | Partial |     Yes     |  Partial   |     No     | Links into `/chats/[matchId]` once accepted.                                                                                                                        |
 
 ### Phase 5 — chat and realtime messaging
 
-| Feature                               | Backlog |    Implemented     | Autotested | Handtested | Current web state / acceptance notes                                                            |
-| ------------------------------------- | :-----: | :----------------: | :--------: | :--------: | ----------------------------------------------------------------------------------------------- |
-| Chat list                             | Partial | Yes (preview data) |     No     |  Partial   | `/chats` renders a static list; rows currently do not have a complete conversation destination. |
-| Conversation route `/chats/[matchId]` |   Yes   |         No         |     No     |     No     | Route and listing context card are missing.                                                     |
-| Message history                       |   Yes   |         No         |     No     |     No     | Not implemented.                                                                                |
-| Message composer                      |   Yes   |         No         |     No     |     No     | Not implemented.                                                                                |
-| Immediate local message insertion     |   Yes   |         No         |     No     |     No     | Not implemented.                                                                                |
-| Sent, delivered, and read states      |   Yes   |         No         |     No     |     No     | Not implemented.                                                                                |
-| Supabase Realtime subscription        |   Yes   |         No         |     No     |     No     | Requires reconnectable subscriptions and cleanup on unmount/hidden page.                        |
-| Reconnect with bounded backoff        |   Yes   |         No         |     No     |     No     | Not implemented.                                                                                |
-| Message deduplication and rollback    |   Yes   |         No         |     No     |     No     | Requires automated tests for reconnect and optimistic failure cases.                            |
-| Report/block chat controls            |   Yes   |         No         |     No     |     No     | Not implemented.                                                                                |
+| Feature                               | Backlog | Implemented | Autotested | Handtested | Current web state / acceptance notes                                                                                 |
+| ------------------------------------- | :-----: | :---------: | :--------: | :--------: | -------------------------------------------------------------------------------------------------------------------- |
+| Chat list                             | Partial |     Yes     |  Partial   |     No     | Real match list; accepted chats are marked delivered on load (#64).                                                  |
+| Conversation route `/chats/[matchId]` | Partial |     Yes     |  Partial   |     No     | Participant-only via RLS.                                                                                            |
+| Message history                       | Partial |     Yes     |  Partial   |     No     | Ordered history with read marking.                                                                                   |
+| Message composer                      | Partial |     Yes     |    Yes     |     No     | Enter/Shift+Enter and length limit; component tests (#68).                                                           |
+| Immediate local message insertion     | Partial |     Yes     |  Partial   |     No     | Optimistic insert with retry.                                                                                        |
+| Sent, delivered, and read states      | Partial |     Yes     |  Partial   |     No     | Read in the chat, delivered on the chat list (#64); only the recipient can advance the state, never backwards (#63). |
+| Supabase Realtime subscription        | Partial |     Yes     |  Partial   |     No     | Subscribes per conversation, cleaned up on unmount.                                                                  |
+| Reconnect with bounded backoff        | Partial |     Yes     |  Partial   |     No     | Bounded exponential backoff.                                                                                         |
+| Message deduplication and rollback    | Partial |     Yes     |  Partial   |     No     | Client UUIDs for exact dedupe.                                                                                       |
+| Report/block chat controls            | Partial |     Yes     |  Partial   |     No     | Block/unblock plus a report link; `blocks` migration not applied anywhere.                                           |
 
 ### Favorites, reporting, and administration
 
-| Feature                      | Backlog |         Implemented          | Autotested | Handtested | Current web state / acceptance notes                                           |
-| ---------------------------- | :-----: | :--------------------------: | :--------: | :--------: | ------------------------------------------------------------------------------ |
-| Favorites empty state        |   No    |             Yes              |     No     |    Yes     | Empty collection provides a direct link to search.                             |
-| Favorites saved-list view    | Partial | Yes (localStorage prototype) |     No     |    Yes     | Saved listing appears after navigating from search and after reload.           |
-| Report user/listing          |   Yes   |              No              |     No     |     No     | `/report/[userId]`, validation, and insert flow are missing.                   |
-| Admin report dashboard       |   Yes   |              No              |     No     |     No     | `/admin/reports`, UI guard, status changes, and audit-safe errors are missing. |
-| Admin authorization boundary |   Yes   |              No              |     No     |     No     | RLS must remain the security boundary even if the UI hides the route.          |
+| Feature                      | Backlog | Implemented | Autotested | Handtested | Current web state / acceptance notes                                                                                  |
+| ---------------------------- | :-----: | :---------: | :--------: | :--------: | --------------------------------------------------------------------------------------------------------------------- |
+| Favorites empty state        |   No    |     Yes     |  Partial   |    Yes     | Links to search.                                                                                                      |
+| Favorites saved-list view    | Partial |     Yes     |  Partial   |  Partial   | Supabase-backed list with photos.                                                                                     |
+| Report user/listing          | Partial |     Yes     |  Partial   |     No     | `/report/[userId]` with Android reasons; no rate limit (same as Android).                                             |
+| Admin report dashboard       | Partial |     Yes     |  Partial   |     No     | `/admin/reports` with status filters and changes. No admin view of reported conversations yet (deletion plan step 3). |
+| Admin authorization boundary | Partial |     Yes     |  Partial   |     No     | `is_admin()`, status-only report updates, verification trigger; migration not applied anywhere.                       |
 
 ### Phase 6 — hardening and release
 
-| Feature                                               | Backlog | Implemented | Autotested | Handtested | Current web state / acceptance notes                                                                                                                                                     |
-| ----------------------------------------------------- | :-----: | :---------: | :--------: | :--------: | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Auth, RLS, Storage, and Realtime integration tests    |   Yes   |     No      |     No     |     No     | No web integration/security test suite exists.                                                                                                                                           |
-| Unit test suite                                       | Partial |     Yes     |  Partial   |     No     | Supabase contract suites cover mappers, queries, and boundary behavior; broader feature coverage remains backlog.                                                                        |
-| Playwright end-to-end suite                           | Partial |     Yes     |  Partial   |     No     | `playwright.config.ts` and `e2e/contract.smoke.spec.ts` exist; local browser execution is blocked by the missing Chromium installation and staging scenarios are gated on safe fixtures. |
-| Mobile, tablet, and desktop workflow coverage         |   Yes   |   Partial   |     No     |    Yes     | Core prototype flows were checked in the shared browser; viewport matrix automation is missing.                                                                                          |
-| Keyboard navigation and focus coverage                | Partial |   Partial   |     No     |  Partial   | Skip link and focus-visible styling exist; a complete keyboard journey test is missing.                                                                                                  |
-| Contrast and accessibility audit                      |   Yes   |   Partial   |     No     |     No     | Basic accessible labels and focus styling exist; formal contrast/axe coverage is missing.                                                                                                |
-| SEO and privacy protections                           |   Yes   |     No      |     No     |     No     | Authenticated data indexing behavior and `noindex` policy are not configured.                                                                                                            |
-| Performance and cross-browser checks                  |   Yes   |     No      |     No     |     No     | Not implemented.                                                                                                                                                                         |
-| Monitoring, backups, rollback, and deployment runbook |   Yes   |     No      |     No     |     No     | Not implemented or documented for the web deployment.                                                                                                                                    |
-| Account deletion and operational privacy procedures   |   Yes   |     No      |     No     |     No     | Must be documented before production release.                                                                                                                                            |
+| Feature                                               | Backlog | Implemented | Autotested | Handtested | Current web state / acceptance notes                                                                                                                                            |
+| ----------------------------------------------------- | :-----: | :---------: | :--------: | :--------: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Auth, RLS, Storage, and Realtime integration tests    | Partial |     Yes     |  Partial   |     No     | `npm run test:integration` (25 tests, 28 with PR #63) has never run; it needs `SUPABASE_TEST_*`.                                                                                |
+| Unit test suite                                       | Partial |     Yes     |    Yes     |     No     | `npm run test:coverage` (≥95% statements over `lib/` and `supabase/functions/_shared`), plus React Testing Library component tests (#68).                                       |
+| Playwright end-to-end suite                           | Partial |     Yes     |  Partial   |     No     | 115 tests listed; never executed (no browsers; signed-in specs need `E2E_AUTH_STATE`).                                                                                          |
+| Mobile, tablet, and desktop workflow coverage         | Partial |     Yes     |  Partial   |  Partial   | Viewport specs written, not executed.                                                                                                                                           |
+| Keyboard navigation and focus coverage                | Partial |     Yes     |  Partial   |  Partial   | Static rules pass; keyboard journeys not executed.                                                                                                                              |
+| Contrast and accessibility audit                      | Partial |     Yes     |  Partial   |     No     | Token contrast tests pass; axe scans not executed; no screen-reader pass.                                                                                                       |
+| SEO and privacy protections                           | Partial |     Yes     |    Yes     |     No     | noindex policy and privacy headers; no CSP until a host is chosen.                                                                                                              |
+| Performance and cross-browser checks                  | Partial |     Yes     |  Partial   |     No     | `npm run perf:budget` passes; the cross-browser matrix is not executed.                                                                                                         |
+| Monitoring, backups, rollback, and deployment runbook |   Yes   |   Partial   |  Partial   |     No     | Deferred: Yes — owner decisions (host, alerting, backup locations). Runbook and `/api/health` exist; host, alerting and backup locations are owner decisions; no restore drill. |
+| Account deletion and operational privacy procedures   | Partial |     Yes     |  Partial   |     No     | Self-service deletion on `/profile/delete-account` (#75); operator procedure, safety-record lookup, retention checks and restore re-application documented.                     |
 
-## Automated verification currently available
+## Automated verification
 
-The web repository currently provides project-level checks:
+Available now and run in CI on every pull request:
 
 ```powershell
 npm run typecheck
+npm run lint
+npm run format:check
+npm test              # unit, static SQL and component tests
 npm run build
+npm run perf:budget
 ```
 
-On 2026-10-07, serialized `npm run build`, `npm run typecheck`, `npm run lint`, and
-`npm run test` passed; the Vitest suite reported 20 passing tests across three files. The
-configured `playwright.config.ts` and `e2e/contract.smoke.spec.ts` are present, but
-`npm run test:e2e` cannot launch its two local smoke tests because the Chromium executable is
-not installed, while 12 staging/security tests are intentionally skipped without staging
-fixtures. `npm run db:status` is currently unavailable because the Supabase CLI is not
-installed. The feature remains partial until staging security/resource checks and browser
-execution pass.
+Written but never executed, because the environment is missing:
+
+- `npm run test:integration`: needs a staging Supabase project with the migrations
+  applied and `SUPABASE_TEST_*` set. It never accepts a service-role key.
+- `npm run test:e2e`: needs Chromium (`npx playwright install chromium`); signed-in specs
+  also need the authenticated staging project (`E2E_AUTH_STATE`). `E2E_BROWSERS` adds
+  Firefox, WebKit and mobile devices.
 
 ## Hands-on verification completed
 
-The following prototype workflows have been exercised manually in the browser:
-
-- Save a listing from search.
-- Navigate to favorites and confirm the same listing appears.
-- Reload and confirm the favorite remains.
-- Remove the listing from favorites.
-- Filter by location and confirm the result count updates.
-- Persist search filters and sorting in the URL.
-- Clear active search filters.
-- Open a valid listing detail page.
-- Open an unknown listing ID and recover through the listings link.
-- Submit the match-request form and confirm the success state and chat link.
-
-These checks validate the current preview-data behavior only. They do not replace authenticated,
-Supabase-backed, multi-user, realtime, security, or offline testing.
+On 2026-10-07, against the preview-data prototype: saving and removing favorites, filter
+and sort persistence in the URL, clearing filters, valid and unknown listing detail, and the
+prototype match-request form. Those checks predate the Supabase-backed implementation and
+have to be repeated against staging.
 
 ## Definition of done for the migration
 
