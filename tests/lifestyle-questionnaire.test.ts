@@ -5,6 +5,7 @@ import {
   isExpressed,
   levelFromStored,
   LIKERT,
+  questionnaireProgress,
   rowsForSave,
   STATEMENTS,
   type AnswerRow,
@@ -166,6 +167,36 @@ describe("expressedCount", () => {
         q_wake: "neutral",
       }),
     ).toBe(2);
+  });
+});
+
+describe('questionnaireProgress (Android "Izpolnjenih X od N trditev")', () => {
+  it("is empty without answers", () => {
+    expect(questionnaireProgress({})).toEqual({
+      answered: 0,
+      total: STATEMENTS.length,
+      percent: 0,
+    });
+  });
+
+  it("counts expressed answers against every statement", () => {
+    const all = Object.fromEntries(
+      STATEMENTS.map((statement) => [statement.id, "agree" as const]),
+    );
+    expect(questionnaireProgress(all)).toEqual({
+      answered: STATEMENTS.length,
+      total: STATEMENTS.length,
+      percent: 100,
+    });
+    const one = {
+      [STATEMENTS[0].id]: "agree" as const,
+      q_x: "no_answer" as const,
+    };
+    expect(questionnaireProgress(one)).toEqual({
+      answered: 1,
+      total: STATEMENTS.length,
+      percent: Math.round(100 / STATEMENTS.length),
+    });
   });
 });
 

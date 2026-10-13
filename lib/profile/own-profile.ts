@@ -97,7 +97,7 @@ export type ProfileClient = {
         }>;
       };
     };
-    update: (values: EditableProfile) => {
+    update: (values: EditableProfile | Pick<ProfileRow, "is_available">) => {
       eq: (
         column: "id",
         value: string,
@@ -207,6 +207,34 @@ export async function updateOwnProfile(
       .maybeSingle();
     if (error) throw error;
     // RLS hides rows the user may not update, which returns no row instead of an error.
+    if (!data)
+      throw new ProfileRequestError(
+        "permission",
+        profileErrorMessages.permission,
+      );
+    return mapProfile(data);
+  } catch (error) {
+    throw toProfileRequestError(error);
+  }
+}
+
+/**
+ * Saves "Iščem sostanovalca / sobo" (Android `setAvailability`). Only available
+ * profiles appear among recommendations.
+ */
+export async function updateAvailability(
+  client: ProfileClient,
+  userId: string,
+  isAvailable: boolean,
+): Promise<Profile> {
+  try {
+    const { data, error } = await client
+      .from("profiles")
+      .update({ is_available: isAvailable })
+      .eq("id", userId)
+      .select("*")
+      .maybeSingle();
+    if (error) throw error;
     if (!data)
       throw new ProfileRequestError(
         "permission",
