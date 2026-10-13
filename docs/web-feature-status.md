@@ -10,8 +10,8 @@ reads and writes the shared Supabase project for every feature; the preview data
 `lib/data.ts` is no longer used by any page. A feature is only considered complete when it is
 implemented, covered by automated tests, and verified manually in a browser.
 
-Last reviewed: 2026-10-13, against `main` after PRs #1–#62, and cross-checked with every record
-in `docs/features/`. Open pull requests are named in the notes.
+Last reviewed: 2026-10-14, against `main` after PRs #1–#77, and cross-checked with every record
+in `docs/features/`. The notes name the PR that closed each gap.
 
 ## Status meanings
 
@@ -34,10 +34,10 @@ The four state columns are independent.
 | ---------------------------------------- | :-----: | :---------: | :--------: | :--------: |
 | Web foundation and responsive shell      | Partial |     Yes     |  Partial   |  Partial   |
 | Authentication and academic verification | Partial |     Yes     |  Partial   |     No     |
-| Profile and questionnaire                |   Yes   |     Yes     |  Partial   |     No     |
+| Profile and questionnaire                | Partial |     Yes     |  Partial   |     No     |
 | Listings and search                      | Partial |     Yes     |  Partial   |  Partial   |
-| Recommendations and matching             |   Yes   |     Yes     |  Partial   |     No     |
-| Chat and realtime messaging              |   Yes   |     Yes     |  Partial   |     No     |
+| Recommendations and matching             | Partial |     Yes     |  Partial   |     No     |
+| Chat and realtime messaging              | Partial |     Yes     |  Partial   |     No     |
 | Favorites                                | Partial |     Yes     |  Partial   |  Partial   |
 | Reports and administration               | Partial |     Yes     |  Partial   |     No     |
 | Offline/cache behavior                   | Partial |     Yes     |  Partial   |     No     |
@@ -51,14 +51,14 @@ browsers (the Playwright suite has never run). See "Automated verification" belo
 
 ### Phase 0 — product and backend preparation
 
-| Feature                                               | Backlog | Implemented | Autotested | Handtested | Current web state / acceptance notes                                                                                                                                                                                                |
-| ----------------------------------------------------- | :-----: | :---------: | :--------: | :--------: | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Shared Supabase data contract                         | Partial |     Yes     |  Partial   |     No     | Typed contract, mappers and query boundary are used by every page. Staging RLS/Storage/Realtime verification remains.                                                                                                               |
-| Reproducible SQL migrations                           | Partial |     Yes     |  Partial   |     No     | Ordered, forward-only migrations in `supabase/migrations` (7 on `main`). Fresh-project apply and `db:status` need a staging project and the Supabase CLI.                                                                           |
-| Development, staging, and production environments     |   Yes   |   Partial   |  Partial   |     No     | Deferred: Yes — owner decision (host, Supabase staging project). Environment validation (`npm run validate:env`, prebuild) is implemented. No staging or production environment exists yet; the host is an owner decision.          |
-| RLS and Storage policy review                         |   Yes   |   Partial   |  Partial   |     No     | Deferred: Yes — draft PRs #63 (chat/match) and #77 (questionnaire answers owner-only, ranking in an Edge Function). Static security contract tests pass; staging verification remains.                                              |
-| Account/document deletion and retention rules         |   Yes   |     No      |     No     |     No     | Deferred: Yes — implemented in stacked draft PRs #72 (tombstones), #73 (report evidence), #74 (audited admin view), #75 (self-service deletion), #76 (retention job); tombstones approved 2026-10-13. Staging verification remains. |
-| Responsive breakpoints and accessibility requirements | Partial |     Yes     |  Partial   |    Yes     | Sidebar, bottom navigation, skip link, landmarks and focus styling. Viewport and keyboard Playwright specs are written but not run.                                                                                                 |
+| Feature                                               | Backlog | Implemented | Autotested | Handtested | Current web state / acceptance notes                                                                                                                                                                                           |
+| ----------------------------------------------------- | :-----: | :---------: | :--------: | :--------: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Shared Supabase data contract                         | Partial |     Yes     |  Partial   |     No     | Typed contract, mappers and query boundary are used by every page. Staging RLS/Storage/Realtime verification remains.                                                                                                          |
+| Reproducible SQL migrations                           | Partial |     Yes     |  Partial   |     No     | Ordered, forward-only migrations in `supabase/migrations` (7 on `main`). Fresh-project apply and `db:status` need a staging project and the Supabase CLI.                                                                      |
+| Development, staging, and production environments     |   Yes   |   Partial   |  Partial   |     No     | Deferred: Yes — owner decision (host, Supabase staging project). Environment validation (`npm run validate:env`, prebuild) is implemented. No staging or production environment exists yet; the host is an owner decision.     |
+| RLS and Storage policy review                         | Partial |     Yes     |  Partial   |     No     | Chat/match gaps closed by `20261013000000` (#63); questionnaire answers owner-only by `20261015000000` (#77). Static security tests pass; none of the migrations is applied on staging yet.                                    |
+| Account/document deletion and retention rules         | Partial |     Yes     |  Partial   |     No     | Implemented (#72–#76): tombstones and owner-only safety record, report evidence, audited admin view, self-service deletion Edge Function, daily retention job. Migrations not applied and functions not deployed (no staging). |
+| Responsive breakpoints and accessibility requirements | Partial |     Yes     |  Partial   |    Yes     | Sidebar, bottom navigation, skip link, landmarks and focus styling. Viewport and keyboard Playwright specs are written but not run.                                                                                            |
 
 ### Phase 1 — web foundation
 
@@ -84,10 +84,10 @@ browsers (the Playwright suite has never run). See "Automated verification" belo
 | Email confirmation flow                     | Partial |     Yes     |  Partial   |     No     | `/auth/confirm` and `/auth/confirmation` (open routes). The Supabase e-mail template needs staging.                                                             |
 | Logout                                      | Partial |     Yes     |  Partial   |     No     | Local-scope sign-out that clears the query cache, favorites and storage.                                                                                        |
 | Profile loading and editing                 | Partial |     Yes     |  Partial   |     No     | Own profile loads and saves; verification is protected by the #51 trigger.                                                                                      |
-| Availability toggle                         |   Yes   |   Partial   |  Partial   |     No     | Deferred: Yes — draft PR #65. On `main`, the toggle is local state that is never saved. Draft PR #65 saves `profiles.is_available` (Android parity).            |
+| Availability toggle                         | Partial |     Yes     |  Partial   |     No     | Saved to `profiles.is_available` with optimistic rollback (#65). Staging check remains.                                                                         |
 | Verified-student indicator                  | Partial |     Yes     |  Partial   |     No     | The badge reads `academic_status_verified`. Only an admin or the database owner can set it; there is no in-app verification queue, and Android has none either. |
 | Academic document upload                    | Partial |     Yes     |  Partial   |     No     | `/academic-verification` uploads to private `vpisnice/<uid>/`. Storage negative tests need staging.                                                             |
-| Lifestyle questionnaire                     | Partial |     Yes     |  Partial   |     No     | `/profile/questionnaire` saves all statements. On `main`, the profile progress card is hard-coded; draft PR #65 computes it.                                    |
+| Lifestyle questionnaire                     | Partial |     Yes     |  Partial   |     No     | `/profile/questionnaire` saves all statements; the profile card shows real progress (#65).                                                                      |
 | Questionnaire conversion and skip semantics |   No    |     Yes     |    Yes     |     No     | Android parity tests pass.                                                                                                                                      |
 
 ### Phase 3 — listings and search
@@ -97,16 +97,16 @@ browsers (the Playwright suite has never run). See "Automated verification" belo
 | Listings feed                         | Partial |     Yes     |  Partial   |     No     | Supabase feed with offline fallback.                                                                                                                                                                  |
 | Listing detail                        | Partial |     Yes     |  Partial   |     No     | Supabase detail with owner actions, request button and report link. `/listings/[id]` is at 195.5 of 200 kB; lazy-loading owner controls made it larger, so headroom must come from the shared bundle. |
 | Owner listing creation                | Partial |     Yes     |  Partial   |     No     | `/listings/new`. RLS insert check needs staging.                                                                                                                                                      |
-| Owner listing editing                 | Partial |     Yes     |  Partial   |     No     | Optimistic version check. Android edits don't bump `listings.version` until draft PR #66 (trigger) merges.                                                                                            |
+| Owner listing editing                 | Partial |     Yes     |  Partial   |     No     | Optimistic version check; every change bumps `listings.version` by trigger (#66), so Android edits are detected.                                                                                      |
 | Owner listing deletion                | Partial |     Yes     |  Partial   |     No     | Confirmation; the favorites cascade needs staging.                                                                                                                                                    |
 | Filled/available listing state        | Partial |     Yes     |  Partial   |     No     | Owner toggle; filled listings can't be requested.                                                                                                                                                     |
 | Location filtering                    | Partial |     Yes     |  Partial   |  Partial   | Server-side `ilike` filter, kept in the URL. The earlier hand-check was against preview data.                                                                                                         |
 | Price filtering                       | Partial |     Yes     |  Partial   |  Partial   | Server-side maximum price, kept in the URL.                                                                                                                                                           |
 | Listing sorting                       | Partial |     Yes     |  Partial   |  Partial   | Client-side sort over the loaded pages.                                                                                                                                                               |
 | Active filter chips and clear filters |   No    |     Yes     |  Partial   |    Yes     | Removable chips and "Počisti filtre".                                                                                                                                                                 |
-| Slovenian result pluralization        |   Yes   |   Partial   |     No     |    Yes     | Deferred: Yes — PR #69. `oglas` / `oglasi` / `oglasov`, but 2 shows "oglasi" instead of the dual "oglasa", and counts over 100 ignore the mod-100 rule. Fix in PR #69.                                |
-| Cursor/keyset pagination              | Partial |     Yes     |  Partial   |     No     | `(created_at desc, id desc)` cursor. Matching index in draft PR #66; real PostgREST `or` filter check on staging.                                                                                     |
-| IndexedDB listing cache               | Partial |     Yes     |  Partial   |     No     | Per-user cache with 7-day expiry. `/search` write-through in draft PR #67. Native IndexedDB untested (no browsers).                                                                                   |
+| Slovenian result pluralization        |   No    |     Yes     |    Yes     |    Yes     | `oglas` / `oglasa` / `oglasi` / `oglasov` by the mod-100 rule (#69).                                                                                                                                  |
+| Cursor/keyset pagination              | Partial |     Yes     |  Partial   |     No     | `(created_at desc, id desc)` cursor with a matching partial index (#66); real PostgREST `or` filter check on staging.                                                                                 |
+| IndexedDB listing cache               | Partial |     Yes     |  Partial   |     No     | Per-user cache with 7-day expiry, written by `/listings` and `/search` (#67). Native IndexedDB untested (no browser run).                                                                             |
 | Stale-cache and offline listing view  | Partial |     Yes     |  Partial   |     No     | Cached fallback with a stale notice on `/listings` and `/search`.                                                                                                                                     |
 | Listing cards with real photos        | Partial |     Yes     |  Partial   |     No     | https-only photo URLs with fallback; photo upload is out of scope (Android has none).                                                                                                                 |
 | Favorite listing action               | Partial |     Yes     |  Partial   |  Partial   | Supabase-backed with optimistic toggle.                                                                                                                                                               |
@@ -114,31 +114,31 @@ browsers (the Playwright suite has never run). See "Automated verification" belo
 
 ### Phase 4 — recommendations and matching
 
-| Feature                                       | Backlog | Implemented | Autotested | Handtested | Current web state / acceptance notes                                                                                                      |
-| --------------------------------------------- | :-----: | :---------: | :--------: | :--------: | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| Compatibility-ranked recommendations          |   Yes   |     Yes     |  Partial   |     No     | Deferred: Yes — draft PR #77 moves the ranking into the `recommendations` Edge Function so answers stay private; same parity-tested code. |
-| Compatibility calculation parity with Android |   No    |     Yes     |    Yes     |     No     | Parity tests pass.                                                                                                                        |
-| Insufficient-answer empty state               | Partial |     Yes     |  Partial   |     No     | Shown below the minimum number of answers.                                                                                                |
-| Match-request creation                        | Partial |     Yes     |  Partial   |     No     | Real request from the listing; filled listings refused.                                                                                   |
-| Pending/accepted/rejected request states      |   Yes   |     Yes     |  Partial   |     No     | UI is recipient-only. The database still lets the requester accept their own request until draft PR #63 merges and is applied.            |
-| Match acceptance conflict handling            | Partial |     Yes     |  Partial   |     No     | Atomic `accept_match` RPC with conflict re-read.                                                                                          |
-| Duplicate-request prevention                  | Partial |     Yes     |  Partial   |     No     | Unique pair index plus 23505 handling.                                                                                                    |
-| Open chat after successful match request      | Partial |     Yes     |  Partial   |     No     | Links into `/chats/[matchId]` once accepted.                                                                                              |
+| Feature                                       | Backlog | Implemented | Autotested | Handtested | Current web state / acceptance notes                                                                                                                                |
+| --------------------------------------------- | :-----: | :---------: | :--------: | :--------: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Compatibility-ranked recommendations          | Partial |     Yes     |  Partial   |     No     | Ranked in the `recommendations` Edge Function with the shared parity-tested code; answers stay private (#77). Deploy the function before applying `20261015000000`. |
+| Compatibility calculation parity with Android |   No    |     Yes     |    Yes     |     No     | Parity tests pass.                                                                                                                                                  |
+| Insufficient-answer empty state               | Partial |     Yes     |  Partial   |     No     | Shown below the minimum number of answers.                                                                                                                          |
+| Match-request creation                        | Partial |     Yes     |  Partial   |     No     | Real request from the listing; filled listings refused.                                                                                                             |
+| Pending/accepted/rejected request states      | Partial |     Yes     |  Partial   |     No     | Only the recipient can answer, in the UI and the database (#63).                                                                                                    |
+| Match acceptance conflict handling            | Partial |     Yes     |  Partial   |     No     | Atomic `accept_match` RPC with conflict re-read.                                                                                                                    |
+| Duplicate-request prevention                  | Partial |     Yes     |  Partial   |     No     | Unique pair index plus 23505 handling.                                                                                                                              |
+| Open chat after successful match request      | Partial |     Yes     |  Partial   |     No     | Links into `/chats/[matchId]` once accepted.                                                                                                                        |
 
 ### Phase 5 — chat and realtime messaging
 
-| Feature                               | Backlog | Implemented | Autotested | Handtested | Current web state / acceptance notes                                                                                                                                                                                                                        |
-| ------------------------------------- | :-----: | :---------: | :--------: | :--------: | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Chat list                             |   Yes   |   Partial   |  Partial   |     No     | Deferred: Yes — draft PR #64. On `main`, `/chats` still shows hard-coded preview conversations next to the real request panel, and `markDelivered` is never called. Draft PR #64 removes the preview and marks messages delivered on load (Android parity). |
-| Conversation route `/chats/[matchId]` | Partial |     Yes     |  Partial   |     No     | Participant-only via RLS.                                                                                                                                                                                                                                   |
-| Message history                       | Partial |     Yes     |  Partial   |     No     | Ordered history with read marking.                                                                                                                                                                                                                          |
-| Message composer                      | Partial |     Yes     |  Partial   |     No     | Enter/Shift+Enter and length limit; component tests in PR #68.                                                                                                                                                                                              |
-| Immediate local message insertion     | Partial |     Yes     |  Partial   |     No     | Optimistic insert with retry.                                                                                                                                                                                                                               |
-| Sent, delivered, and read states      |   Yes   |     Yes     |  Partial   |     No     | Read is marked in the chat; delivered only after PR #64. `messages_update` lets participants edit each other's messages until draft PR #63 is applied.                                                                                                      |
-| Supabase Realtime subscription        | Partial |     Yes     |  Partial   |     No     | Subscribes per conversation, cleaned up on unmount.                                                                                                                                                                                                         |
-| Reconnect with bounded backoff        | Partial |     Yes     |  Partial   |     No     | Bounded exponential backoff.                                                                                                                                                                                                                                |
-| Message deduplication and rollback    | Partial |     Yes     |  Partial   |     No     | Client UUIDs for exact dedupe.                                                                                                                                                                                                                              |
-| Report/block chat controls            | Partial |     Yes     |  Partial   |     No     | Block/unblock plus a report link; `blocks` migration not applied anywhere.                                                                                                                                                                                  |
+| Feature                               | Backlog | Implemented | Autotested | Handtested | Current web state / acceptance notes                                                                                 |
+| ------------------------------------- | :-----: | :---------: | :--------: | :--------: | -------------------------------------------------------------------------------------------------------------------- |
+| Chat list                             | Partial |     Yes     |  Partial   |     No     | Real match list; accepted chats are marked delivered on load (#64).                                                  |
+| Conversation route `/chats/[matchId]` | Partial |     Yes     |  Partial   |     No     | Participant-only via RLS.                                                                                            |
+| Message history                       | Partial |     Yes     |  Partial   |     No     | Ordered history with read marking.                                                                                   |
+| Message composer                      | Partial |     Yes     |    Yes     |     No     | Enter/Shift+Enter and length limit; component tests (#68).                                                           |
+| Immediate local message insertion     | Partial |     Yes     |  Partial   |     No     | Optimistic insert with retry.                                                                                        |
+| Sent, delivered, and read states      | Partial |     Yes     |  Partial   |     No     | Read in the chat, delivered on the chat list (#64); only the recipient can advance the state, never backwards (#63). |
+| Supabase Realtime subscription        | Partial |     Yes     |  Partial   |     No     | Subscribes per conversation, cleaned up on unmount.                                                                  |
+| Reconnect with bounded backoff        | Partial |     Yes     |  Partial   |     No     | Bounded exponential backoff.                                                                                         |
+| Message deduplication and rollback    | Partial |     Yes     |  Partial   |     No     | Client UUIDs for exact dedupe.                                                                                       |
+| Report/block chat controls            | Partial |     Yes     |  Partial   |     No     | Block/unblock plus a report link; `blocks` migration not applied anywhere.                                           |
 
 ### Favorites, reporting, and administration
 
@@ -155,7 +155,7 @@ browsers (the Playwright suite has never run). See "Automated verification" belo
 | Feature                                               | Backlog | Implemented | Autotested | Handtested | Current web state / acceptance notes                                                                                                                                            |
 | ----------------------------------------------------- | :-----: | :---------: | :--------: | :--------: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Auth, RLS, Storage, and Realtime integration tests    | Partial |     Yes     |  Partial   |     No     | `npm run test:integration` (25 tests, 28 with PR #63) has never run; it needs `SUPABASE_TEST_*`.                                                                                |
-| Unit test suite                                       | Partial |     Yes     |    Yes     |     No     | `npm run test:coverage` (lib ≥95% statements). Component tests (React Testing Library) in PR #68.                                                                               |
+| Unit test suite                                       | Partial |     Yes     |    Yes     |     No     | `npm run test:coverage` (≥95% statements over `lib/` and `supabase/functions/_shared`), plus React Testing Library component tests (#68).                                       |
 | Playwright end-to-end suite                           | Partial |     Yes     |  Partial   |     No     | 115 tests listed; never executed (no browsers; signed-in specs need `E2E_AUTH_STATE`).                                                                                          |
 | Mobile, tablet, and desktop workflow coverage         | Partial |     Yes     |  Partial   |  Partial   | Viewport specs written, not executed.                                                                                                                                           |
 | Keyboard navigation and focus coverage                | Partial |     Yes     |  Partial   |  Partial   | Static rules pass; keyboard journeys not executed.                                                                                                                              |
@@ -163,7 +163,7 @@ browsers (the Playwright suite has never run). See "Automated verification" belo
 | SEO and privacy protections                           | Partial |     Yes     |    Yes     |     No     | noindex policy and privacy headers; no CSP until a host is chosen.                                                                                                              |
 | Performance and cross-browser checks                  | Partial |     Yes     |  Partial   |     No     | `npm run perf:budget` passes; the cross-browser matrix is not executed.                                                                                                         |
 | Monitoring, backups, rollback, and deployment runbook |   Yes   |   Partial   |  Partial   |     No     | Deferred: Yes — owner decisions (host, alerting, backup locations). Runbook and `/api/health` exist; host, alerting and backup locations are owner decisions; no restore drill. |
-| Account deletion and operational privacy procedures   |   Yes   |   Partial   |  Partial   |     No     | Deferred: Yes — self-service deletion and updated operator procedures in draft PR #75 (stacked on #72–#74).                                                                     |
+| Account deletion and operational privacy procedures   | Partial |     Yes     |  Partial   |     No     | Self-service deletion on `/profile/delete-account` (#75); operator procedure, safety-record lookup, retention checks and restore re-application documented.                     |
 
 ## Automated verification
 
@@ -173,7 +173,7 @@ Available now and run in CI on every pull request:
 npm run typecheck
 npm run lint
 npm run format:check
-npm test              # unit, static SQL and (after PR #68) component tests
+npm test              # unit, static SQL and component tests
 npm run build
 npm run perf:budget
 ```
