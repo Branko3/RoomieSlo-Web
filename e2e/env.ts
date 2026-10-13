@@ -1,10 +1,21 @@
-import { test } from "@playwright/test";
+import { test, type Page } from "@playwright/test";
 
 /** Shared environment checks for the Playwright suite. */
 export const supabaseConfigured = Boolean(
   process.env.NEXT_PUBLIC_SUPABASE_URL &&
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
 );
+
+/**
+ * The page's `role="alert"` elements, without the route announcer that the
+ * Next.js App Router adds to every page (also `role="alert"`), which would
+ * otherwise make every alert locator ambiguous.
+ */
+export function pageAlerts(page: Page) {
+  return page
+    .getByRole("alert")
+    .and(page.locator(":not(#__next-route-announcer__)"));
+}
 
 export const listingId = process.env.E2E_LISTING_ID ?? "";
 
