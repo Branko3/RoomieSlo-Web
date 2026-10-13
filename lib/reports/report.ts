@@ -8,16 +8,19 @@ export type ReportClient = {
       error: DbError;
     }>;
   };
-  from: (table: "reports") => {
-    insert: (row: NewReport) => PromiseLike<{ error: DbError }>;
-  };
+  rpc: (
+    fn: "submit_report",
+    args: SubmitReportArgs,
+  ) => PromiseLike<{ data: string | null; error: DbError }>;
 };
 
-export type NewReport = {
-  reporter_id: string;
-  reported_id: string;
-  reason: string;
-  description: string;
+/** Arguments of the `submit_report` RPC; the reporter is always the caller. */
+export type SubmitReportArgs = {
+  p_reported: string;
+  p_reason: string;
+  p_description: string;
+  /** The conversation to keep as evidence (chat reports only). */
+  p_match: string | null;
 };
 
 /** Same reasons and default as Android's `ReportUserScreen`. */
@@ -64,7 +67,10 @@ export class ReportError extends Error {
   }
 }
 
-/** Where the report was started; stored as a note so admins see the context. */
+/**
+ * Where the report was started. A chat report links its conversation (kept as
+ * evidence); a listing report keeps the listing as a note for admins.
+ */
 export type ReportContext =
   | { kind: "chat"; matchId: string }
   | { kind: "listing"; listingId: string }
@@ -89,10 +95,9 @@ export function parseReportContext(params: Params): ReportContext {
 }
 
 export function contextNote(context: ReportContext): string {
-  if (!context) return "";
-  return context.kind === "chat"
-    ? `[Prijava iz klepeta: ${context.matchId}]`
-    : `[Prijava iz oglasa: ${context.listingId}]`;
+  return context?.kind === "listing"
+    ? `[Prijava iz oglasa: ${context.listingId}]`
+    : "";
 }
 
 /** Where "Nazaj" leads after (or instead of) reporting. */
@@ -126,12 +131,15 @@ export function validateReport(draft: ReportDraft): ReportError | null {
   return null;
 }
 
-export function buildReport(reporterId: string, draft: ReportDraft): NewReport {
+export function buildReport(draft: ReportDraft): SubmitReportArgs {
   return {
-    reporter_id: reporterId,
-    reported_id: draft.reportedId,
-    reason: draft.reason,
-    description: [draft.description.trim(), contextNote(draft.context)]
+    p_reported: draft.reportedId,
+    p_reason: draft.reason,
+    p_match:
+      draft.context?.kind === "chat" && isUserId(draft.context.matchId)
+        ? draft.context.matchId
+        : null,
+    p_description: [draft.description.trim(), contextNote(draft.context)]
       .filter(Boolean)
       .join("\n\n"),
   };
@@ -147,7 +155,10 @@ function toReportError(error: unknown): ReportError {
   return new ReportError("failed", reportCopy.failed);
 }
 
-/** Validates and inserts a report as the current user (RLS: `reporter_id = auth.uid()`). */
+/**
+ * Validates and files a report through `submit_report`, which records the
+ * caller as the reporter and, for a chat report, snapshots the conversation.
+ */
 export async function submitReport(
   client: ReportClient,
   draft: ReportDraft,
@@ -159,9 +170,7 @@ export async function submitReport(
     if (!data.user) throw new ReportError("signed-out", reportCopy.signedOut);
     if (data.user.id === draft.reportedId)
       throw new ReportError("self", reportCopy.self);
-    const { error } = await client
-      .from("reports")
-      .insert(buildReport(data.user.id, draft));
+    const { error } = await client.rpc("submit_report", buildReport(draft));
     if (error) throw error;
   } catch (error) {
     throw toReportError(error);

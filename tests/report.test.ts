@@ -11,8 +11,8 @@ import {
   reportCopy,
   submitReport,
   validateReport,
-  type NewReport,
   type ReportClient,
+  type SubmitReportArgs,
   type ReportDraft,
 } from "../lib/reports/report";
 
@@ -31,22 +31,19 @@ function draft(overrides: Partial<ReportDraft> = {}): ReportDraft {
 
 function makeClient({
   user = { id: ME } as { id: string } | null,
-  insert = { error: null } as { error: unknown } | Error,
+  insert = { data: "r1", error: null } as
+    { data?: unknown; error: unknown } | Error,
 } = {}) {
-  const inserted: NewReport[] = [];
+  const inserted: SubmitReportArgs[] = [];
   const tables: string[] = [];
   const client = {
     auth: { getUser: vi.fn(async () => ({ data: { user }, error: null })) },
-    from: (table: string) => {
-      tables.push(table);
-      return {
-        insert: (row: NewReport) => {
-          inserted.push(row);
-          return insert instanceof Error
-            ? Promise.reject(insert)
-            : Promise.resolve(insert);
-        },
-      };
+    rpc: (fn: string, args: SubmitReportArgs) => {
+      tables.push(fn);
+      inserted.push(args);
+      return insert instanceof Error
+        ? Promise.reject(insert)
+        : Promise.resolve(insert);
     },
   };
   return { client: client as unknown as ReportClient, inserted, tables };
@@ -125,47 +122,59 @@ describe("validateReport", () => {
   });
 });
 
+const MATCH = "33333333-3333-4333-8333-333333333333";
+
 describe("buildReport", () => {
-  it("trims the description and adds the context note", () => {
+  it("links a chat report's conversation as evidence instead of a note", () => {
     expect(
       buildReport(
-        ME,
         draft({
           reason: "Nadlegovanje",
           description: "  Žaljiva sporočila.  ",
-          context: { kind: "chat", matchId: "m1" },
+          context: { kind: "chat", matchId: MATCH },
         }),
       ),
     ).toEqual({
-      reporter_id: ME,
-      reported_id: PEER,
-      reason: "Nadlegovanje",
-      description: "Žaljiva sporočila.\n\n[Prijava iz klepeta: m1]",
+      p_reported: PEER,
+      p_reason: "Nadlegovanje",
+      p_description: "Žaljiva sporočila.",
+      p_match: MATCH,
     });
   });
 
-  it("stores only the note, or an empty description, when nothing was written", () => {
+  it("never sends a malformed conversation id", () => {
     expect(
-      buildReport(ME, draft({ context: { kind: "listing", listingId: "l1" } }))
-        .description,
-    ).toBe(contextNote({ kind: "listing", listingId: "l1" }));
-    expect(buildReport(ME, draft()).description).toBe("");
+      buildReport(draft({ context: { kind: "chat", matchId: "m1" } })).p_match,
+    ).toBeNull();
+  });
+
+  it("keeps a listing report's listing as a note", () => {
+    const args = buildReport(
+      draft({ context: { kind: "listing", listingId: "l1" } }),
+    );
+    expect(args.p_description).toBe(
+      contextNote({ kind: "listing", listingId: "l1" }),
+    );
+    expect(args.p_match).toBeNull();
+    expect(buildReport(draft()).p_description).toBe("");
+    expect(contextNote({ kind: "chat", matchId: MATCH })).toBe("");
   });
 });
 
 describe("submitReport", () => {
-  it("inserts as the current user", async () => {
+  it("files through submit_report without sending a reporter id", async () => {
     const { client, inserted, tables } = makeClient();
     await submitReport(client, draft({ description: "Opis" }));
-    expect(tables).toEqual(["reports"]);
+    expect(tables).toEqual(["submit_report"]);
     expect(inserted).toEqual([
       {
-        reporter_id: ME,
-        reported_id: PEER,
-        reason: DEFAULT_REASON,
-        description: "Opis",
+        p_reported: PEER,
+        p_reason: DEFAULT_REASON,
+        p_description: "Opis",
+        p_match: null,
       },
     ]);
+    expect(JSON.stringify(inserted)).not.toContain(ME);
   });
 
   it("validates before calling the server", async () => {
