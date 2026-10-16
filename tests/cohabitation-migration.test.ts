@@ -46,8 +46,7 @@ function statements(fn: string): string[] {
 }
 
 describe("migration order", () => {
-  it("is the newest migration and runs after everything it extends", () => {
-    expect(files.at(-1)).toBe(NAME);
+  it("runs after everything it extends", () => {
     for (const dependency of [
       "20261011000000_user_blocks.sql",
       "20261013000000_chat_and_match_authorization.sql",
@@ -121,11 +120,20 @@ describe("row-level security", () => {
   });
 
   it("is not exposed to admins, profiles, search or recommendations", () => {
-    // The only read path is the participant policy above; no other migration
-    // (admin views, recommendation or search functions) touches the table.
+    // The only read path is the participant policy above. No other migration
+    // (admin views, recommendation or search functions) touches the table,
+    // except the ratings migration, which reads it inside its own RPCs and
+    // keeps the deletion and retention steps.
     expect(sql).not.toMatch(/admins a? ?where[^;]*cohabitation/);
+    const RATINGS = "20261016000100_roommate_ratings.sql";
     for (const [index, file] of all.entries()) {
       if (files[index] === NAME) continue;
+      if (files[index] === RATINGS) {
+        expect(file).not.toMatch(
+          /(grant|policy)[^;]* on public\.cohabitations/,
+        );
+        continue;
+      }
       expect(file, files[index]).not.toContain("cohabitations");
     }
   });
@@ -282,10 +290,10 @@ describe("account deletion", () => {
     read("20261014000000_account_deletion_tombstones.sql"),
     "handle_deleted_user",
   );
-  const current = effectiveFunction("handle_deleted_user");
+  // This migration's version; later migrations must keep it (checked there).
+  const current = fnIn(sql, "handle_deleted_user");
 
   it("keeps every step of the previous handle_deleted_user", () => {
-    expect(fnIn(sql, "handle_deleted_user")).toBe(current);
     expect(statements(previous).length).toBe(9);
     for (const statement of statements(previous))
       expect(current).toContain(statement);
@@ -314,10 +322,9 @@ describe("retention", () => {
     read("20261014000400_retention_jobs.sql"),
     "purge_expired_data",
   );
-  const current = effectiveFunction("purge_expired_data");
+  const current = fnIn(sql, "purge_expired_data");
 
   it("keeps every rule and counter of the previous purge_expired_data", () => {
-    expect(fnIn(sql, "purge_expired_data")).toBe(current);
     expect(statements(previous).length).toBe(15);
     for (const statement of statements(previous)) {
       if (statement.startsWith("return jsonb_build_object")) continue;

@@ -2,7 +2,9 @@
 // answers never leave the database: `questionnaire_answers` is readable only by
 // its owner (migration 20261015000000). The caller is identified from the token;
 // the response holds profiles, scores and shared-statement counts, never another
-// person's answers.
+// person's answers. Each recommendation also carries the person's roommate
+// rating summary from `rating_summaries` (aggregates only, migration
+// 20261016000100); if that lookup fails, `ratings` is null and the list still loads.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import {
@@ -88,5 +90,28 @@ Deno.serve(async (request) => {
       answers: row.questionnaire_answers ?? [],
     })),
   );
-  return json({ myAnswers, recommendations: ranked });
+  const summaries = new Map<string, unknown>();
+  if (ranked.length) {
+    const { data, error } = await admin.rpc("rating_summaries", {
+      p_profile_ids: ranked.map((r) => r.profile.id),
+    });
+    if (error) {
+      console.log(
+        JSON.stringify({ event: "recommendations", outcome: "ratings_error" }),
+      );
+    } else {
+      for (const row of (data ?? []) as Array<{
+        profile_id: string;
+        summary: unknown;
+      }>)
+        summaries.set(row.profile_id, row.summary);
+    }
+  }
+  return json({
+    myAnswers,
+    recommendations: ranked.map((r) => ({
+      ...r,
+      ratings: summaries.get(r.profile.id) ?? null,
+    })),
+  });
 });

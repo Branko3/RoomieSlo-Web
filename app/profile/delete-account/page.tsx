@@ -9,9 +9,10 @@ import {
   deleteOwnAccount,
   type DeleteAccountClient,
 } from "../../../lib/account/deletion";
+import { privacyContact } from "../../../lib/privacy/controller";
 import { createSupabaseBrowserClient } from "../../../lib/supabase/browser";
 
-const contact = process.env.NEXT_PUBLIC_PRIVACY_CONTACT ?? "";
+const contact = privacyContact();
 
 /** Self-service account deletion (approved retention matrix, 2026-10-12). */
 export default function DeleteAccountPage() {
@@ -64,7 +65,11 @@ export default function DeleteAccountPage() {
             </li>
             <li>odgovore vprašalnika, priljubljene in tvoje oglase,</li>
             <li>dokazilo o vpisu iz zasebne shrambe,</li>
-            <li>zahteve za ujemanje, na katere še ni odgovora.</li>
+            <li>zahteve za ujemanje, na katere še ni odgovora,</li>
+            <li>
+              ocene, ki so jih o tebi oddali sostanovalci, in nepotrjene izjave
+              »Živiva skupaj«.
+            </li>
           </ul>
         </div>
       </section>
@@ -79,8 +84,17 @@ export default function DeleteAccountPage() {
               ona,
             </li>
             <li>
-              prijave zlorab, ki si jih oddal ali so bile oddane zoper tebe, do
-              12 mesecev po zaključku,
+              prijave zlorab, ki si jih oddal(a) ali so bile oddane zoper tebe,
+              do 12 mesecev po zaključku,
+            </li>
+            <li>
+              sobivanja ostanejo drugi osebi v njeni zgodovini; trenutno
+              sobivanje se zaključi s tem mesecem. Izbrišemo jih, ko svoj račun
+              izbriše tudi druga oseba,
+            </li>
+            <li>
+              ocene, ki si jih dal(a), ostanejo v povzetku druge osebe brez
+              tvojega imena, največ 36 mesecev po koncu sobivanja,
             </li>
             <li>
               tvoj e-naslov in ime v zaščitenem zapisu za varnostne primere: 30

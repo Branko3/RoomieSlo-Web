@@ -240,9 +240,87 @@ const recommendation = (id: string, compatibility: number) => ({
   },
   compatibility,
   sharedStatements: 1,
+  ratings: null as unknown,
 });
 
 describe("loadRecommendations", () => {
+  it("validates each person's rating summary and keeps rater identities out", async () => {
+    const shown = {
+      state: "shown",
+      total: 4,
+      would_live_again: 3,
+      strengths: [{ tag: "clean_tidy", count: 3 }],
+    };
+    const result = {
+      myAnswers: [answer("q1", 1)],
+      recommendations: [
+        { ...recommendation("a", 90), ratings: shown },
+        { ...recommendation("b", 80), ratings: { state: "insufficient" } },
+        { ...recommendation("c", 70), ratings: { state: "hidden" } },
+        { ...recommendation("d", 60), ratings: undefined },
+      ],
+    };
+    const loaded = await loadRecommendations(
+      makeClient({ invoke: { data: result, error: null } }).client,
+    );
+    expect(loaded.recommendations.map((r) => r.ratings)).toEqual([
+      {
+        state: "shown",
+        total: 4,
+        wouldLiveAgain: 3,
+        strengths: [{ tag: "clean_tidy", count: 3 }],
+      },
+      { state: "insufficient" },
+      { state: "hidden" },
+      null,
+    ]);
+  });
+
+  it.each([
+    ["an unknown state", { state: "great" }],
+    [
+      "fewer than 3 shown ratings",
+      { state: "shown", total: 2, would_live_again: 2, strengths: [] },
+    ],
+    [
+      "private improvements",
+      {
+        state: "shown",
+        total: 3,
+        would_live_again: 1,
+        strengths: [{ tag: "noise", count: 1 }],
+      },
+    ],
+    [
+      "more than 3 strengths",
+      {
+        state: "shown",
+        total: 5,
+        would_live_again: 5,
+        strengths: [
+          "clean_tidy",
+          "pleasant",
+          "respects_quiet",
+          "keeps_agreements",
+        ].map((tag) => ({ tag, count: 1 })),
+      },
+    ],
+  ])("rejects a response with %s", async (_label, ratings) => {
+    await expect(
+      loadRecommendations(
+        makeClient({
+          invoke: {
+            data: {
+              myAnswers: [],
+              recommendations: [{ ...recommendation("a", 1), ratings }],
+            },
+            error: null,
+          },
+        }).client,
+      ),
+    ).rejects.toMatchObject({ kind: "unknown" });
+  });
+
   it("asks the recommendations function, never the answers table", async () => {
     const result = {
       myAnswers: [answer("q1", 1)],

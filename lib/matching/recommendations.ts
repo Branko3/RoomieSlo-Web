@@ -1,4 +1,5 @@
 import type { CompatibilityAnswer } from "../compatibility/compatibility";
+import { parseRatingSummary, type RatingSummary } from "../ratings/summary";
 
 type DbError = { code?: string; message?: string; status?: number } | null;
 
@@ -18,6 +19,8 @@ export type Recommendation = {
   compatibility: number;
   /** Statements both people answered; 0 means no score could be computed. */
   sharedStatements: number;
+  /** Roommate rating summary; null when the server could not provide one. */
+  ratings: RatingSummary | null;
 };
 
 export type RecommendationsResult = {
@@ -64,19 +67,39 @@ export function nameAndAge(
     : `${profile.displayName}, ${profile.age}`;
 }
 
-function isResult(value: unknown): value is RecommendationsResult {
-  const v = value as RecommendationsResult | null;
-  return (
-    !!v &&
-    Array.isArray(v.myAnswers) &&
-    Array.isArray(v.recommendations) &&
-    v.recommendations.every(
-      (r) =>
-        typeof r?.profile?.id === "string" &&
-        typeof r.compatibility === "number" &&
-        typeof r.sharedStatements === "number",
+/** Validates the function's answer; a malformed rating summary invalidates it. */
+function parseResult(value: unknown): RecommendationsResult | null {
+  const v = value as {
+    myAnswers?: unknown;
+    recommendations?: unknown;
+  } | null;
+  if (!v || !Array.isArray(v.myAnswers) || !Array.isArray(v.recommendations))
+    return null;
+  const recommendations: Recommendation[] = [];
+  for (const r of v.recommendations as Array<Record<string, unknown> | null>) {
+    const profile = r?.profile as RecommendedProfile | undefined;
+    if (
+      typeof profile?.id !== "string" ||
+      typeof r?.compatibility !== "number" ||
+      typeof r.sharedStatements !== "number"
     )
-  );
+      return null;
+    let ratings: RatingSummary | null = null;
+    if (r.ratings !== null && r.ratings !== undefined) {
+      ratings = parseRatingSummary(r.ratings);
+      if (!ratings) return null;
+    }
+    recommendations.push({
+      profile,
+      compatibility: r.compatibility,
+      sharedStatements: r.sharedStatements,
+      ratings,
+    });
+  }
+  return {
+    myAnswers: v.myAnswers as CompatibilityAnswer[],
+    recommendations,
+  };
 }
 
 function toError(error: unknown): RecommendationsError {
@@ -109,8 +132,9 @@ export async function loadRecommendations(
     if (!userData.user?.id) throw new RecommendationsError("signed-out");
     const { data, error } = await client.functions.invoke("recommendations");
     if (error) throw toError(error);
-    if (!isResult(data)) throw new RecommendationsError("unknown");
-    return data;
+    const result = parseResult(data);
+    if (!result) throw new RecommendationsError("unknown");
+    return result;
   } catch (error) {
     if (error instanceof RecommendationsError) throw error;
     throw toError(error);

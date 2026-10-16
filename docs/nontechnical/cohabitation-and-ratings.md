@@ -1,6 +1,6 @@
 # Cohabitation declarations and roommate ratings: plan
 
-- Status: Approved 2026-10-16 (Branko). Part A implemented (`docs/features/cohabitation-declarations.md`); Part B (ratings) not started
+- Status: Approved 2026-10-16 (Branko). Implemented: Part A (`docs/features/cohabitation-declarations.md`) and Part B (`docs/features/roommate-ratings.md`); the LIA (`roommate-ratings-lia.md`) awaits sign-off
 - Date: 2026-10-16
 - Owner decisions so far (2026-10-16):
   - the public view is an aggregate plus tags,

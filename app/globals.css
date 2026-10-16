@@ -2074,3 +2074,80 @@ button {
   background: var(--amber);
   flex: none;
 }
+/* Roommate ratings */
+.rating-summary {
+  margin: 4px 0 10px;
+  font-size: 13px;
+}
+.rating-summary p {
+  margin: 0 0 6px;
+}
+.rating-summary .chips,
+.rating-section .chips {
+  list-style: none;
+  padding: 0;
+}
+.rating-chip {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 12px;
+}
+.rating {
+  margin: 0 0 14px;
+  font-size: 13px;
+}
+.rating p {
+  margin: 0 0 8px;
+}
+.rating-banner {
+  border: 1px solid var(--amber);
+  background: #fff6e0;
+  color: #5c4511;
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+.rating-banner .muted {
+  color: #5c4511;
+}
+.rating-form {
+  border-color: var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  display: grid;
+  gap: 10px;
+}
+.rating-form fieldset {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+.rating-form legend {
+  font-weight: 600;
+  padding: 0 4px;
+}
+.rating-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.rating-section {
+  margin: 8px 0 22px;
+}
+.rating-section h2 {
+  font-size: 16px;
+  margin: 0 0 4px;
+}
+.rating-subtitle {
+  font-size: 14px;
+  margin: 12px 0 6px;
+}
+.rating-improvements {
+  margin: 0 0 8px;
+  padding-left: 18px;
+}
+.rating-visibility {
+  margin-top: 12px;
+}

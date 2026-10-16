@@ -51,8 +51,12 @@ describe("recommendations Edge Function", () => {
   it("scores with the shared, parity-tested code and returns no answers", () => {
     expect(fn).toContain('from "../_shared/compatibility.ts"');
     expect(fn).toContain("scoreCandidates(");
-    expect(fn).toContain("return json({ myAnswers, recommendations: ranked })");
-    // scoreCandidates strips `answers` (see tests/recommendations.test.ts).
+    // Only scoreCandidates' output (which strips `answers`, see
+    // tests/recommendations.test.ts) is returned, plus each rating summary.
+    expect(fn).toMatch(
+      /return json\(\{\s*myAnswers,\s*recommendations: ranked\.map\(\(r\) => \(\{\s*\.\.\.r,\s*ratings: summaries\.get\(r\.profile\.id\) \?\? null,\s*\}\)\),\s*\}\)/,
+    );
+    expect(fn).toContain('admin.rpc("rating_summaries"');
   });
 
   it("keeps the service-role key in the function environment", () => {

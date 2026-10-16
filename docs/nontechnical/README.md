@@ -5,8 +5,9 @@ Non-technical analyses and proposals: product research, psychology, legal and pr
 records. Implemented behaviour is documented in `docs/features/`. When a proposal is approved
 and built, its feature document there links back to it.
 
-| Document                                                               | Topic                                                                                                                    | Status             |
-| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------------ |
-| [roommate-matching-psychology.md](roommate-matching-psychology.md)     | Questionnaire design, matching model and the post-match process, from a psychological perspective                        | Analysis           |
-| [research-data-and-cohabitation.md](research-data-and-cohabitation.md) | Research consent, "Živiva skupaj" declarations, and keeping anonymised data after account deletion (GDPR, ZVOP-2, IP RS) | Proposed           |
-| [cohabitation-and-ratings.md](cohabitation-and-ratings.md)             | Mutual "Živiva skupaj" declaration and anonymous, double-blind roommate ratings (aggregate + tags)                       | Part A implemented |
+| Document                                                               | Topic                                                                                                                    | Status                             |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ---------------------------------- |
+| [roommate-matching-psychology.md](roommate-matching-psychology.md)     | Questionnaire design, matching model and the post-match process, from a psychological perspective                        | Analysis                           |
+| [research-data-and-cohabitation.md](research-data-and-cohabitation.md) | Research consent, "Živiva skupaj" declarations, and keeping anonymised data after account deletion (GDPR, ZVOP-2, IP RS) | Proposed                           |
+| [cohabitation-and-ratings.md](cohabitation-and-ratings.md)             | Mutual "Živiva skupaj" declaration and anonymous, double-blind roommate ratings (aggregate + tags)                       | Implemented (Parts A and B)        |
+| [roommate-ratings-lia.md](roommate-ratings-lia.md)                     | Legitimate-interest assessment (GDPR art. 6(1)(f)) for roommate ratings                                                  | Awaiting the controller's sign-off |

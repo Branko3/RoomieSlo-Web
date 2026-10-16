@@ -23,6 +23,10 @@ function makeClient({
   } | null,
   tables = {} as Record<string, Outcome>,
   files = { data: [{ name: "vpis.pdf" }], error: null } as Outcome,
+  received = {
+    data: { state: "insufficient", count: 2, visible: true },
+    error: null,
+  } as Outcome,
 } = {}) {
   const calls: string[] = [];
   const settle = (o: Outcome) =>
@@ -50,6 +54,10 @@ function makeClient({
         return filter;
       },
     }),
+    rpc: (fn: string) => {
+      calls.push(`rpc ${fn}`);
+      return settle(received);
+    },
     storage: {
       from: (bucket: string) => ({
         list: (path: string) => {
@@ -69,11 +77,15 @@ describe("exportMyData", () => {
     expect(calls).toEqual([
       ...OWNED_TABLES.map(({ table, column }) => `${table}.* ${column}=${ME}`),
       `matches.* or user_id_a.eq.${ME},user_id_b.eq.${ME}`,
+      `cohabitations.* or user_id_a.eq.${ME},user_id_b.eq.${ME}`,
+      "rpc my_rating_summary",
       `storage vpisnice/${ME}`,
     ]);
     expect(result).toMatchObject({
       format: "roomieslo-data-export",
-      version: 1,
+      version: 2,
+      cohabitations: [{ table: "cohabitations" }],
+      receivedRatings: { state: "insufficient", count: 2, visible: true },
       exportedAt: "2026-10-12T09:00:00.000Z",
       account: { id: ME, email: "ana@example.test", createdAt: "2026-01-01" },
       matches: [{ table: "matches" }],
@@ -90,7 +102,54 @@ describe("exportMyData", () => {
       "favorites",
       "messages",
       "reports",
+      "roommate_ratings",
     ]);
+  });
+
+  it("includes the ratings I gave, my cohabitations and my received aggregate, never rater identities", async () => {
+    const given = {
+      id: "r1",
+      cohabitation_id: "c1",
+      rater_id: ME,
+      rated_id: "peer",
+      would_live_again: true,
+      strengths: ["clean_tidy"],
+      improvements: ["noise"],
+    };
+    const shown = {
+      state: "shown",
+      total: 3,
+      would_live_again: 2,
+      strengths: [{ tag: "pleasant", count: 2 }],
+      improvements: [{ tag: "noise", count: 1 }],
+      visible: true,
+    };
+    const { client, calls } = makeClient({
+      tables: { roommate_ratings: { data: [given], error: null } },
+      received: { data: shown, error: null },
+    });
+    const result = await exportMyData(client, NOW);
+    expect(calls).toContain(`roommate_ratings.* rater_id=${ME}`);
+    expect(result.data.roommate_ratings).toEqual([given]);
+    expect(result.receivedRatings).toEqual(shown);
+    // Received ratings come only as the aggregate: no rows, so no rater ids.
+    expect(JSON.stringify(result.receivedRatings)).not.toMatch(/rater|_id/);
+    expect(result.notes.join(" ")).toContain("kdo je dal katero oceno");
+  });
+
+  it("fails the export when the received aggregate can't be read", async () => {
+    await expect(
+      exportMyData(
+        makeClient({ received: { data: null, error: { code: "XX000" } } })
+          .client,
+        NOW,
+      ),
+    ).rejects.toMatchObject({ kind: "failed" });
+    const empty = await exportMyData(
+      makeClient({ received: { data: null, error: null } }).client,
+      NOW,
+    );
+    expect(empty.receivedRatings).toBeNull();
   });
 
   it("treats missing data as empty lists", async () => {
@@ -186,5 +245,41 @@ describe("privacy procedures document", () => {
     expect(doc).toContain("on_auth_user_deleted");
     expect(doc).toContain("deleted_user_safety_records");
     expect(doc).not.toMatch(/on delete cascade. this removes/i);
+  });
+});
+
+describe("data controller and the ratings notice", () => {
+  const page = readFileSync(
+    join(process.cwd(), "app/privacy/page.tsx"),
+    "utf8",
+  );
+
+  it("names Branko and reads the contact from one setting", async () => {
+    const { DATA_CONTROLLER, privacyContact } =
+      await import("../lib/privacy/controller");
+    expect(DATA_CONTROLLER).toBe("Branko");
+    vi.stubEnv("NEXT_PUBLIC_PRIVACY_CONTACT", "  kontakt@example.test ");
+    expect(privacyContact()).toBe("kontakt@example.test");
+    vi.stubEnv("NEXT_PUBLIC_PRIVACY_CONTACT", "");
+    expect(privacyContact()).toBe("");
+    vi.unstubAllEnvs();
+    expect(page).toContain("DATA_CONTROLLER");
+    expect(page).toContain("Kontakt za zasebnost še ni nastavljen.");
+    expect(page).not.toMatch(/thesis|diplom|magistr/i);
+  });
+
+  it("explains roommate ratings: basis, what is shown, threshold, 36 months, hiding, unfair ratings", () => {
+    for (const phrase of [
+      "Ocene sostanovalcev",
+      "zakonitega interesa (6(1)(f) člen",
+      "3 od 4 sostanovalcev bi spet",
+      "šele, ko imaš vsaj 3 ocene",
+      "zadnjih 36 mesecev",
+      "Prikaži ocene sostanovalcev",
+      "Ocene so skrite",
+      "nepoštena",
+      "kdo je dal katero oceno",
+    ])
+      expect(page.replace(/\s+/g, " ")).toContain(phrase);
   });
 });

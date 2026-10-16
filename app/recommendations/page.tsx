@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
+import { RatingSummaryView } from "../../components/rating-summary";
 import { getSupabaseConfig } from "../../lib/config";
 import {
   QUESTIONNAIRE_ROUTE,
@@ -93,7 +94,7 @@ export default function RecommendationsPage() {
     body = (
       <ol className="recommendation-list">
         {query.data.recommendations.map(
-          ({ profile, compatibility, sharedStatements }) => (
+          ({ profile, compatibility, sharedStatements, ratings }) => (
             <li className="recommendation-card" key={profile.id}>
               <div className="recommendation-head">
                 <div>
@@ -127,6 +128,7 @@ export default function RecommendationsPage() {
                   <span className="chip">Išče sostanovalca</span>
                 )}
               </div>
+              {ratings && <RatingSummaryView summary={ratings} />}
               {profile.bio && (
                 <p className="recommendation-bio">{profile.bio}</p>
               )}
