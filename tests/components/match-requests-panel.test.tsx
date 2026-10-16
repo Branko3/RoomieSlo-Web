@@ -11,6 +11,7 @@ const fake = vi.hoisted(() => ({
   names: [] as Array<{ id: string; display_name: string }>,
   rpc: vi.fn(),
   updates: [] as unknown[],
+  cohabitations: [] as Array<Record<string, unknown>>,
 }));
 
 vi.mock("../../lib/config", () => ({
@@ -28,6 +29,13 @@ vi.mock("../../lib/supabase/browser", () => ({
         return {
           select: () => ({
             in: async () => ({ data: fake.names, error: null }),
+          }),
+        };
+      }
+      if (table === "cohabitations") {
+        return {
+          select: () => ({
+            order: async () => ({ data: fake.cohabitations, error: null }),
           }),
         };
       }
@@ -96,6 +104,7 @@ const row = (name: string) =>
 beforeEach(() => {
   fake.rpc.mockReset();
   fake.updates = [];
+  fake.cohabitations = [];
   fake.matches = [
     match({ id: "m-in", user_id_a: "ana", user_id_b: ME }),
     match({ id: "m-out", user_id_a: ME, user_id_b: "bor" }),
@@ -125,6 +134,54 @@ describe("MatchRequestsPanel", () => {
     const link = await screen.findByRole("link", { name: "Odpri klepet" });
     expect(link).toHaveAttribute("href", "/chats/m-ok");
     expect(row("Cene")).toContainElement(link);
+  });
+
+  it("marks a chat whose cohabitation declaration awaits my answer", async () => {
+    const declaration = {
+      id: "c1",
+      match_id: "m-ok",
+      user_id_a: ME,
+      user_id_b: "cene",
+      initiated_by: "cene",
+      status: "pending",
+      started_month: "2026-09-01",
+      ended_month: null,
+      declined_at: null,
+      confirmed_at: null,
+      ended_at: null,
+      version: 1,
+      created_at: "2026-10-10T10:00:00Z",
+    };
+    fake.cohabitations = [declaration];
+    renderPanel();
+    await screen.findByText("Cene");
+    expect(
+      await within(row("Cene")).findByText("Čaka na tvoj odgovor o sobivanju"),
+    ).toBeInTheDocument();
+    expect(within(row("Ana")).queryByText(/sobivanju/)).toBeNull();
+  });
+
+  it("does not mark my own pending declaration", async () => {
+    fake.cohabitations = [
+      {
+        id: "c1",
+        match_id: "m-ok",
+        user_id_a: ME,
+        user_id_b: "cene",
+        initiated_by: ME,
+        status: "pending",
+        started_month: "2026-09-01",
+        ended_month: null,
+        declined_at: null,
+        confirmed_at: null,
+        ended_at: null,
+        version: 1,
+        created_at: "2026-10-10T10:00:00Z",
+      },
+    ];
+    renderPanel();
+    await screen.findByText("Cene");
+    expect(screen.queryByText("Čaka na tvoj odgovor o sobivanju")).toBeNull();
   });
 
   it("accepts through the atomic RPC and shows the new state", async () => {

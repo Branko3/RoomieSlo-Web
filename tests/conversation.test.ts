@@ -47,13 +47,20 @@ const settle = <T>(result: Result<T>) =>
 function makeClient({
   user = { id: ME } as { id: string } | null,
   match = {
-    data: { id: MATCH, user_id_a: PEER, user_id_b: ME, status: "accepted" },
+    data: {
+      id: MATCH,
+      user_id_a: PEER,
+      user_id_b: ME,
+      status: "accepted",
+      created_at: "2026-09-14T08:00:00Z",
+    },
     error: null,
   } as Result<{
     id: string;
     user_id_a: string;
     user_id_b: string;
     status: string;
+    created_at?: string;
   }>,
   peer = {
     data: {
@@ -111,6 +118,7 @@ describe("loadConversation", () => {
     expect(conversation).toMatchObject({
       status: "accepted",
       matchId: MATCH,
+      matchCreatedAt: "2026-09-14T08:00:00Z",
       iAmRecipient: true,
       peer: { id: PEER, name: "Ana K.", verified: true, faculty: "FRI" },
     });
@@ -270,6 +278,7 @@ describe("loadConversation", () => {
 describe("conversationNotice", () => {
   const base = {
     matchId: MATCH,
+    matchCreatedAt: null,
     peer: {
       id: PEER,
       name: "Ana",

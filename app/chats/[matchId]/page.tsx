@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
+import { ChatCohabitation } from "../../../components/chat-cohabitation";
 import {
   ChatSafetyControls,
   useBlockState,
@@ -171,6 +172,14 @@ export default function ConversationPage({
         state={blockState}
         canBlock={!peer.deleted}
       />
+      {conversation.status === "accepted" && (
+        <ChatCohabitation
+          matchId={conversation.matchId}
+          matchCreatedAt={conversation.matchCreatedAt}
+          peerName={peer.name}
+          canDeclare={!peer.deleted && !blockState.blocked}
+        />
+      )}
 
       {conversation.peerListings.length > 0 && (
         <section className="conversation-context" aria-label="Oglasi te osebe">
