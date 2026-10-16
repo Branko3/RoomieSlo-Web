@@ -210,8 +210,7 @@ describe("submit_roommate_rating", () => {
 });
 
 describe("summaries", () => {
-  const counted =
-    "status = 'revealed' and submitted_at > now() - interval '36 months'";
+  const counted = () => effectiveFunction("counted_ratings");
 
   it("rating_summary works without auth.uid() and returns aggregates only", () => {
     expect(summary()).toContain("security definer set search_path = public");
@@ -242,8 +241,22 @@ describe("summaries", () => {
     expect(summary()).not.toMatch(/'insufficient', 'count'/);
   });
 
-  it("counts only revealed ratings from the last 36 months, with the top 3 strengths", () => {
-    expect(summary().split(counted).length - 1).toBe(2);
+  it("counts each rater once: their latest revealed rating from the last 36 months", () => {
+    expect(counted()).toContain(
+      "select distinct on (r.rater_id) r.would_live_again, r.strengths, r.improvements from public.roommate_ratings r where r.rated_id = p_profile_id and r.status = 'revealed' and r.submitted_at > now() - interval '36 months' order by r.rater_id, r.submitted_at desc",
+    );
+    expect(counted()).toContain("security definer set search_path = public");
+    expect(sql).toContain(
+      "revoke all on function public.counted_ratings(uuid) from public, anon, authenticated",
+    );
+    // Both summaries read only the counted set, never the table directly.
+    for (const fn of [summary(), mine()]) {
+      expect(fn).toContain("from public.counted_ratings(");
+      expect(fn).not.toContain("from public.roommate_ratings");
+    }
+  });
+
+  it("shows the top 3 strengths", () => {
     expect(summary()).toContain(
       "'strengths', public.rating_tag_counts(tags, public.rating_strength_tags(), 3)",
     );
@@ -254,9 +267,8 @@ describe("summaries", () => {
 
   it("my_rating_summary adds my private improvements and my count below 3", () => {
     expect(mine()).toContain("me uuid := auth.uid()");
-    expect(mine()).toContain("where rated_id = me");
+    expect(mine()).toContain("from public.counted_ratings(me) c");
     expect(mine()).not.toContain("rater_id");
-    expect(mine().split(counted).length - 1).toBe(3);
     expect(mine()).toContain(
       "return jsonb_build_object('state', 'insufficient', 'count', total,",
     );

@@ -1,5 +1,5 @@
 import type { Cohabitation } from "../cohabitation/cohabitation";
-import { ratingAction } from "./rules";
+import { ratingAction, ratingWindow } from "./rules";
 import { parseMyRatingSummary, type MyRatingSummary } from "./summary";
 import {
   IMPROVEMENT_TAGS,
@@ -298,17 +298,21 @@ export async function setRatingsVisible(
   }
 }
 
-/** The cohabitation a chat's rating refers to: the latest confirmed one. */
+/**
+ * The cohabitation a chat's rating refers to: the newest confirmed one whose
+ * rating window is open, so an older cohabitation can still be rated after
+ * the two move in together again; otherwise the newest confirmed one.
+ */
 export function ratableCohabitation(
   cohabitations: Cohabitation[],
+  now: Date = new Date(),
 ): Cohabitation | null {
+  const confirmed = [...cohabitations]
+    .filter((c) => ratingWindow(c, now) !== null)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   return (
-    [...cohabitations]
-      .filter(
-        (c) =>
-          (c.status === "active" || c.status === "ended") &&
-          c.confirmedAt !== null,
-      )
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0] ?? null
+    confirmed.find((c) => ratingWindow(c, now)?.state === "open") ??
+    confirmed[0] ??
+    null
   );
 }

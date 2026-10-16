@@ -66,10 +66,7 @@ export default function DeleteAccountPage() {
             <li>odgovore vprašalnika, priljubljene in tvoje oglase,</li>
             <li>dokazilo o vpisu iz zasebne shrambe,</li>
             <li>zahteve za ujemanje, na katere še ni odgovora,</li>
-            <li>
-              ocene, ki so jih o tebi oddali sostanovalci, in nepotrjene izjave
-              »Živiva skupaj«.
-            </li>
+            <li>ocene, ki so jih o tebi oddali sostanovalci.</li>
           </ul>
         </div>
       </section>
@@ -88,8 +85,9 @@ export default function DeleteAccountPage() {
               do 12 mesecev po zaključku,
             </li>
             <li>
-              sobivanja ostanejo drugi osebi v njeni zgodovini; trenutno
-              sobivanje se zaključi s tem mesecem. Izbrišemo jih, ko svoj račun
+              sobivanja ostanejo drugi osebi v njeni zgodovini: trenutno
+              sobivanje se zaključi s tem mesecem, nepotrjena izjava »Živiva
+              skupaj« pa se zapre kot nepotrjena. Izbrišemo jih, ko svoj račun
               izbriše tudi druga oseba,
             </li>
             <li>

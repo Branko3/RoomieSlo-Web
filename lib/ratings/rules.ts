@@ -67,6 +67,25 @@ export function addCalendarMonths(date: Date, months: number): Date {
   return result;
 }
 
+/** The server's rule: `submitted_at <= now() - interval '6 months'` (in UTC). */
+export function canUpdateAt(submittedAt: Date, now: Date): boolean {
+  return addCalendarMonths(now, -UPDATE_AFTER_MONTHS) >= submittedAt;
+}
+
+/**
+ * The first moment `canUpdateAt` holds. Usually 6 calendar months later, but
+ * when that day doesn't exist (31 August + 6 months), subtracting 6 months
+ * from the clamped date lands before the submission, so it's the 1st of the
+ * following month instead.
+ */
+export function updateAllowedFrom(submittedAt: Date): Date {
+  const candidate = addCalendarMonths(submittedAt, UPDATE_AFTER_MONTHS);
+  if (canUpdateAt(submittedAt, candidate)) return candidate;
+  return new Date(
+    Date.UTC(candidate.getUTCFullYear(), candidate.getUTCMonth() + 1, 1),
+  );
+}
+
 type OwnRating = { status: "hidden" | "revealed"; submittedAt: string };
 
 export type RatingAction =
@@ -96,9 +115,13 @@ export function ratingAction(
     return { kind: "edit", window };
   const nextUpdate =
     cohabitation.status === "active"
-      ? addCalendarMonths(new Date(mine.submittedAt), UPDATE_AFTER_MONTHS)
+      ? updateAllowedFrom(new Date(mine.submittedAt))
       : null;
-  if (window.state === "open" && nextUpdate && nextUpdate <= now)
+  if (
+    window.state === "open" &&
+    nextUpdate &&
+    canUpdateAt(new Date(mine.submittedAt), now)
+  )
     return { kind: "update", window };
   return {
     kind: "locked",

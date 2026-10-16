@@ -305,21 +305,31 @@ describe("loadRecommendations", () => {
         ].map((tag) => ({ tag, count: 1 })),
       },
     ],
-  ])("rejects a response with %s", async (_label, ratings) => {
-    await expect(
-      loadRecommendations(
+  ])(
+    "drops only that card's summary when it has %s",
+    async (_label, ratings) => {
+      const loaded = await loadRecommendations(
         makeClient({
           invoke: {
             data: {
               myAnswers: [],
-              recommendations: [{ ...recommendation("a", 1), ratings }],
+              recommendations: [
+                { ...recommendation("a", 1), ratings },
+                { ...recommendation("b", 1), ratings: { state: "hidden" } },
+              ],
             },
             error: null,
           },
         }).client,
-      ),
-    ).rejects.toMatchObject({ kind: "unknown" });
-  });
+      );
+      expect(
+        loaded.recommendations.map((r) => [r.profile.id, r.ratings]),
+      ).toEqual([
+        ["a", null],
+        ["b", { state: "hidden" }],
+      ]);
+    },
+  );
 
   it("asks the recommendations function, never the answers table", async () => {
     const result = {

@@ -67,7 +67,7 @@ export function nameAndAge(
     : `${profile.displayName}, ${profile.age}`;
 }
 
-/** Validates the function's answer; a malformed rating summary invalidates it. */
+/** Validates the function's answer; a malformed rating summary becomes null. */
 function parseResult(value: unknown): RecommendationsResult | null {
   const v = value as {
     myAnswers?: unknown;
@@ -84,11 +84,12 @@ function parseResult(value: unknown): RecommendationsResult | null {
       typeof r.sharedStatements !== "number"
     )
       return null;
-    let ratings: RatingSummary | null = null;
-    if (r.ratings !== null && r.ratings !== undefined) {
-      ratings = parseRatingSummary(r.ratings);
-      if (!ratings) return null;
-    }
+    // A summary that fails validation is dropped for that card only, like a
+    // failed lookup on the server: the recommendations themselves still load.
+    const ratings: RatingSummary | null =
+      r.ratings === null || r.ratings === undefined
+        ? null
+        : parseRatingSummary(r.ratings);
     recommendations.push({
       profile,
       compatibility: r.compatibility,

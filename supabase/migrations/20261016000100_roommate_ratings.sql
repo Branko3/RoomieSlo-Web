@@ -230,10 +230,30 @@ as $$
 $$;
 revoke all on function public.rating_tag_counts(text[], text[], integer) from public, anon, authenticated;
 
+-- The ratings that count for a person: revealed, from the last 36 months,
+-- and only each rater's latest one. A rater counts once however many
+-- cohabitations the two declared, so one friend can't make up the threshold
+-- of 3 by declaring, confirming and ending several times.
+create or replace function public.counted_ratings(p_profile_id uuid)
+returns table (would_live_again boolean, strengths text[], improvements text[])
+language sql
+stable
+security definer
+set search_path = public
+as $$
+    select distinct on (r.rater_id) r.would_live_again, r.strengths, r.improvements
+    from public.roommate_ratings r
+    where r.rated_id = p_profile_id
+      and r.status = 'revealed'
+      and r.submitted_at > now() - interval '36 months'
+    order by r.rater_id, r.submitted_at desc;
+$$;
+revoke all on function public.counted_ratings(uuid) from public, anon, authenticated;
+
 -- The public summary of a profile. Aggregates only; it never uses auth.uid(),
 -- so the recommendations Edge Function (service role) can call it.
 --   { state: 'hidden' }        the person turned ratings off
---   { state: 'insufficient' }  fewer than 3 counted ratings, or a deleted profile
+--   { state: 'insufficient' }  fewer than 3 raters counted, or a deleted profile
 --   { state: 'shown', total, would_live_again, strengths: [{tag, count}] (top 3) }
 create or replace function public.rating_summary(p_profile_id uuid)
 returns jsonb
@@ -256,21 +276,14 @@ begin
         return jsonb_build_object('state', 'hidden');
     end if;
 
-    select count(*)::integer, count(*) filter (where would_live_again)::integer
-    into total, yes
-    from public.roommate_ratings
-    where rated_id = p_profile_id
-      and status = 'revealed'
-      and submitted_at > now() - interval '36 months';
+    select count(*)::integer,
+           count(*) filter (where c.would_live_again)::integer,
+           coalesce((select array_agg(t) from public.counted_ratings(p_profile_id) x, unnest(x.strengths) t), '{}')
+    into total, yes, tags
+    from public.counted_ratings(p_profile_id) c;
     if total < 3 then
         return jsonb_build_object('state', 'insufficient');
     end if;
-
-    select coalesce(array_agg(tag), '{}') into tags
-    from public.roommate_ratings, unnest(strengths) as tag
-    where rated_id = p_profile_id
-      and status = 'revealed'
-      and submitted_at > now() - interval '36 months';
 
     return jsonb_build_object(
         'state', 'shown',
@@ -297,7 +310,7 @@ revoke all on function public.rating_summaries(uuid[]) from public, anon, authen
 grant execute on function public.rating_summaries(uuid[]) to service_role;
 
 -- The caller's own aggregate, including the private improvement tags. Same
--- threshold; below it only the count of counted ratings is returned.
+-- counted ratings and threshold; below it only the count is returned.
 --   { state: 'insufficient', count, visible }
 --   { state: 'shown', total, would_live_again, strengths (top 3), improvements (all), visible }
 create or replace function public.my_rating_summary()
@@ -320,25 +333,16 @@ begin
     end if;
     select coalesce(show_roommate_ratings, true) into visible from public.profiles where id = me;
 
-    select count(*)::integer, count(*) filter (where would_live_again)::integer
-    into total, yes
-    from public.roommate_ratings
-    where rated_id = me
-      and status = 'revealed'
-      and submitted_at > now() - interval '36 months';
+    select count(*)::integer,
+           count(*) filter (where c.would_live_again)::integer,
+           coalesce((select array_agg(t) from public.counted_ratings(me) x, unnest(x.strengths) t), '{}'),
+           coalesce((select array_agg(t) from public.counted_ratings(me) x, unnest(x.improvements) t), '{}')
+    into total, yes, strength_tags, improvement_tags
+    from public.counted_ratings(me) c;
     if total < 3 then
         return jsonb_build_object('state', 'insufficient', 'count', total,
                                   'visible', coalesce(visible, true));
     end if;
-
-    select coalesce(array_agg(tag), '{}') into strength_tags
-    from public.roommate_ratings, unnest(strengths) as tag
-    where rated_id = me and status = 'revealed'
-      and submitted_at > now() - interval '36 months';
-    select coalesce(array_agg(tag), '{}') into improvement_tags
-    from public.roommate_ratings, unnest(improvements) as tag
-    where rated_id = me and status = 'revealed'
-      and submitted_at > now() - interval '36 months';
 
     return jsonb_build_object(
         'state', 'shown',

@@ -48,6 +48,7 @@
    The daily job reveals ratings for the last two cases. Only revealed ratings count.
 
 5. **Editing.**
+   - The chat shows the newest confirmed cohabitation whose window is open (so an older one can still be rated after the two move in together again), otherwise the newest confirmed one.
    - The rater sees their own rating in the chat ("Tvoja ocena: …"), with the private tags marked "(zasebno)".
    - While the rating is hidden, the rater can edit it. The 14-day reveal still counts from the first submission.
    - After it is revealed, the rating can be updated once every 6 months, but only while the two still live together. Only the latest version counts.
@@ -56,7 +57,8 @@
    - In the last 7 days before it closes, the reminder adds "Ocenjevanje se zapre <datum>."
    - There are no push notifications.
 7. **Summary for others.** On recommendation cards, not on listings:
-   - With at least 3 revealed ratings from the last 36 months, the profile not deleted and `show_roommate_ratings` on: "**3 od 4** sostanovalcev bi spet živeli s to osebo", plus up to 3 of the most common strengths with counts ("Čist(a) in urejen(a) · 3"), ordered by frequency, ties in tag order.
+   - **Counted ratings:** each rater counts once, with their latest revealed rating from the last 36 months. A pair that declares, confirms and ends several cohabitations still adds one rating, so one friend can't make up the threshold.
+   - With at least 3 counted ratings, the profile not deleted and `show_roommate_ratings` on: "**3 od 4** sostanovalcev bi spet živeli s to osebo", plus up to 3 of the most common strengths with counts ("Čist(a) in urejen(a) · 3"), ordered by frequency, ties in tag order.
    - Below 3 ratings: "Še ni dovolj ocen", with no count.
    - Turned off: "Ocene so skrite".
 8. **My summary (`/profile`, "Ocene sostanovalcev").**
@@ -113,6 +115,7 @@
     - a security-definer function that never uses `auth.uid()`, so the service role can call it;
     - it returns aggregates only: `{state: 'hidden' | 'insufficient'}` or `{state: 'shown', total, would_live_again, strengths}`;
     - callable by `authenticated` and `service_role`.
+  - `counted_ratings(p_profile_id)`: the counted set, `distinct on (rater_id)` (latest revealed rating per rater, last 36 months). Both summaries read only this; it is not callable through the API.
   - `rating_summaries(uuid[])`: the batch used by the Edge Function, callable by the service role only.
   - `my_rating_summary()`: my aggregate, including improvements; below the threshold, only `count`; plus `visible`.
   - `handle_deleted_user` and `purge_expired_data`: the full bodies from `20261016000000`, plus the rating steps and the new `ratings_revealed` and `ratings` counters.
@@ -123,7 +126,7 @@
   - `ratings.ts`: client calls, row validation, error mapping (signed-out, permission, offline, invalid, window, locked, unknown).
 - `lib/cohabitation/months.ts`: `monthStart` (midnight on the first day, Slovenian time).
 - `supabase/functions/recommendations/index.ts`: adds `ratings` per recommendation from `rating_summaries`. If that call fails, `ratings` is `null` and the list still loads.
-- `lib/matching/recommendations.ts`: validates the new shape. A malformed summary invalidates the response.
+- `lib/matching/recommendations.ts`: validates the new shape. A malformed summary becomes `null` for that card only; the list still loads.
 - Components:
   - `components/chat-rating.tsx`: the reminder, the form and my rating. It sits under the cohabitation controls in accepted chats.
   - `components/rating-summary.tsx`: the cards.
@@ -155,9 +158,10 @@
   - direct writes and the batch summary are refused;
   - a summary below 3 is `insufficient`;
   - a third party (the admin test account) sees nothing and can't rate.
-- Executed SQL (not in CI): both new migrations and the whole migration chain were applied to PGlite (Postgres in WASM) with stubs for Supabase's `auth` and `storage`. 42 scenarios passed as real `authenticated` and `service_role` sessions, covering:
+- Executed SQL (not in CI): both new migrations and the whole migration chain were applied to PGlite (Postgres in WASM) with stubs for Supabase's `auth` and `storage`. 44 scenarios passed as real `authenticated` and `service_role` sessions, covering:
   - the window, tags, double-blind reveal and the 6-month update;
   - the threshold, the 36-month window and opt-out;
+  - one rater counted once across three cohabitations with the same person;
   - the batch grant, deletion, retention and the block hook.
 
 ## Handoff to testing

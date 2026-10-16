@@ -19,9 +19,11 @@ import {
 } from "../lib/ratings/ratings";
 import {
   addCalendarMonths,
+  canUpdateAt,
   ratingAction,
   ratingReminder,
   ratingWindow,
+  updateAllowedFrom,
 } from "../lib/ratings/rules";
 import {
   belowThresholdLabel,
@@ -206,6 +208,33 @@ describe("rating actions", () => {
     ).toBe("update");
   });
 
+  it("agrees with the server's 6-month check at month ends", () => {
+    // Server: submitted_at <= now() - interval '6 months'.
+    const submitted = new Date("2026-08-31T10:00:00Z");
+    expect(canUpdateAt(submitted, new Date("2027-02-28T12:00:00Z"))).toBe(
+      false,
+    );
+    expect(canUpdateAt(submitted, new Date("2027-03-01T00:00:00Z"))).toBe(true);
+    expect(updateAllowedFrom(submitted)).toEqual(
+      new Date("2027-03-01T00:00:00Z"),
+    );
+    expect(updateAllowedFrom(new Date("2026-04-15T10:00:00Z"))).toEqual(
+      new Date("2026-10-15T10:00:00Z"),
+    );
+    const late = {
+      status: "revealed" as const,
+      submittedAt: submitted.toISOString(),
+    };
+    const feb28 = new Date("2027-02-28T12:00:00Z");
+    expect(ratingAction(cohabitation(), late, feb28)).toMatchObject({
+      kind: "locked",
+      until: new Date("2027-03-01T00:00:00Z"),
+    });
+    expect(
+      ratingAction(cohabitation(), late, new Date("2027-03-01T00:00:00Z")).kind,
+    ).toBe("update");
+  });
+
   it("never updates after the end, and nothing after the window closed", () => {
     const ended = cohabitation({
       status: "ended",
@@ -245,6 +274,27 @@ describe("rating actions", () => {
       ratingReminder(ratingAction(cohabitation(), hidden, now), now),
     ).toBeNull();
     expect(ratingReminder(ratingAction(cohabitation(), null))).toBe("open");
+  });
+
+  it("prefers an older cohabitation whose window is still open over a newer one not open yet", () => {
+    const now = new Date("2026-10-16T10:00:00Z");
+    const older = cohabitation({
+      id: "older",
+      status: "ended",
+      ended_month: "2026-10-01",
+      ended_at: "2026-10-10T10:00:00Z",
+      created_at: "2026-02-01T00:00:00Z",
+    });
+    const newer = cohabitation({
+      id: "newer",
+      started_month: "2026-10-01",
+      created_at: "2026-10-12T00:00:00Z",
+    });
+    expect(ratableCohabitation([newer, older], now)?.id).toBe("older");
+    // Once the older window has closed, the newest confirmed one is shown.
+    expect(
+      ratableCohabitation([newer, older], new Date("2026-12-31T00:00:00Z"))?.id,
+    ).toBe("newer");
   });
 
   it("picks the latest confirmed cohabitation of a chat", () => {
