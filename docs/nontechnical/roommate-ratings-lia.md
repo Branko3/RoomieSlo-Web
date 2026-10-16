@@ -73,6 +73,32 @@ The processing is therefore necessary and proportionate to the purpose.
 - The "Živiva skupaj" dialog tells both people that they can rate each other after two months.
 - The rating form says the rating is anonymous and when it becomes visible.
 
+### Residual risk: inference from timing
+
+The app never shows who gave which rating, but the rated person can sometimes work it out from
+**when** their own summary changes:
+
+- a new rating counts once it is revealed. If only one person lived with them in that period,
+  the change can only come from that person;
+- a 6-month update can only come from the current roommate;
+- a rater can tell that the other person has rated once their own rating is revealed before the
+  14 days are up.
+
+This can't be eliminated. Any summary that reflects real ratings changes when a rating arrives.
+With a single roommate in a period, that change is attributable however it is presented.
+Batching changes (for example monthly), or waiting for two new ratings before updating, would only
+blur the timing, and would delay feedback for people with few roommates. The owner decided on
+2026-10-16 not to add such measures.
+
+The risk is accepted because the safeguards above still limit what can be learned:
+
+- only the aggregate is ever shown, so the rated person infers at most one answer;
+- improvement tags are private;
+- there is no free text;
+- the rater is never revealed by the app, the owner or the export.
+
+Pressure or retaliation after such an inference goes through the report and block flow.
+
 ### Assessment
 
 With these safeguards, the impact on the rated person is limited and foreseeable:
