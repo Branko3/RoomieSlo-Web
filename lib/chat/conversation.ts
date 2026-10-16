@@ -14,6 +14,7 @@ type MatchRow = {
   user_id_a: string;
   user_id_b: string;
   status: MatchStatus;
+  created_at?: string | null;
 };
 
 type PeerRow = {
@@ -41,6 +42,8 @@ export type Conversation =
   | {
       status: MatchStatus;
       matchId: string;
+      /** When the match was created (bounds the cohabitation move-in month); null if unknown. */
+      matchCreatedAt: string | null;
       peer: ConversationPeer;
       /** I received the request (relevant while it is pending). */
       iAmRecipient: boolean;
@@ -129,7 +132,7 @@ export async function loadConversation(
 
     const match = await client
       .from("matches")
-      .select("id,user_id_a,user_id_b,status")
+      .select("id,user_id_a,user_id_b,status,created_at")
       .eq("id", matchId)
       .maybeSingle();
     if (match.error) throw match.error;
@@ -167,6 +170,7 @@ export async function loadConversation(
     return {
       status: row.status,
       matchId: row.id,
+      matchCreatedAt: row.created_at ?? null,
       iAmRecipient: row.user_id_b === me,
       peer: {
         id: peerId,

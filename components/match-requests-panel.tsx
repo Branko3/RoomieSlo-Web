@@ -3,6 +3,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import {
+  awaitingMyAnswer,
+  cohabitationCopy,
+  loadMyCohabitations,
+} from "../lib/cohabitation/cohabitation";
+import {
   markAcceptedDelivered,
   type DeliveryClient,
 } from "../lib/chat/delivery";
@@ -23,6 +28,10 @@ import {
   type MatchRow,
 } from "../lib/matching/match-requests";
 import { createSupabaseBrowserClient } from "../lib/supabase/browser";
+import {
+  cohabitationClient,
+  MY_COHABITATIONS_KEY,
+} from "./cohabitation-queries";
 
 const MATCHES_KEY = ["matches", "mine"] as const;
 
@@ -63,6 +72,16 @@ export function MatchRequestsPanel() {
       return rows;
     },
   });
+  // Declarations awaiting my answer mark their chat; a failure here only
+  // hides the mark, the list itself keeps working.
+  const cohabitations = useQuery({
+    queryKey: MY_COHABITATIONS_KEY,
+    enabled: configured,
+    queryFn: () => loadMyCohabitations(cohabitationClient()),
+  });
+  const awaiting = cohabitations.data
+    ? awaitingMyAnswer(cohabitations.data.cohabitations, cohabitations.data.me)
+    : new Set<string>();
   const respond = useMutation({
     mutationFn: async ({
       matchId,
@@ -146,6 +165,13 @@ export function MatchRequestsPanel() {
               <span className="match-request-text">
                 <b>{row.peerName}</b>
                 <small>{label}</small>
+                {row.match.status === "accepted" &&
+                  awaiting.has(row.match.id) && (
+                    <span className="attention-mark">
+                      <span className="attention-dot" aria-hidden="true" />
+                      {cohabitationCopy.attention}
+                    </span>
+                  )}
               </span>
               {row.match.status === "accepted" && (
                 <Link
