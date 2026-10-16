@@ -95,7 +95,7 @@ export const cohabitationCopy = {
   declareAction: "Živiva skupaj",
   declareTitle: "Živita skupaj?",
   declareHint:
-    "Izberi mesec, ko sta se vselila. Druga oseba mora to potrditi. Sobivanje vidita samo vidva.",
+    "Izberi mesec, ko sta se vselila. Druga oseba mora to potrditi. Sobivanje vidita samo vidva. Ko živita skupaj, se lahko po dveh mesecih anonimno ocenita.",
   startedMonthLabel: "Mesec vselitve",
   endedMonthLabel: "Mesec izselitve",
   submitDeclare: "Pošlji v potrditev",

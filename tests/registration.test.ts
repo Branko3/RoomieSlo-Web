@@ -13,26 +13,39 @@ describe("registration validation", () => {
         displayName: "  Ana Novak ",
         email: " ANA@EXAMPLE.COM ",
         password: "password",
+        adultStudent: true,
       }),
     ).toEqual({
       displayName: "Ana Novak",
       email: "ana@example.com",
       password: "password",
+      adultStudent: true,
     });
   });
 
-  it("requires a name, valid email, and eight-character password", () => {
+  it("requires a name, valid email, eight-character password and the 18+ student confirmation", () => {
     expect(
       validateRegistration({
         displayName: " ",
         email: "not-an-email",
         password: "short",
+        adultStudent: false,
       }),
     ).toEqual({
       displayName: "Vnesi ime in priimek.",
       email: "Vnesi veljaven e-naslov.",
       password: "Geslo mora vsebovati najmanj 8 znakov.",
+      adultStudent:
+        "RoomieSlo je namenjen študentom, starim vsaj 18 let. Potrdi to za nadaljevanje.",
     });
+    expect(
+      validateRegistration({
+        displayName: "Ana",
+        email: "ana@example.com",
+        password: "password",
+        adultStudent: true,
+      }),
+    ).toEqual({});
   });
 
   it("builds the exact public Auth sign-up payload", () => {
@@ -41,22 +54,30 @@ describe("registration validation", () => {
         displayName: "  Ana Novak ",
         email: " ANA@EXAMPLE.COM ",
         password: "password",
+        adultStudent: true,
       }),
     ).toEqual({
       email: "ana@example.com",
       password: "password",
-      options: { data: { display_name: "Ana Novak" } },
+      options: {
+        data: { display_name: "Ana Novak", adult_student_confirmed: true },
+      },
     });
   });
 
   it("sends the confirmation link back to /auth/confirm when a redirect is given", () => {
     expect(
       buildSignUpInput(
-        { displayName: "Ana", email: "ana@example.com", password: "password" },
+        {
+          displayName: "Ana",
+          email: "ana@example.com",
+          password: "password",
+          adultStudent: true,
+        },
         "https://roomieslo.example/auth/confirm?next=%2Flistings",
       ).options,
     ).toEqual({
-      data: { display_name: "Ana" },
+      data: { display_name: "Ana", adult_student_confirmed: true },
       emailRedirectTo:
         "https://roomieslo.example/auth/confirm?next=%2Flistings",
     });

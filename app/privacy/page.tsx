@@ -10,9 +10,10 @@ import {
   privacyRequestHref,
   type ExportClient,
 } from "../../lib/privacy/export";
+import { DATA_CONTROLLER, privacyContact } from "../../lib/privacy/controller";
 import { createSupabaseBrowserClient } from "../../lib/supabase/browser";
 
-const contact = process.env.NEXT_PUBLIC_PRIVACY_CONTACT ?? "";
+const contact = privacyContact();
 
 function download(json: string, name: string) {
   const url = URL.createObjectURL(
@@ -55,12 +56,30 @@ export default function PrivacyPage() {
 
       <section className="profile-card privacy-section">
         <div>
+          <b>Upravljavec podatkov</b>
+          <p>
+            Upravljavec tvojih osebnih podatkov v aplikaciji RoomieSlo je{" "}
+            {DATA_CONTROLLER}.{" "}
+            {contact ? (
+              <>
+                Kontakt: <a href={`mailto:${contact}`}>{contact}</a>
+              </>
+            ) : (
+              "Kontakt za zasebnost še ni nastavljen."
+            )}
+          </p>
+        </div>
+      </section>
+
+      <section className="profile-card privacy-section">
+        <div>
           <b>Katere podatke hranimo</b>
           <p>
             Profil (ime, starost, fakulteta, opis, fotografija), odgovore
             vprašalnika, tvoje oglase, priljubljene, ujemanja in sporočila,
-            prijave, ki si jih oddal, ter dokazilo o vpisu v zasebni shrambi, do
-            katere imata dostop le ti in skrbnik.
+            sobivanja (»Živiva skupaj«) in ocene sostanovalcev, prijave, ki si
+            jih oddal(a), ter dokazilo o vpisu v zasebni shrambi, do katere
+            imata dostop le ti in skrbnik.
           </p>
           <p>
             Ob prijavi zlorabe lahko skrbnik pregleda pogovor, povezan s
@@ -79,11 +98,60 @@ export default function PrivacyPage() {
         </div>
       </section>
 
+      <section
+        className="profile-card privacy-section"
+        aria-labelledby="privacy-ratings-title"
+      >
+        <div>
+          <b id="privacy-ratings-title">Ocene sostanovalcev</b>
+          <p>
+            Ocene obdelujemo na podlagi zakonitega interesa (6(1)(f) člen GDPR):
+            drugim uporabnikom pomagajo varneje izbrati sostanovalca. Oceniš
+            lahko samo osebo, s katero imaš potrjeno sobivanje (»Živiva
+            skupaj«), in sicer enkrat na sobivanje.
+          </p>
+          <p>
+            Prikaz ocen je privzeto izklopljen: dokler na profilu ne vklopiš
+            »Prikaži ocene sostanovalcev«, se ocene zbirajo zasebno in jih vidiš
+            samo ti. Ko jih vklopiš, drugi vidijo le povzetek, na primer »3 od 4
+            sostanovalcev bi spet živeli s to osebo«, in do 3 najpogostejše
+            močne točke. Povzetek prikažemo šele, ko imaš vsaj 3 ocene; prej
+            drugi vidijo »Še ni dovolj ocen«. Vsaka oseba se šteje enkrat.
+            Področja za izboljšanje vidiš samo ti. Nihče, tudi ocenjena oseba
+            ne, ne vidi, kdo je dal katero oceno. Ocene niso prikazane na
+            oglasih.
+          </p>
+          <p>
+            Ocena je skrita, dokler ne oceni tudi druga oseba ali ne mine 14
+            dni. Štejejo le ocene iz zadnjih 36 mesecev; ocene izbrišemo 36
+            mesecev po koncu sobivanja. Ob izbrisu računa izbrišemo ocene, ki si
+            jih prejel(a); ocene, ki si jih dal(a), ostanejo v povzetku druge
+            osebe brez tvojega imena.
+          </p>
+          <p>
+            Prikaz lahko kadar koli spet izklopiš. Če želiš, da tvojih ocen
+            sploh ne hranimo, nam piši in jih izbrišemo. Če meniš, da je ocena
+            nepoštena ali da sobivanja ni bilo,{" "}
+            {contact ? (
+              <>
+                piši na <a href={`mailto:${contact}`}>{contact}</a>.
+              </>
+            ) : (
+              "piši upravljavcu (kontakt še ni nastavljen)."
+            )}{" "}
+            Upravljavec oceno preveri in nepošteno oceno izbriše; nikomur ne
+            razkrije, kdo jo je dal.
+          </p>
+        </div>
+      </section>
+
       <section className="profile-card privacy-section">
         <div>
           <b>Prenesi svoje podatke</b>
           <p>
-            Pripravimo datoteko JSON z vsemi podatki, ki jih lahko vidiš o sebi.
+            Pripravimo datoteko JSON z vsemi podatki, ki jih lahko vidiš o sebi,
+            vključno s tvojimi sobivanji, ocenami, ki si jih dal(a), in
+            povzetkom ocen, ki si jih prejel(a) (brez podatka, kdo je ocenil).
           </p>
           {error && (
             <p className="privacy-error" role="alert">

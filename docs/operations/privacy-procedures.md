@@ -86,6 +86,27 @@ no access: no policy, RPC or dashboard view reads this table. Retention: 30 days
 deletion, or 12 months after the last report about the person closes, whichever is later
 (enforced by the retention job).
 
+### Unfair or fake roommate ratings (manual)
+
+There is no in-app dispute process (plan `docs/nontechnical/cohabitation-and-ratings.md` §4.6). A
+user who thinks a rating is unfair, or that the cohabitation never happened, writes to the
+privacy contact. This also covers the right to rectification.
+
+1. Verify the sender (section 2) and log the request.
+2. In Supabase, look at the person's cohabitations and the ratings they received:
+   `select r.id, r.cohabitation_id, r.would_live_again, r.strengths, r.improvements, r.status, r.submitted_at, c.started_month, c.ended_month from public.roommate_ratings r join public.cohabitations c on c.id = r.cohabitation_id where r.rated_id = '<user id>';`
+3. If a rating is unfair (for example, pressure or revenge reported through `/report`, or a
+   cohabitation that both people confirm never happened), delete it:
+   `delete from public.roommate_ratings where id = '<rating id>';`
+4. Reply without saying who gave any rating, and without quoting a single rating's answers.
+   Never tell the rated person who rated them.
+
+Showing ratings is opt-in: users switch it on and off themselves under Profil → "Prikaži ocene
+sostanovalcev" (off by default). A **formal objection** (GDPR art. 21) by e-mail goes further:
+after verifying the sender, delete that person's received ratings
+(`delete from public.roommate_ratings where rated_id = '<user id>';`) and confirm by reply. Ratings
+a roommate gives later are collected again; if the person objects again, repeat this.
+
 ## 4. Data minimisation in operations
 
 - Logs: client error reports contain no personal data (`lib/ops/report-error.ts`). Don't add user ids, emails, message text or document names to logs or alerts.
@@ -124,6 +145,6 @@ deletion, or 12 months after the last report about the person closes, whichever 
 
 ## Open decisions
 
-- `NEXT_PUBLIC_PRIVACY_CONTACT` (the privacy email shown on `/privacy`) and the request owner.
+- `NEXT_PUBLIC_PRIVACY_CONTACT` (the data controller's e-mail shown on `/privacy`, also used to report unfair ratings) and the request owner. The controller is Branko; until the e-mail is set, `/privacy` says the contact is not configured.
 - Locations of the request log and breach register.
 - Decided 2026-10-12 (retention record): backup retention 30 days; the full retention matrix; admin message access limited to reported conversations. Decided 2026-10-13: profile tombstones and the safety identity record (migration `20261014000000`). Still to build: report evidence, the admin message view with audit log, self-service deletion and the retention jobs.

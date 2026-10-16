@@ -1,13 +1,14 @@
 # Cohabitation declarations and roommate ratings: plan
 
-- Status: Approved 2026-10-16 (Branko). Part A implemented (`docs/features/cohabitation-declarations.md`); Part B (ratings) not started
+- Status: Approved 2026-10-16 (Branko). Implemented: Part A (`docs/features/cohabitation-declarations.md`) and Part B (`docs/features/roommate-ratings.md`); the LIA (`roommate-ratings-lia.md`) awaits sign-off
 - Date: 2026-10-16
 - Owner decisions so far (2026-10-16):
   - the public view is an aggregate plus tags,
   - tags only, no free-text comments,
   - cohabitation is built first, and ratings are built on top of it,
   - the thresholds in §4 are accepted (3 ratings, 2-month window, 14-day blind period, 36-month retention),
-  - users can hide their ratings (§4.5),
+  - users can hide their ratings (§4.5); changed later on 2026-10-16: showing ratings is **opt-in** (off by default), and ratings are still collected while it's off,
+  - profiles are for university students aged 18 or older,
   - summaries appear on profiles and recommendation cards only, not on listings,
   - the data controller is Branko personally; the thesis is finished and this is no longer thesis work,
   - no in-app dispute process: unfair ratings are handled manually by the owner (§4.6).
@@ -102,7 +103,11 @@ Counting rules:
 
 ### 4.5 Opting out (GDPR right to object)
 
-The profile setting **"Prikaži ocene sostanovalcev"** ("Show roommate ratings") is on by default. When it's off, others see "Ocene so skrite" ("Ratings are hidden"). Ratings are still collected, so the user can switch the setting back on. This is the honest form of an objection: others can see that ratings are hidden and decide for themselves.
+**Changed by the owner on 2026-10-16: opt-in.** The profile setting **"Prikaži ocene sostanovalcev"** ("Show roommate ratings") is **off by default**. While it's off, ratings are still collected, but only the rated person sees them (their own aggregate on `/profile`), and other users see nothing about ratings for that person: no line, no "hidden" label, so an unset preference never looks like hiding something. When the person turns it on, others see the summary (from 3 ratings). The person can turn it off again at any time.
+
+A formal objection (by e-mail to the controller) goes further than the toggle: that person's received ratings are deleted (`docs/operations/privacy-procedures.md`).
+
+_Original design (superseded): on by default, with "Ocene so skrite" shown when off._
 
 ### 4.6 Unfair ratings (manual, no in-app process)
 

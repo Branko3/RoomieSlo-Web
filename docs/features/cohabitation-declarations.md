@@ -144,10 +144,12 @@ The month pickers are labelled `<select>` elements that receive focus when opene
 
 There is no staging Supabase project, so the migration has not been applied or executed anywhere. The integration suite is written and skips itself without `SUPABASE_TEST_*`.
 
-## Follow-ups (not in this scope)
+## Follow-ups
 
-- Ratings (plan Part B, §4) and their policy steps, including the LIA, the `/privacy` text and the dialog sentence about rating after two months.
-- The self-service data export (`lib/privacy/export.ts`) does not include cohabitations yet. Plan §6 lists them under the access right, together with ratings in delivery step 5.
+Done in [roommate ratings](roommate-ratings.md):
+
+- Ratings (plan Part B) and their policy steps: the LIA, the `/privacy` text, and the dialog sentence "Ko živita skupaj, se lahko po dveh mesecih anonimno ocenita."
+- The self-service data export now includes my cohabitations (export version 2).
 
 ## Test status
 

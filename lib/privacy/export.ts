@@ -23,6 +23,7 @@ export type ExportClient = {
     }>;
   };
   from: (table: string) => { select: (columns: string) => Filter };
+  rpc: (fn: "my_rating_summary") => Result;
   storage: {
     from: (bucket: string) => {
       list: (path: string) => PromiseLike<{
@@ -41,9 +42,11 @@ export const OWNED_TABLES = [
   { table: "favorites", column: "profile_id" },
   { table: "messages", column: "sender_id" },
   { table: "reports", column: "reporter_id" },
+  // Ratings I gave (RLS shows raters only their own rows).
+  { table: "roommate_ratings", column: "rater_id" },
 ] as const;
 
-export const EXPORT_VERSION = 1;
+export const EXPORT_VERSION = 2;
 
 export type DataExport = {
   format: "roomieslo-data-export";
@@ -52,6 +55,13 @@ export type DataExport = {
   account: { id: string; email: string | null; createdAt: string | null };
   data: Record<string, unknown[]>;
   matches: unknown[];
+  /** My "Živiva skupaj" declarations, as either participant. */
+  cohabitations: unknown[];
+  /**
+   * The aggregate of ratings I received (`my_rating_summary`). Who gave which
+   * rating is never included (GDPR art. 15(4): the rights of others).
+   */
+  receivedRatings: unknown;
   academicDocuments: string[];
   notes: string[];
 };
@@ -107,6 +117,14 @@ export async function exportMyData(
         .select("*")
         .or(`user_id_a.eq.${user.id},user_id_b.eq.${user.id}`),
     );
+    const cohabitations = await rows(
+      client
+        .from("cohabitations")
+        .select("*")
+        .or(`user_id_a.eq.${user.id},user_id_b.eq.${user.id}`),
+    );
+    const received = await client.rpc("my_rating_summary");
+    if (received.error) throw received.error;
     const documents = await client.storage.from("vpisnice").list(user.id);
     if (documents.error) throw documents.error;
 
@@ -121,10 +139,13 @@ export async function exportMyData(
       },
       data,
       matches,
+      cohabitations,
+      receivedRatings: received.data ?? null,
       academicDocuments: (documents.data ?? []).map((file) => file.name),
       notes: [
         "Sporočila druge osebe v tvojih klepetih niso vključena; vključena so tvoja poslana sporočila.",
         "Akademski dokumenti so navedeni po imenu; datoteke lahko zahtevaš pri skrbniku.",
+        "Ocene, ki si jih prejel(a), so vključene le kot povzetek; kdo je dal katero oceno, ni vključeno, ker bi to razkrilo podatke drugih oseb.",
       ],
     };
   } catch (error) {

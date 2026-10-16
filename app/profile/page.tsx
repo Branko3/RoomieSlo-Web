@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { MyCohabitationsSection } from "../../components/my-cohabitations-section";
+import { MyRatingsSection } from "../../components/my-ratings-section";
 import { OwnProfileSection } from "../../components/own-profile-section";
 import {
   AvailabilityCard,
@@ -26,6 +27,7 @@ export default function ProfilePage() {
           <AvailabilityCard />
           <QuestionnaireProgressCard />
           <MyCohabitationsSection />
+          <MyRatingsSection />
         </>
       )}
       <LogoutButton />

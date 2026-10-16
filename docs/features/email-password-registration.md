@@ -7,7 +7,7 @@
 
 ## Behavior
 
-Unauthenticated visitors can submit a display name, email, and password. Name and email are trimmed (email is lowercased), client validation prevents invalid requests, and Supabase Auth receives `options.data.display_name`. The existing `handle_new_user` trigger remains responsible for creating the profile. Success with no session explains email confirmation and links to `/login`; duplicate and unexpected failures use safe Slovenian messages.
+Unauthenticated visitors can submit a display name, email, and password, and must confirm "Potrjujem, da imam vsaj 18 let in sem študent(ka) univerze." (owner decision 2026-10-16; sent as `adult_student_confirmed` in the user metadata). Name and email are trimmed (email is lowercased), client validation prevents invalid requests, and Supabase Auth receives `options.data.display_name`. The existing `handle_new_user` trigger remains responsible for creating the profile. Success with no session explains email confirmation and links to `/login`; duplicate and unexpected failures use safe Slovenian messages.
 
 ## Acceptance criteria
 

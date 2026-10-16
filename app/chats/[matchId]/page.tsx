@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { ChatCohabitation } from "../../../components/chat-cohabitation";
+import { ChatRating } from "../../../components/chat-rating";
 import {
   ChatSafetyControls,
   useBlockState,
@@ -179,6 +180,9 @@ export default function ConversationPage({
           peerName={peer.name}
           canDeclare={!peer.deleted && !blockState.blocked}
         />
+      )}
+      {conversation.status === "accepted" && !peer.deleted && (
+        <ChatRating matchId={conversation.matchId} peerName={peer.name} />
       )}
 
       {conversation.peerListings.length > 0 && (

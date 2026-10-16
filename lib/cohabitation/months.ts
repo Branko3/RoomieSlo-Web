@@ -73,6 +73,38 @@ export function monthsBetween(from: string, to: string): string[] {
   return months;
 }
 
+/** Milliseconds Slovenian wall-clock time is ahead of UTC at `date` (1 or 2 hours). */
+function zoneOffset(date: Date): number {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: COHABITATION_TIME_ZONE,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).formatToParts(date);
+  const part = (type: string) =>
+    Number(parts.find((p) => p.type === type)?.value);
+  const wall = Date.UTC(
+    part("year"),
+    part("month") - 1,
+    part("day"),
+    part("hour"),
+    part("minute"),
+    part("second"),
+  );
+  return wall - Math.floor(date.getTime() / 1000) * 1000;
+}
+
+/** The instant a month starts in Slovenian time (midnight on its first day). */
+export function monthStart(month: string): Date {
+  const [, year, number] = MONTH.exec(month) ?? [];
+  const guess = Date.UTC(Number(year), Number(number) - 1, 1);
+  return new Date(guess - zoneOffset(new Date(guess)));
+}
+
 /** "okt. 2026" */
 export function monthLabel(month: string): string {
   const [, year, number] = MONTH.exec(month) ?? [];

@@ -10,6 +10,7 @@ import {
   RegistrationErrors,
   RegistrationValues,
   validateRegistration,
+  ADULT_STUDENT_LABEL,
 } from "../../lib/auth/registration";
 import { emailRedirectUrl } from "../../lib/auth/confirmation";
 
@@ -17,13 +18,20 @@ const initialValues: RegistrationValues = {
   displayName: "",
   email: "",
   password: "",
+  adultStudent: false,
 };
 
-const FIELD_ORDER = ["displayName", "email", "password"] as const;
+const FIELD_ORDER = [
+  "displayName",
+  "email",
+  "password",
+  "adultStudent",
+] as const;
 const FIELD_IDS = {
   displayName: "display-name",
   email: "email",
   password: "password",
+  adultStudent: "adult-student",
 } as const;
 
 export default function RegisterPage() {
@@ -33,7 +41,10 @@ export default function RegisterPage() {
   const [status, setStatus] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function updateValue(field: keyof RegistrationValues, value: string) {
+  function updateValue<K extends keyof RegistrationValues>(
+    field: K,
+    value: RegistrationValues[K],
+  ) {
     setValues((current) => ({ ...current, [field]: value }));
     setErrors((current) => ({ ...current, [field]: undefined }));
     setStatus("");
@@ -140,6 +151,28 @@ export default function RegisterPage() {
           {errors.password && (
             <p id="password-error" className="field-error" role="alert">
               {errors.password}
+            </p>
+          )}
+
+          <label className="checkbox-row" htmlFor="adult-student">
+            <input
+              id="adult-student"
+              name="adultStudent"
+              type="checkbox"
+              checked={values.adultStudent}
+              onChange={(event) =>
+                updateValue("adultStudent", event.target.checked)
+              }
+              aria-invalid={Boolean(errors.adultStudent)}
+              aria-describedby={
+                errors.adultStudent ? "adult-student-error" : undefined
+              }
+            />
+            {ADULT_STUDENT_LABEL}
+          </label>
+          {errors.adultStudent && (
+            <p id="adult-student-error" className="field-error" role="alert">
+              {errors.adultStudent}
             </p>
           )}
 

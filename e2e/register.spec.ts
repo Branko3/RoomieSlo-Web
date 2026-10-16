@@ -20,6 +20,9 @@ async function fillRegistrationForm(page: Page) {
   await page.getByLabel("Ime in priimek").fill(validValues.name);
   await page.getByLabel("E-naslov").fill(validValues.email);
   await page.getByLabel("Geslo").fill(validValues.password);
+  await page
+    .getByLabel("Potrjujem, da imam vsaj 18 let in sem študent(ka) univerze.")
+    .check();
 }
 
 async function mockSignUp(
@@ -51,7 +54,7 @@ test.describe("/register", () => {
     );
 
     await page.getByRole("button", { name: "Ustvari račun" }).click();
-    await expect(pageAlerts(page)).toHaveCount(3);
+    await expect(pageAlerts(page)).toHaveCount(4);
     await expect(page.getByLabel("Ime in priimek")).toHaveAttribute(
       "aria-describedby",
       "display-name-error",
@@ -116,7 +119,7 @@ test.describe("/register", () => {
     expect(payload).toMatchObject({
       email: "ana@example.com",
       password: "password",
-      data: { display_name: "Ana Novak" },
+      data: { display_name: "Ana Novak", adult_student_confirmed: true },
     });
     expect(redirectTo).toMatch(/\/auth\/confirm/);
   });
