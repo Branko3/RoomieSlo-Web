@@ -268,7 +268,7 @@ describe("data controller and the ratings notice", () => {
     expect(page).not.toMatch(/thesis|diplom|magistr/i);
   });
 
-  it("explains roommate ratings: basis, what is shown, threshold, 36 months, hiding, unfair ratings", () => {
+  it("explains roommate ratings: basis, opt-in, what is shown, threshold, 36 months, deletion, unfair ratings", () => {
     for (const phrase of [
       "Ocene sostanovalcev",
       "zakonitega interesa (6(1)(f) člen",
@@ -276,7 +276,9 @@ describe("data controller and the ratings notice", () => {
       "šele, ko imaš vsaj 3 ocene",
       "zadnjih 36 mesecev",
       "Prikaži ocene sostanovalcev",
-      "Ocene so skrite",
+      "Prikaz ocen je privzeto izklopljen",
+      "Vsaka oseba se šteje enkrat",
+      "piši in jih izbrišemo",
       "nepoštena",
       "kdo je dal katero oceno",
     ])

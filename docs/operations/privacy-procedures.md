@@ -101,8 +101,11 @@ privacy contact. This also covers the right to rectification.
 4. Reply without saying who gave any rating, and without quoting a single rating's answers.
    Never tell the rated person who rated them.
 
-Users can also hide their ratings themselves: Profil → "Prikaži ocene sostanovalcev" (the
-GDPR objection; others then see "Ocene so skrite").
+Showing ratings is opt-in: users switch it on and off themselves under Profil → "Prikaži ocene
+sostanovalcev" (off by default). A **formal objection** (GDPR art. 21) by e-mail goes further:
+after verifying the sender, delete that person's received ratings
+(`delete from public.roommate_ratings where rated_id = '<user id>';`) and confirm by reply. Ratings
+a roommate gives later are collected again; if the person objects again, repeat this.
 
 ## 4. Data minimisation in operations
 

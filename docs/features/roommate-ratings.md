@@ -60,11 +60,11 @@
    - **Counted ratings:** each rater counts once, with their latest revealed rating from the last 36 months. A pair that declares, confirms and ends several cohabitations still adds one rating, so one friend can't make up the threshold.
    - With at least 3 counted ratings, the profile not deleted and `show_roommate_ratings` on: "**3 od 4** sostanovalcev bi spet živeli s to osebo", plus up to 3 of the most common strengths with counts ("Čist(a) in urejen(a) · 3"), ordered by frequency, ties in tag order.
    - Below 3 ratings: "Še ni dovolj ocen", with no count.
-   - Turned off: "Ocene so skrite".
+   - **Not opted in (the default): nothing at all** is shown for that person, so an unset preference never reads as hiding something.
 8. **My summary (`/profile`, "Ocene sostanovalcev").**
    - From 3 ratings: the same line and strengths, plus "Področja za izboljšanje" with counts.
    - Below 3: only the count ("2 oceni, prikazane bodo od 3 dalje"), or "Še nimaš ocen.".
-   - The toggle "Prikaži ocene sostanovalcev" (on by default). It is an `aria-pressed` button that keeps focus while saving.
+   - The toggle "Prikaži ocene sostanovalcev" (**off by default**; opt-in, owner decision 2026-10-16). While it's off, ratings are still collected and only the person sees them. It is an `aria-pressed` button that keeps focus while saving.
    - Nobody ever sees who gave which rating.
 9. **Plurals.** Slovenian forms follow the last two digits, like `listingCountLabel`: "1 ocena", "2 oceni", "3–4 ocene", "5+ ocen" (101 is "ocena").
 10. **Deletion.**
@@ -83,12 +83,21 @@
     - The delete-account page lists the new rows.
 13. **No in-app dispute process** (plan §4.6). Unfair ratings are handled manually by the owner (`docs/operations/privacy-procedures.md`). No report kinds or admin screens were added.
 
+## 18+ (owner decision 2026-10-16)
+
+RoomieSlo is for university students aged 18 or older:
+
+- registration requires "Potrjujem, da imam vsaj 18 let in sem študent(ka) univerze." The confirmation is stored as `adult_student_confirmed` in the Auth user metadata, so the account's creation time dates it;
+- the profile form accepts ages from 18 (`PROFILE_LIMITS.ageMin`);
+- migration `20261016000200_adult_profiles.sql` adds `check (age is null or age >= 18)` as `not valid`, so any client (Android included) is refused a younger age without the migration failing on existing rows. The migration lists the query to find older under-18 rows and the command to validate the constraint once none are left.
+
 ## Acceptance criteria
 
 - [x] Only confirmed cohabitants rate, once per cohabitation; the window and the 6-month update rule are enforced on the server and mirrored in `lib/ratings/rules.ts`.
 - [x] Fixed tag sets, at most 3 each, stored as stable keys; Slovenian labels in lib.
 - [x] Double-blind reveal: on the second rating, after 14 days, or at window close.
-- [x] Summaries only from 3 revealed ratings in the last 36 months, with opt-out and deleted profiles handled; never who rated.
+- [x] Summaries only from 3 counted ratings in the last 36 months, opt-in (off by default), deleted profiles handled; never who rated.
+- [x] Profiles are 18+: a required confirmation at registration, a minimum profile age of 18, and a database constraint.
 - [x] The summary on recommendation cards (Edge Function plus validation), not on listings.
 - [x] `/profile` summary, improvements, the count below the threshold, and the toggle.
 - [x] `/privacy` controller and ratings section; the dialog sentence; the export; the delete-account copy.
@@ -170,7 +179,7 @@
 - Manual check with four accounts:
   - three people rate the same person: below 3, the card shows "Še ni dovolj ocen"; from 3, the ratio and strengths;
   - the rated person's `/profile` shows the improvements;
-  - turn the toggle off and check "Ocene so skrite";
+  - check that cards show nothing until the rated person turns the toggle on;
   - edit a hidden rating;
   - delete a rater's account, and check that the aggregate stays;
   - keyboard only, and a screen reader on the form.

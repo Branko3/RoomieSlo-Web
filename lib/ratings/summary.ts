@@ -122,7 +122,6 @@ export function ratingCountLabel(n: number): string {
 
 export const ratingCopy = {
   insufficient: "Še ni dovolj ocen",
-  hidden: "Ocene so skrite",
   none: "Še nimaš ocen.",
   improvementsTitle: "Področja za izboljšanje",
   anonymity:
@@ -137,11 +136,14 @@ export function shownHeadline(summary: {
   return `${summary.wouldLiveAgain} od ${summary.total} sostanovalcev bi spet živeli s to osebo`;
 }
 
-/** The one line other people see. */
-export function summaryHeadline(summary: RatingSummary): string {
+/**
+ * The one line other people see; null when the person hasn't turned ratings
+ * on (the default), so nothing about ratings is shown for them.
+ */
+export function summaryHeadline(summary: RatingSummary): string | null {
   switch (summary.state) {
     case "hidden":
-      return ratingCopy.hidden;
+      return null;
     case "insufficient":
       return ratingCopy.insufficient;
     case "shown":

@@ -27,7 +27,8 @@ export const PROFILE_LIMITS = {
   displayNameMax: 60,
   facultyMax: 120,
   bioMax: 500,
-  ageMin: 16,
+  // University students only, 18 or older (registration confirms it).
+  ageMin: 18,
   ageMax: 99,
 } as const;
 

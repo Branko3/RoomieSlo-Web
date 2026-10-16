@@ -446,7 +446,8 @@ describe("summaries", () => {
     expect(summaryHeadline({ state: "insufficient" })).toBe(
       "Še ni dovolj ocen",
     );
-    expect(summaryHeadline({ state: "hidden" })).toBe("Ocene so skrite");
+    // Not opted in: nothing is shown at all.
+    expect(summaryHeadline({ state: "hidden" })).toBeNull();
     expect(belowThresholdLabel(2)).toBe("2 oceni, prikazane bodo od 3 dalje");
     expect(belowThresholdLabel(1)).toBe("1 ocena, prikazane bodo od 3 dalje");
     expect(belowThresholdLabel(0)).toBe("Še nimaš ocen.");

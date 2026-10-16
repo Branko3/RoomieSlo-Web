@@ -52,7 +52,6 @@ const mine = () => effectiveFunction("my_rating_summary");
 describe("migration order", () => {
   it("runs after the cohabitation migration it builds on", () => {
     expect(files.indexOf(NAME)).toBeGreaterThan(files.indexOf(PREVIOUS));
-    expect(files.at(-1)).toBe(NAME);
   });
 });
 
@@ -90,10 +89,14 @@ describe("roommate_ratings table", () => {
     );
   });
 
-  it("adds the opt-out, on by default, editable through the owner's profile policy", () => {
+  it("adds the opt-in setting, off by default, editable through the owner's profile policy", () => {
     expect(sql).toContain(
-      "alter table public.profiles add column if not exists show_roommate_ratings boolean not null default true",
+      "alter table public.profiles add column if not exists show_roommate_ratings boolean not null default false",
     );
+    expect(mine()).toContain(
+      "select coalesce(show_roommate_ratings, false) into visible",
+    );
+    expect(mine()).not.toContain("coalesce(visible, true)");
     // The profile guards still pin only their own columns.
     expect(effectiveFunction("protect_academic_verification")).not.toContain(
       "show_roommate_ratings",

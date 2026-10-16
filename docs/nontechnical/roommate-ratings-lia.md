@@ -48,23 +48,26 @@ The processing is therefore necessary and proportionate to the purpose.
 - **Expectations.** People who live together expect to be talked about in some way, but they don't
   expect a public verdict from a single person, or retaliation.
 - **Accuracy.** People change over time, and a single rating can be unfair.
-- **Vulnerable people.** Most users are students, and some are young adults.
+- **Vulnerable people.** All users are university students aged 18 or older: registration requires
+  confirming it, and the database refuses an age under 18 (owner decision 2026-10-16). Children,
+  whom art. 6(1)(f) singles out for extra weight, are therefore not rated. Many users are young
+  adults, which the safeguards below take into account.
 
 ### Safeguards (plan §2 and §4), which are the balancing measures
 
-| Risk                                                                              | Safeguard                                                                                                                                                                |
-| --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Fake or revenge ratings from people who only chatted                              | Only participants of a cohabitation that **both** confirmed ("Živiva skupaj") can rate, and only once per cohabitation                                                   |
-| Fear of retaliation pushes ratings to the top, or ratings are used as retaliation | **Double-blind**: a rating stays hidden until both have rated, 14 days pass, or the window closes                                                                        |
-| The rated person could tell who said what                                         | **Nothing is shown below 3** ratings. Only aggregates are shown, never who gave which rating, anywhere (not even in the data export, art. 15(4))                         |
-| A public label from a few opinions                                                | Only "would live again" and **strengths** are public. **Improvement tags are private** to the rated person. Tags describe behaviour, not character                       |
-| Defamation, identifying details, moderation burden                                | **No free text**                                                                                                                                                         |
-| Outdated or inflated signals                                                      | No stars or averages; a ratio ("3 od 4") is honest about how little data there is. Only ratings from the **last 36 months** count, and older ones are deleted            |
-| Objection (art. 21)                                                               | "Prikaži ocene sostanovalcev" lets the person hide their ratings at any time. Others then see "Ocene so skrite", so the objection is respected without misleading others |
-| Unfair ratings                                                                    | They can be reported to the controller's e-mail. The owner checks them and deletes unfair ones (also covering rectification, art. 16). The rater is never revealed       |
-| Pressure to rate well                                                             | It goes through the existing report and block flow                                                                                                                       |
-| Ratings shown out of context                                                      | Summaries appear only on profiles and recommendation cards, never on listings                                                                                            |
-| Access by staff                                                                   | In-app admins have no access. Only the database owner can see ratings, through Supabase                                                                                  |
+| Risk                                                                              | Safeguard                                                                                                                                                                                                                                       |
+| --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Fake or revenge ratings from people who only chatted                              | Only participants of a cohabitation that **both** confirmed ("Živiva skupaj") can rate, and only once per cohabitation                                                                                                                          |
+| Fear of retaliation pushes ratings to the top, or ratings are used as retaliation | **Double-blind**: a rating stays hidden until both have rated, 14 days pass, or the window closes                                                                                                                                               |
+| The rated person could tell who said what                                         | **Nothing is shown below 3** ratings. Only aggregates are shown, never who gave which rating, anywhere (not even in the data export, art. 15(4))                                                                                                |
+| A public label from a few opinions                                                | Only "would live again" and **strengths** are public. **Improvement tags are private** to the rated person. Tags describe behaviour, not character                                                                                              |
+| Defamation, identifying details, moderation burden                                | **No free text**                                                                                                                                                                                                                                |
+| Outdated or inflated signals                                                      | No stars or averages; a ratio ("3 od 4") is honest about how little data there is. Only ratings from the **last 36 months** count, and older ones are deleted                                                                                   |
+| Objection (art. 21)                                                               | Showing ratings is **opt-in**: off by default, so nothing is shown to others until the person turns on "Prikaži ocene sostanovalcev", and they can turn it off at any time. A formal objection by e-mail deletes that person's received ratings |
+| Unfair ratings                                                                    | They can be reported to the controller's e-mail. The owner checks them and deletes unfair ones (also covering rectification, art. 16). The rater is never revealed                                                                              |
+| Pressure to rate well                                                             | It goes through the existing report and block flow                                                                                                                                                                                              |
+| Ratings shown out of context                                                      | Summaries appear only on profiles and recommendation cards, never on listings                                                                                                                                                                   |
+| Access by staff                                                                   | In-app admins have no access. Only the database owner can see ratings, through Supabase                                                                                                                                                         |
 
 ### Transparency
 
@@ -106,7 +109,11 @@ With these safeguards, the impact on the rated person is limited and foreseeable
 - it is aggregated;
 - it needs at least 3 independent cohabitants;
 - it expires;
-- the rated person can hide it.
+- nothing is shown to others unless the rated person opts in, and they can withdraw at any time.
+
+While a person hasn't opted in, their ratings are stored but shown only to them. That storage still
+rests on legitimate interest: it lets ratings appear as soon as the person opts in, without losing
+earlier cohabitations. Its impact is low, because nobody else sees anything.
 
 The other users' interest in a real, verified trust signal is significant. On this basis, the
 balance favours the processing.

@@ -272,7 +272,7 @@ describe("validateProfileDraft", () => {
     ["displayName", draft({ displayName: "x".repeat(61) })],
     ["faculty", draft({ faculty: "x".repeat(121) })],
     ["bio", draft({ bio: "x".repeat(501) })],
-    ["age", draft({ age: "15" })],
+    ["age", draft({ age: "17" })],
     ["age", draft({ age: "100" })],
     ["age", draft({ age: "22.5" })],
     ["age", draft({ age: "dvaindvajset" })],
@@ -287,7 +287,7 @@ describe("validateProfileDraft", () => {
       validateProfileDraft(
         draft({
           displayName: "Al",
-          age: "16",
+          age: "18",
           faculty: "x".repeat(120),
           bio: "x".repeat(500),
         }),

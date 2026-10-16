@@ -105,8 +105,8 @@ export function MyRatingsSection() {
             <b id="ratings-visible-label">Prikaži ocene sostanovalcev</b>
             <p>
               {summary.visible
-                ? "Drugi vidijo povzetek, ko imaš vsaj 3 ocene."
-                : "Drugi vidijo »Ocene so skrite«. Ocene se še vedno zbirajo in jih lahko kadar koli znova prikažeš."}
+                ? "Vklopljeno: drugi vidijo povzetek, ko imaš vsaj 3 ocene. Lahko ga kadar koli spet izklopiš."
+                : "Izklopljeno: ocene se zbirajo zasebno in jih vidiš samo ti. Drugim jih pokažemo šele, ko to vklopiš."}
             </p>
             {visibility.isError && (
               <p className="error-message" role="alert">
@@ -141,8 +141,8 @@ export function MyRatingsSection() {
     >
       <h2 id="my-ratings-title">Ocene sostanovalcev</h2>
       <p className="muted">
-        Ocenijo te lahko samo osebe, s katerimi imaš potrjeno sobivanje.
-        Povzetek drugim pokažemo šele od 3 ocen naprej.
+        Ocenijo te lahko samo osebe, s katerimi imaš potrjeno sobivanje. Drugim
+        jih pokažemo samo, če to vklopiš, in šele od 3 ocen naprej.
       </p>
       {content}
     </section>

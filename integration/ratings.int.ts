@@ -125,7 +125,24 @@ describe.skipIf(skip)("roommate ratings RLS", () => {
     expect(batch.error).not.toBeNull();
   });
 
-  it("returns 'insufficient' for a summary below 3 ratings", async () => {
+  it("hides a summary until the person opts in, then returns 'insufficient' below 3", async () => {
+    const off = await a.client
+      .from("profiles")
+      .update({ show_roommate_ratings: false })
+      .eq("id", a.userId)
+      .select("show_roommate_ratings");
+    expect(off.error).toBeNull();
+    const hidden = await b.client.rpc("rating_summary", {
+      p_profile_id: a.userId,
+    });
+    expect(hidden.data).toEqual({ state: "hidden" });
+
+    const on = await a.client
+      .from("profiles")
+      .update({ show_roommate_ratings: true })
+      .eq("id", a.userId)
+      .select("show_roommate_ratings");
+    expect(on.data).toEqual([{ show_roommate_ratings: true }]);
     const publicSummary = await b.client.rpc("rating_summary", {
       p_profile_id: a.userId,
     });

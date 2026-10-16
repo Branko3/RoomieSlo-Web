@@ -2151,3 +2151,15 @@ button {
 .rating-visibility {
   margin-top: 12px;
 }
+/* Registration: 18+ student confirmation */
+.auth-card .checkbox-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-weight: 400;
+  margin-top: 14px;
+}
+.auth-card .checkbox-row input {
+  width: auto;
+  margin-top: 3px;
+}

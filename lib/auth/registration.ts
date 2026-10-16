@@ -2,7 +2,12 @@ export type RegistrationValues = {
   displayName: string;
   email: string;
   password: string;
+  /** RoomieSlo is for university students, who must be 18 or older. */
+  adultStudent: boolean;
 };
+
+export const ADULT_STUDENT_LABEL =
+  "Potrjujem, da imam vsaj 18 let in sem študent(ka) univerze.";
 
 export type RegistrationErrors = Partial<
   Record<keyof RegistrationValues, string>
@@ -15,6 +20,7 @@ export function normalizeRegistrationValues(
     displayName: values.displayName.trim(),
     email: values.email.trim().toLowerCase(),
     password: values.password,
+    adultStudent: values.adultStudent === true,
   };
 }
 
@@ -35,6 +41,10 @@ export function validateRegistration(
   if (normalized.password.length < 8) {
     errors.password = "Geslo mora vsebovati najmanj 8 znakov.";
   }
+  if (!normalized.adultStudent) {
+    errors.adultStudent =
+      "RoomieSlo je namenjen študentom, starim vsaj 18 let. Potrdi to za nadaljevanje.";
+  }
 
   return errors;
 }
@@ -48,7 +58,12 @@ export function buildSignUpInput(
     email: normalized.email,
     password: normalized.password,
     options: {
-      data: { display_name: normalized.displayName },
+      // The confirmation is kept with the account (Auth user metadata), with
+      // the account's creation time as its date.
+      data: {
+        display_name: normalized.displayName,
+        adult_student_confirmed: normalized.adultStudent,
+      },
       ...(emailRedirectTo ? { emailRedirectTo } : {}),
     },
   };

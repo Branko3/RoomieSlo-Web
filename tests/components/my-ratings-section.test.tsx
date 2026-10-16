@@ -108,7 +108,7 @@ describe("MyRatingsSection", () => {
     );
     expect(fake.updates).toEqual([{ show_roommate_ratings: false }]);
     expect(
-      screen.getByText(/Drugi vidijo »Ocene so skrite«/),
+      screen.getByText(/Izklopljeno: ocene se zbirajo zasebno/),
     ).toBeInTheDocument();
     expect(toggle()).toHaveFocus();
 

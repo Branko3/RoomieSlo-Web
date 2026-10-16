@@ -111,12 +111,15 @@ export default function PrivacyPage() {
             skupaj«), in sicer enkrat na sobivanje.
           </p>
           <p>
-            Drugi vidijo le povzetek, na primer »3 od 4 sostanovalcev bi spet
-            živeli s to osebo«, in do 3 najpogostejše močne točke. Povzetek
-            prikažemo šele, ko imaš vsaj 3 ocene; prej drugi vidijo »Še ni
-            dovolj ocen«. Področja za izboljšanje vidiš samo ti. Nihče, tudi
-            ocenjena oseba ne, ne vidi, kdo je dal katero oceno. Ocene niso
-            prikazane na oglasih.
+            Prikaz ocen je privzeto izklopljen: dokler na profilu ne vklopiš
+            »Prikaži ocene sostanovalcev«, se ocene zbirajo zasebno in jih vidiš
+            samo ti. Ko jih vklopiš, drugi vidijo le povzetek, na primer »3 od 4
+            sostanovalcev bi spet živeli s to osebo«, in do 3 najpogostejše
+            močne točke. Povzetek prikažemo šele, ko imaš vsaj 3 ocene; prej
+            drugi vidijo »Še ni dovolj ocen«. Vsaka oseba se šteje enkrat.
+            Področja za izboljšanje vidiš samo ti. Nihče, tudi ocenjena oseba
+            ne, ne vidi, kdo je dal katero oceno. Ocene niso prikazane na
+            oglasih.
           </p>
           <p>
             Ocena je skrita, dokler ne oceni tudi druga oseba ali ne mine 14
@@ -126,9 +129,9 @@ export default function PrivacyPage() {
             osebe brez tvojega imena.
           </p>
           <p>
-            Ocene lahko skriješ na profilu z nastavitvijo »Prikaži ocene
-            sostanovalcev«; drugi takrat vidijo »Ocene so skrite«. Če meniš, da
-            je ocena nepoštena ali da sobivanja ni bilo,{" "}
+            Prikaz lahko kadar koli spet izklopiš. Če želiš, da tvojih ocen
+            sploh ne hranimo, nam piši in jih izbrišemo. Če meniš, da je ocena
+            nepoštena ali da sobivanja ni bilo,{" "}
             {contact ? (
               <>
                 piši na <a href={`mailto:${contact}`}>{contact}</a>.

@@ -65,12 +65,14 @@ drop policy if exists roommate_ratings_select_own on public.roommate_ratings;
 create policy roommate_ratings_select_own on public.roommate_ratings for select to authenticated
     using (auth.uid() = rater_id);
 
--- Opt-out (GDPR right to object): on by default; users change their own row
+-- Showing ratings is opt-in (owner decision 2026-10-16): off by default.
+-- Ratings are still collected while it is off, visible only to the rated
+-- person, so they are there once the person turns it on. Users change it
 -- through the existing profiles_update policy. The profile guards
 -- (protect_academic_verification, protect_profile_tombstone) only pin their
 -- own columns, so this column stays editable by its owner.
 alter table public.profiles
-    add column if not exists show_roommate_ratings boolean not null default true;
+    add column if not exists show_roommate_ratings boolean not null default false;
 
 -- The rating window of a cohabitation: it opens 2 months after the move-in
 -- month, or when the cohabitation ends if that's sooner, and closes 60 days
@@ -252,7 +254,7 @@ revoke all on function public.counted_ratings(uuid) from public, anon, authentic
 
 -- The public summary of a profile. Aggregates only; it never uses auth.uid(),
 -- so the recommendations Edge Function (service role) can call it.
---   { state: 'hidden' }        the person turned ratings off
+--   { state: 'hidden' }        the person hasn't turned ratings on (the default)
 --   { state: 'insufficient' }  fewer than 3 raters counted, or a deleted profile
 --   { state: 'shown', total, would_live_again, strengths: [{tag, count}] (top 3) }
 create or replace function public.rating_summary(p_profile_id uuid)
@@ -331,7 +333,7 @@ begin
     if me is null then
         raise exception 'not signed in' using errcode = '42501';
     end if;
-    select coalesce(show_roommate_ratings, true) into visible from public.profiles where id = me;
+    select coalesce(show_roommate_ratings, false) into visible from public.profiles where id = me;
 
     select count(*)::integer,
            count(*) filter (where c.would_live_again)::integer,
@@ -341,7 +343,7 @@ begin
     from public.counted_ratings(me) c;
     if total < 3 then
         return jsonb_build_object('state', 'insufficient', 'count', total,
-                                  'visible', coalesce(visible, true));
+                                  'visible', coalesce(visible, false));
     end if;
 
     return jsonb_build_object(
@@ -350,7 +352,7 @@ begin
         'would_live_again', yes,
         'strengths', public.rating_tag_counts(strength_tags, public.rating_strength_tags(), 3),
         'improvements', public.rating_tag_counts(improvement_tags, public.rating_improvement_tags(), null),
-        'visible', coalesce(visible, true)
+        'visible', coalesce(visible, false)
     );
 end;
 $$;
