@@ -4,7 +4,7 @@ import Link from "next/link";
 import { MapPinIcon } from "./icons";
 import { ListingPhoto } from "./listing-photo";
 import { ListingStatusToggle } from "./listing-status-control";
-import { formatMoveIn, formatPrice } from "../lib/listings/format";
+import { formatPrice, formatTimestampDate } from "../lib/listings/format";
 import { listingStatusLabel } from "../lib/listings/listing-status";
 import type { Listing } from "../lib/supabase/mappers";
 
@@ -57,7 +57,7 @@ export function OwnListingCard({
         </div>
         <div>
           <dt>Objavljeno</dt>
-          <dd>{formatMoveIn(listing.createdAt)}</dd>
+          <dd>{formatTimestampDate(listing.createdAt)}</dd>
         </div>
       </dl>
       <div className="own-listing-actions">
