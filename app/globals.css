@@ -1407,18 +1407,6 @@ button.text-link {
   height: 78px;
   font-size: var(--text-lg);
 }
-.verified {
-  display: inline-grid;
-  place-items: center;
-  background: var(--color-action);
-  color: var(--color-on-action);
-  border-radius: 50%;
-  font-size: 10px;
-  width: 16px;
-  height: 16px;
-  margin-left: 5px;
-  vertical-align: middle;
-}
 .verified-badge {
   display: inline-flex;
   align-items: center;
