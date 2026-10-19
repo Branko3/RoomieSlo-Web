@@ -50,7 +50,7 @@ export default function MyListingsPage() {
         <DataState error={error} onRetry={() => void refetch()}>
           <span />
         </DataState>
-      ) : listings.length === 0 ? (
+      ) : !listings || listings.length === 0 ? (
         <EmptyState
           title="Še nimaš oglasov"
           description="Ko objaviš oglas, ga najdeš tukaj, tudi ko je že zapolnjen."

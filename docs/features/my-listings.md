@@ -38,7 +38,8 @@ The user's own listings appeared in the browsing feeds next to everyone else's, 
 - `lib/listings/pagination.ts`, `lib/supabase/queries.ts`: `excludeOwnerId` adds `.neq("owner_id", …)`; the feeds pass the user id from the local session (`readSessionUserId`, no network). Sign-out clears the query cache, so the feed key needs no user id.
 - `lib/listings/listing-cache.ts`, `lib/listings/offline-listings.ts`: `excludeOwnerId` on cached reads; `excludeOwnListings` on the fallback loader for browsing feeds.
 - `lib/listings/my-listings.ts`: `fetchMyListings(client, ownerId)`, `groupMyListings`, Slovenian count labels and the header summary.
-- `lib/listings/use-my-listings.ts`: TanStack Query hook (`["listings", "mine"]`) with `setFilled` for in-place status updates; refetches on every mount.
+- `lib/listings/use-my-listings.ts`: a plain `useState`/`useEffect` hook like `useListings`, with `setFilled` for in-place status updates; it loads on every mount. A TanStack `useQuery` here regrouped Query's shared chunks and pushed `/chats/[matchId]` over the first-load budget.
+- **Bundle budget:** adding the `/listings/mine` entry made Next's chunk splitting duplicate three TanStack Query modules into two chunks of `/chats/[matchId]` (197.7 → 200.5 kB, budget 200). The chat page now loads `ChatCohabitation` and `ChatRating` with `next/dynamic`: both are secondary, appear only for accepted matches and fetch their own data. The route ends at 193.0 kB, below `main`.
 - `components/listing-status-control.tsx`: split into `ListingStatusToggle` (no owner check) and `ListingStatusControl` (owner check + toggle), so the list does not make one `getUser()` call per card.
 - `components/own-listing-card.tsx`: the owner's flyer variant (a separate component, not an `isOwner` flag on `ListingCard`).
 - `components/my-listings-links.tsx`: dashboard shortcut and profile row; `components/owner-listing-actions.tsx`: "Vsi moji oglasi" link.
