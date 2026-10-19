@@ -14,6 +14,7 @@ type IconProps = Omit<SVGProps<SVGSVGElement>, "children"> & {
 function Svg({
   size = 20,
   label,
+  className,
   children,
   ...rest
 }: IconProps & { children: ReactNode }) {
@@ -29,7 +30,7 @@ function Svg({
       strokeLinecap="round"
       strokeLinejoin="round"
       focusable="false"
-      className="icon"
+      className={className ? `icon ${className}` : "icon"}
       {...(label
         ? { role: "img", "aria-label": label }
         : { "aria-hidden": true })}

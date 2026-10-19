@@ -8,6 +8,8 @@
   - the `@axe-core/playwright` dev dependency.
 - Android behavior preserved: not applicable. These are web color and accessibility rules; the brand greens are unchanged.
 
+> Historical record of the 2026-10-12 audit. The token names below (`--muted`, `--focus-ring`, …) were replaced by the semantic layer in UI phase 1 (`--color-text-muted`, `--color-focus`, …); see `design-system/roomieslo/MASTER.md` for the current system. The contrast test now checks every pairing in light and dark mode.
+
 ## Audit findings and fixes
 
 WCAG 2.2 AA: 4.5:1 for normal text, and 3:1 for large text, UI components and focus indicators.
