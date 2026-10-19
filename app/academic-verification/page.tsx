@@ -11,7 +11,6 @@ export default function AcademicVerificationPage() {
     <div className="content-wrap narrow-content">
       <header className="topbar">
         <div>
-          <p className="eyebrow">PREVERJANJE</p>
           <h1>Preverjanje akademskega statusa</h1>
         </div>
       </header>

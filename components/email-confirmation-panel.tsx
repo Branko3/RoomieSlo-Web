@@ -57,7 +57,6 @@ export function EmailConfirmationPanel() {
 
   return (
     <div className="auth-card">
-      <p className="eyebrow">POTRDITEV E-NASLOVA</p>
       <h1>{error ? "Potrditev ni uspela" : "Preveri svojo e-pošto"}</h1>
       {error ? (
         <p className="error-message" role="alert">

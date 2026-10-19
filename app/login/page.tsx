@@ -62,7 +62,6 @@ export default function LoginPage() {
         </b>
       </div>
       <form className="auth-card" onSubmit={submit} noValidate>
-        <p className="eyebrow">DOBRODOŠEL NAZAJ</p>
         <h1>Prijavi se v svoj račun</h1>
         {params.get("deleted") === "1" && (
           <p className="success-message" role="status">

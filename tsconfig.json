@@ -16,5 +16,12 @@
     "plugins": [{ "name": "next" }]
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", "orchestration", "supabase/functions"]
+  "exclude": [
+    "node_modules",
+    "orchestration",
+    "supabase/functions",
+    "skills",
+    "agent-skills",
+    "ui-ux-pro-max-skill"
+  ]
 }

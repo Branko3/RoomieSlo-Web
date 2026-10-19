@@ -91,7 +91,6 @@ export default function SearchPage() {
     <div className="content-wrap">
       <header className="topbar">
         <div>
-          <p className="eyebrow">RAZIŠČI</p>
           <h1>Iskanje sobe</h1>
         </div>
       </header>

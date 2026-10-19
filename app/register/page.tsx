@@ -98,7 +98,6 @@ export default function RegisterPage() {
         </b>
       </div>
       <div className="auth-card">
-        <p className="eyebrow">ZAČNI NA NOVO</p>
         <h1>Ustvari svoj račun</h1>
         <p className="muted">Poveži se s ljudmi, ki iščejo podoben dom.</p>
         <form onSubmit={handleSubmit} noValidate>

@@ -43,7 +43,6 @@ export default function FavoritesPage() {
     <div className="content-wrap">
       <header className="topbar">
         <div>
-          <p className="eyebrow">TVOJA ZBIRKA</p>
           <h1>Priljubljeni oglasi</h1>
         </div>
       </header>
