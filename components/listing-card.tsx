@@ -19,7 +19,7 @@ export function ListingCard({ listing }: { listing: Listing }) {
           listing={listing}
           sizes="(max-width: 650px) 100vw, (max-width: 1100px) 50vw, 33vw"
         />
-        <FavoriteIconButton listingId={listing.id} />
+        <FavoriteIconButton listingId={listing.id} subject={listing.title} />
       </div>
       <div className="listing-body">
         <div className="chips">

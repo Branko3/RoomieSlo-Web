@@ -1185,9 +1185,17 @@ button.text-link {
 }
 .detail-copy {
   grid-area: summary;
-  position: -webkit-sticky;
-  position: sticky;
-  top: 24px;
+}
+/*
+ * Sticky only where the whole summary fits: an owner's summary (status,
+ * actions, request form, delete) outgrows a 720–768px laptop screen.
+ */
+@media (min-width: 651px) and (min-height: 800px) {
+  .detail-copy {
+    position: -webkit-sticky;
+    position: sticky;
+    top: 24px;
+  }
 }
 .detail-sections {
   grid-area: sections;
@@ -2535,9 +2543,6 @@ button.text-link {
     height: 240px;
     margin: 0 -16px;
     border-radius: 0;
-  }
-  .detail-copy {
-    position: static;
   }
   .detail-copy h1 {
     font-size: var(--text-2xl);
