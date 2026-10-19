@@ -29,7 +29,7 @@ export default function ListingsPage() {
           aria-label="Odpri klepete in obvestila"
           href="/chats"
         >
-          ♧<span className="notification-dot" />
+          ♧
         </Link>
       </header>
       <section className="hero-banner">

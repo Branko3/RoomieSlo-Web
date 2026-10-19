@@ -58,6 +58,17 @@ describe("Supabase contract mappers", () => {
     });
   });
 
+  it("keeps the owner's description and listing facts, with unknowns as null", () => {
+    expect(mapListing(row)).toMatchObject({
+      description: "Opis",
+      deposit: null,
+      sizeSqm: 16,
+      flatmates: 2,
+      billsIncluded: true,
+      furnished: true,
+    });
+  });
+
   it("rejects incomplete rows instead of returning an empty domain object", () => {
     expect(() => mapListing({ ...row, id: "" })).toThrow("listings.id");
   });

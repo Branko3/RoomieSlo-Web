@@ -555,16 +555,6 @@ button.text-link {
   color: var(--color-text);
   background: var(--color-surface-hover);
 }
-.notification-dot {
-  position: absolute;
-  width: 9px;
-  height: 9px;
-  background: var(--color-attention);
-  border: 2px solid var(--color-surface);
-  border-radius: var(--radius-pill);
-  right: 9px;
-  top: 9px;
-}
 .field {
   flex: 1;
 }
@@ -1141,20 +1131,19 @@ button.text-link {
   margin: 24px 0;
   gap: 30px;
 }
-.detail-stats span {
+.detail-stats > div {
   flex: 1;
+  margin: 0;
 }
-.detail-stats b,
-.detail-stats small {
-  display: block;
-}
-.detail-stats b {
-  font-size: var(--text-sm);
-}
-.detail-stats small {
+.detail-stats dt {
   font-size: var(--text-2xs);
   color: var(--color-text-muted);
-  margin-top: 4px;
+  margin-bottom: 4px;
+}
+.detail-stats dd {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 700;
 }
 .request-message {
   width: 100%;

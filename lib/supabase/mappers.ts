@@ -14,6 +14,13 @@ export type Listing = {
   image: string;
   isFilled: boolean;
   createdAt: string;
+  /** Owner-written facts. Optional: listings cached before these were mapped lack them. */
+  description?: string;
+  deposit?: number | null;
+  sizeSqm?: number | null;
+  flatmates?: number;
+  billsIncluded?: boolean;
+  furnished?: boolean;
 };
 
 export type Profile = Pick<
@@ -74,6 +81,12 @@ export function mapListing(row: Row<"listings">): Listing {
     image: row.photo_url || "🏠",
     isFilled: row.is_filled,
     createdAt,
+    description: row.description ?? "",
+    deposit: row.deposit,
+    sizeSqm: row.size_sqm,
+    flatmates: row.flatmates_count,
+    billsIncluded: row.bills_included,
+    furnished: row.furnished,
   };
 }
 

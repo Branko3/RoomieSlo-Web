@@ -62,7 +62,6 @@ export default function ListingDetail({ params }: { params: { id: string } }) {
         <div className="detail-copy">
           <div className="chips">
             <span className="chip">{listing.roomType}</span>
-            <span className="chip chip-green">Preverjen oglas</span>
             <span
               className={`chip ${isFilled ? "chip-filled" : "chip-available"}`}
               aria-live="polite"
@@ -86,24 +85,26 @@ export default function ListingDetail({ params }: { params: { id: string } }) {
             ownerId={listing.ownerId}
           />
           <p className="detail-description">
-            Svetla in prijetna nastanitev za študenta. Stanovanje je urejeno,
-            skupni prostori pa so dobro vzdrževani. Piši lastniku za več
-            informacij in ogled.
+            {listing.description?.trim() || "Lastnik še ni dodal opisa."}
           </p>
-          <div className="detail-stats">
-            <span>
-              <b>{listing.details.split(" · ")[0]}</b>
-              <small>velikost</small>
-            </span>
-            <span>
-              <b>{listing.available}</b>
-              <small>vselitev</small>
-            </span>
-            <span>
-              <b>320 €</b>
-              <small>varščina</small>
-            </span>
-          </div>
+          <dl className="detail-stats">
+            {listing.sizeSqm != null && (
+              <div>
+                <dt>velikost</dt>
+                <dd>{listing.sizeSqm} m²</dd>
+              </div>
+            )}
+            <div>
+              <dt>vselitev</dt>
+              <dd>{listing.available}</dd>
+            </div>
+            {listing.deposit != null && (
+              <div>
+                <dt>varščina</dt>
+                <dd>{listing.deposit} €</dd>
+              </div>
+            )}
+          </dl>
           {getSupabaseConfig().configured ? (
             <>
               <MatchRequestButton
