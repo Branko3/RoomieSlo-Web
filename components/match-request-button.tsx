@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
+import { ChevronRightIcon } from "./icons";
 import { getSupabaseConfig } from "../lib/config";
 import {
   existingRequestMessage,
@@ -110,7 +111,10 @@ export function MatchRequestButton({
         {justSent
           ? "Zahteva je poslana."
           : existingRequestMessage(current.request)}{" "}
-        <Link href={link.href}>{link.label}</Link>
+        <Link className="link-chevron" href={link.href}>
+          {link.label}
+          <ChevronRightIcon size={16} />
+        </Link>
       </div>
     );
   }

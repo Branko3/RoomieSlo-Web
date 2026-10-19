@@ -1326,9 +1326,9 @@ button.text-link {
   gap: 13px;
   color: var(--color-attention-text);
 }
-.tip-card > span,
+.tip-card > .icon,
 .match-icon {
-  font-size: 22px;
+  flex: none;
 }
 .tip-card p,
 .match-banner p {
@@ -1761,18 +1761,21 @@ button.text-link {
   list-style: none;
   padding: 0;
   margin: 0;
-  display: grid;
-  gap: 10px;
+  background: var(--panel-bg);
+  border: var(--panel-border);
+  border-radius: var(--panel-radius);
+  overflow: hidden;
 }
 .match-request {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 12px;
-  background: var(--panel-bg);
-  border: var(--panel-border);
-  border-radius: var(--panel-radius);
-  padding: 12px 14px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--color-border);
+}
+.match-request:first-child {
+  border-top: 0;
 }
 .match-request-text {
   flex: 1;
@@ -1799,12 +1802,23 @@ button.text-link {
 .conversation-header {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   margin-bottom: 16px;
 }
 .conversation-header h1 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: var(--text-xl);
   margin: 0;
+  overflow-wrap: anywhere;
+}
+.conversation-peer {
+  flex: 1;
+  min-width: 0;
+}
+.verified-icon {
+  color: var(--color-action);
 }
 .conversation-header p {
   margin: 2px 0 0;
@@ -1927,6 +1941,9 @@ button.text-link {
   align-items: flex-end;
   gap: 8px;
 }
+.composer-send {
+  flex: none;
+}
 .composer-row textarea {
   flex: 1;
   min-height: var(--touch-min);
@@ -1942,7 +1959,47 @@ button.text-link {
   border-color: var(--color-danger);
 }
 .chat-safety {
-  margin: -6px 0 14px;
+  position: relative;
+  flex: none;
+}
+.safety-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 10;
+  width: 280px;
+  max-width: 80vw;
+  padding: 6px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-media);
+  box-shadow: var(--shadow-float);
+}
+.safety-panel[hidden] {
+  display: none;
+}
+.safety-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: var(--touch-min);
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-text);
+  font-weight: 600;
+  text-align: left;
+}
+.safety-item:hover {
+  background: var(--color-surface-hover);
+}
+.safety-item.danger-link {
+  color: var(--color-danger);
+}
+.safety-panel .confirm-panel {
+  margin: 6px;
 }
 .chat-safety-actions {
   display: flex;
@@ -1952,8 +2009,12 @@ button.text-link {
 
 /* --- Cohabitation declarations ("Živiva skupaj") --- */
 .cohabitation {
-  margin: -4px 0 14px;
+  margin: 0 0 10px;
+  padding: 10px 14px;
   font-size: var(--text-sm);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-paper);
 }
 .cohabitation-actions {
   align-items: center;
@@ -1970,12 +2031,13 @@ button.text-link {
 .cohabitation-banner,
 .cohabitation-suggestion,
 .rating-banner {
-  border: 1px solid var(--color-attention-border);
   background: var(--color-attention-surface);
+  border-color: var(--color-attention-border);
   color: var(--color-attention-text);
-  border-radius: var(--radius-media);
-  padding: 12px 14px;
-  margin: 0 0 12px;
+}
+.cohabitation .cohabitation-banner,
+.cohabitation .cohabitation-suggestion {
+  margin: 0;
 }
 .cohabitation-banner p,
 .cohabitation-suggestion p {
@@ -2057,7 +2119,11 @@ button.text-link {
 }
 .rating {
   margin: 0 0 14px;
+  padding: 10px 14px;
   font-size: var(--text-sm);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-paper);
 }
 .rating p {
   margin: 0 0 8px;
@@ -2504,6 +2570,32 @@ button.text-link {
     height: 3px;
     border-radius: 0 0 var(--radius-paper) var(--radius-paper);
     background: var(--color-action);
+  }
+  .is-focused .mobile-nav {
+    display: none;
+  }
+  .is-focused .main-content {
+    padding-bottom: 0;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .is-focused .conversation-body {
+    max-height: none;
+    min-height: 45vh;
+  }
+  .is-focused .message-composer {
+    position: -webkit-sticky;
+    position: sticky;
+    bottom: 0;
+    z-index: 3;
+    margin: 10px -16px 0;
+    padding: 8px 16px;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom));
+    background: var(--color-bg);
+    border-top: 1px solid var(--color-border);
+  }
+  .composer-send {
+    padding-left: 14px;
+    padding-right: 14px;
   }
   .mobile-nav :focus-visible,
   .mobile-nav a:focus-visible {

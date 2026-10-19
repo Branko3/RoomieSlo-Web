@@ -20,9 +20,9 @@ export function chatLinkFor(
   label: string;
 } {
   if (request?.status === "accepted") {
-    return { href: chatHref(request.id), label: "Odpri klepet →" };
+    return { href: chatHref(request.id), label: "Odpri klepet" };
   }
-  return { href: "/chats", label: "Odpri klepete →" };
+  return { href: "/chats", label: "Odpri klepete" };
 }
 
 /**

@@ -35,9 +35,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const profile = profileSummary(useSession());
   if (!requiresSession(getRouteAccess(pathname))) return <>{children}</>;
   const active = activeSection(pathname);
+  // A conversation is a focused task: on phones the composer replaces the bottom bar.
+  const focused = /^\/chats\/[^/]+$/.test(pathname ?? "");
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell${focused ? " is-focused" : ""}`}>
       <a className="skip-link" href="#main-content">
         Preskoči na vsebino
       </a>

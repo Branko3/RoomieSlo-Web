@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { MAX_MESSAGE_LENGTH, validateDraft } from "../lib/chat/send-message";
+import { SendIcon } from "./icons";
 
 /**
  * Message input for an accepted conversation. Enter sends, Shift+Enter adds a
@@ -66,7 +67,12 @@ export function MessageComposer({
             }
           }}
         />
-        <button className="button" type="submit" disabled={!validation.ok}>
+        <button
+          className="button composer-send"
+          type="submit"
+          disabled={!validation.ok}
+        >
+          <SendIcon size={18} />
           Pošlji
         </button>
       </div>
