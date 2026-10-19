@@ -86,12 +86,6 @@ const CASES: Array<[string, string, string, ContrastKind]> = [
   ["toast text", "var(--color-on-toast)", "var(--color-toast)", "text"],
   ["hero text", ruleColor(".hero-banner p"), "var(--color-hero)", "text"],
   [
-    "hero eyebrow",
-    ruleColor(".hero-banner .eyebrow"),
-    "var(--color-hero)",
-    "text",
-  ],
-  [
     "hero focus ring",
     ruleColor(".hero-banner :focus-visible", "outline-color"),
     "var(--color-hero)",
@@ -111,10 +105,10 @@ const CASES: Array<[string, string, string, ContrastKind]> = [
     "ui",
   ],
   [
-    "static heart on background",
-    ruleColor(".heart-static"),
-    "var(--color-bg)",
-    "ui",
+    "tear-strip price on surface",
+    ruleColor(".tear-strip .tear-price"),
+    "var(--color-surface)",
+    "text",
   ],
 ];
 

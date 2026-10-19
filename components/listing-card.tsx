@@ -1,30 +1,25 @@
 "use client";
 
 import Link from "next/link";
+import { FavoriteIconButton } from "./favorite-button";
+import { MapPinIcon } from "./icons";
 import { ListingPhoto } from "./listing-photo";
-import { useFavorites } from "./providers";
+import { formatMoveIn, formatPrice } from "../lib/listings/format";
 import type { Listing } from "../lib/supabase/mappers";
 
+/**
+ * A listing as a notice-board flyer: photo, what and where, then a
+ * perforated tear-off strip with the rent and the move-in date.
+ */
 export function ListingCard({ listing }: { listing: Listing }) {
-  const { isFavorite, toggleFavorite } = useFavorites();
-  const favorite = isFavorite(listing.id);
   return (
-    <article className="listing-card">
+    <article className="listing-card flyer">
       <div className="listing-art">
         <ListingPhoto
           listing={listing}
-          sizes="(max-width: 700px) 100vw, (max-width: 1100px) 50vw, 33vw"
+          sizes="(max-width: 650px) 100vw, (max-width: 1100px) 50vw, 33vw"
         />
-        <button
-          className={`heart-button ${favorite ? "liked" : ""}`}
-          onClick={() => toggleFavorite(listing.id)}
-          aria-pressed={favorite}
-          aria-label={
-            favorite ? "Odstrani iz priljubljenih" : "Dodaj med priljubljene"
-          }
-        >
-          {favorite ? "♥" : "♡"}
-        </button>
+        <FavoriteIconButton listingId={listing.id} subject={listing.title} />
       </div>
       <div className="listing-body">
         <div className="chips">
@@ -33,24 +28,31 @@ export function ListingCard({ listing }: { listing: Listing }) {
             <span className="chip chip-green">Na voljo</span>
           )}
         </div>
-        <Link href={`/listings/${listing.id}`} className="listing-title">
-          {listing.title}
-        </Link>
-        <p className="muted">⌖ {listing.district}</p>
-        <div className="listing-meta">
-          <div>
-            <small>Najemnina</small>
-            <strong>
-              {listing.price} € <em>/ mesec</em>
-            </strong>
-          </div>
-          <div>
-            <small>Na voljo od</small>
-            <strong>{listing.available}</strong>
-          </div>
-        </div>
-        <p className="listing-details">{listing.details}</p>
+        <h3 className="flyer-heading">
+          <Link href={`/listings/${listing.id}`} className="listing-title">
+            {listing.title}
+          </Link>
+        </h3>
+        <p className="flyer-place">
+          <MapPinIcon size={16} />
+          {listing.district}
+        </p>
+        {listing.details && (
+          <p className="listing-details">{listing.details}</p>
+        )}
       </div>
+      <dl className="tear-strip">
+        <div>
+          <dt>Najemnina</dt>
+          <dd className="tear-price">
+            {formatPrice(listing.price)} <span>/ mesec</span>
+          </dd>
+        </div>
+        <div>
+          <dt>Na voljo od</dt>
+          <dd>{formatMoveIn(listing.available)}</dd>
+        </div>
+      </dl>
     </article>
   );
 }

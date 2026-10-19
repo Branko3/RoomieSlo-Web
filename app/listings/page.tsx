@@ -6,9 +6,38 @@ import {
   EmptyState,
   LoadingState,
 } from "../../components/data-states";
+import {
+  BellIcon,
+  ChevronRightIcon,
+  ClipboardIcon,
+  PlusIcon,
+  SearchIcon,
+  UsersIcon,
+} from "../../components/icons";
 import { ListingCard } from "../../components/listing-card";
 import { useOfflineListings } from "../../lib/listings/use-offline-listings";
 import Link from "next/link";
+
+const QUICK_ACTIONS = [
+  {
+    href: "/search",
+    Icon: SearchIcon,
+    title: "Iskanje sobe",
+    hint: "Nastavi svoje filtre",
+  },
+  {
+    href: "/profile",
+    Icon: ClipboardIcon,
+    title: "Izpolni vprašalnik",
+    hint: "Izboljšaj ujemanja",
+  },
+  {
+    href: "/recommendations",
+    Icon: UsersIcon,
+    title: "Priporočeni sostanovalci",
+    hint: "Razvrščeni po združljivosti",
+  },
+] as const;
 
 export default function ListingsPage() {
   const {
@@ -29,19 +58,17 @@ export default function ListingsPage() {
           aria-label="Odpri klepete in obvestila"
           href="/chats"
         >
-          ♧
+          <BellIcon />
         </Link>
       </header>
-      <section className="hero-banner">
+      <section className="hero-banner" aria-labelledby="hero-title">
         <div>
-          <span className="eyebrow">NOVO V ROOMIESLO</span>
-          <h2>Najdi prostor, kjer se boš počutil doma.</h2>
+          <h2 id="hero-title">Najdi prostor, kjer se boš počutil doma.</h2>
           <p>Sobe in sostanovalci za študente. Boljši začetek.</p>
-          <a className="button button-light" href="/search">
-            Razišči oglase <span>→</span>
-          </a>
+          <Link className="button button-light" href="/search">
+            Razišči oglase
+          </Link>
         </div>
-        <div className="hero-shape">⌂</div>
       </section>
       <div className="section-heading">
         <div>
@@ -50,11 +77,13 @@ export default function ListingsPage() {
         </div>
         <div className="section-actions">
           <Link className="button button-outline" href="/listings/new">
-            + Objavi oglas
+            <PlusIcon size={18} />
+            Objavi oglas
           </Link>
-          <a className="text-link" href="/search">
-            Poglej vse →
-          </a>
+          <Link className="text-link link-chevron" href="/search">
+            Poglej vse
+            <ChevronRightIcon size={16} />
+          </Link>
         </div>
       </div>
       <CacheNotice view={view} onRetry={retry} />
@@ -86,32 +115,22 @@ export default function ListingsPage() {
           <p className="muted">Kaj želiš narediti danes?</p>
         </div>
       </div>
-      <div className="action-grid">
-        <a href="/search" className="action-card">
-          <span className="action-icon green">⌕</span>
-          <span>
-            <b>Iskanje sobe</b>
-            <small>Nastavi svoje filtre</small>
-          </span>
-          <strong>→</strong>
-        </a>
-        <a href="/profile" className="action-card">
-          <span className="action-icon amber">✦</span>
-          <span>
-            <b>Izpolni vprašalnik</b>
-            <small>Izboljšaj ujemanja</small>
-          </span>
-          <strong>→</strong>
-        </a>
-        <a href="/recommendations" className="action-card">
-          <span className="action-icon green">♥</span>
-          <span>
-            <b>Priporočeni sostanovalci</b>
-            <small>Razvrščeni po združljivosti</small>
-          </span>
-          <strong>→</strong>
-        </a>
-      </div>
+      <ul className="row-list">
+        {QUICK_ACTIONS.map(({ href, Icon, title, hint }) => (
+          <li key={href}>
+            <Link href={href} className="row-link">
+              <span className="row-icon">
+                <Icon />
+              </span>
+              <span className="row-text">
+                <b>{title}</b>
+                <small>{hint}</small>
+              </span>
+              <ChevronRightIcon className="icon row-chevron" />
+            </Link>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
