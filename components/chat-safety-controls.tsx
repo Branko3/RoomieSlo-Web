@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import {
   blockCopy,
   BlockError,
@@ -13,6 +13,7 @@ import {
   type BlockClient,
 } from "../lib/chat/blocking";
 import { createSupabaseBrowserClient } from "../lib/supabase/browser";
+import { FlagIcon, MoreIcon } from "./icons";
 
 function client() {
   return createSupabaseBrowserClient() as unknown as BlockClient;
@@ -48,49 +49,105 @@ export function useBlockState(peerId: string | null) {
   };
 }
 
-/** "Prijavi" and "Blokiraj"/"Odblokiraj" for the other person in a conversation. */
-export function ChatSafetyControls({
+type BlockState = ReturnType<typeof useBlockState>;
+
+/**
+ * The "⋯" safety menu in the conversation header. Its items are composed by
+ * the page: reporting is always there, blocking only while the other account
+ * exists.
+ */
+export function ChatSafetyMenu({ children }: { children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  const panelId = useId();
+  const toggleRef = useRef<HTMLButtonElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+        toggleRef.current?.focus();
+      }
+    };
+    // A press anywhere outside the menu closes it, like any other popover.
+    // touchstart too: iOS Safari fires no mousedown for taps on plain text,
+    // and pointer events are missing from Safari 12 (browserslist).
+    const onPointer = (event: MouseEvent | TouchEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("mousedown", onPointer);
+    document.addEventListener("touchstart", onPointer, { passive: true });
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("mousedown", onPointer);
+      document.removeEventListener("touchstart", onPointer);
+    };
+  }, [open]);
+
+  return (
+    <div className="chat-safety" ref={rootRef}>
+      <button
+        ref={toggleRef}
+        type="button"
+        className="icon-button"
+        aria-label="Varnost: prijavi ali blokiraj"
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={() => setOpen((value) => !value)}
+      >
+        <MoreIcon />
+      </button>
+      <div id={panelId} className="safety-panel" hidden={!open}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/** "Prijavi": report this person, with the conversation attached. */
+export function ReportPersonLink({
   peerId,
   matchId,
-  state,
-  canBlock = true,
 }: {
   peerId: string;
   matchId: string;
-  state: ReturnType<typeof useBlockState>;
-  /** False for a deleted account: there is nobody left to block, but reporting stays. */
-  canBlock?: boolean;
 }) {
-  const [confirming, setConfirming] = useState(false);
-
   return (
-    <div className="chat-safety">
-      <div className="chat-safety-actions">
-        <Link className="text-link" href={reportHref(peerId, matchId)}>
-          Prijavi
-        </Link>
-        {!canBlock ? null : state.blocked ? (
-          <button
-            type="button"
-            className="text-link"
-            disabled={state.pending}
-            onClick={() => state.setBlocked(false)}
-          >
-            Odblokiraj
-          </button>
-        ) : (
-          <button
-            type="button"
-            className="text-link danger-link"
-            disabled={state.pending || state.loading}
-            onClick={() => setConfirming(true)}
-            aria-expanded={confirming}
-          >
-            Blokiraj
-          </button>
-        )}
-      </div>
-      {canBlock && confirming && !state.blocked && (
+    <Link className="safety-item" href={reportHref(peerId, matchId)}>
+      <FlagIcon size={18} />
+      Prijavi
+    </Link>
+  );
+}
+
+/** "Blokiraj" (with confirmation) or "Odblokiraj". */
+export function BlockPersonControl({ state }: { state: BlockState }) {
+  const [confirming, setConfirming] = useState(false);
+  return (
+    <>
+      {state.blocked ? (
+        <button
+          type="button"
+          className="safety-item"
+          disabled={state.pending}
+          onClick={() => state.setBlocked(false)}
+        >
+          Odblokiraj
+        </button>
+      ) : (
+        <button
+          type="button"
+          className="safety-item danger-link"
+          disabled={state.pending || state.loading}
+          onClick={() => setConfirming(true)}
+          aria-expanded={confirming}
+        >
+          Blokiraj
+        </button>
+      )}
+      {confirming && !state.blocked && (
         <div
           className="confirm-panel"
           role="alertdialog"
@@ -124,6 +181,6 @@ export function ChatSafetyControls({
           {state.error}
         </p>
       )}
-    </div>
+    </>
   );
 }

@@ -21,7 +21,7 @@ describe("chatLinkFor", () => {
   it("opens the conversation directly once the request is accepted", () => {
     expect(chatLinkFor({ id: "m1", status: "accepted" })).toEqual({
       href: "/chats/m1",
-      label: "Odpri klepet →",
+      label: "Odpri klepet",
     });
   });
 
@@ -32,7 +32,7 @@ describe("chatLinkFor", () => {
   ])("leads to the request list for %o", (request) => {
     expect(chatLinkFor(request)).toEqual({
       href: "/chats",
-      label: "Odpri klepete →",
+      label: "Odpri klepete",
     });
   });
 });

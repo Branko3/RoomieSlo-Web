@@ -5,9 +5,16 @@ import Link from "next/link";
 import { ChatCohabitation } from "../../../components/chat-cohabitation";
 import { ChatRating } from "../../../components/chat-rating";
 import {
-  ChatSafetyControls,
+  BlockPersonControl,
+  ChatSafetyMenu,
+  ReportPersonLink,
   useBlockState,
 } from "../../../components/chat-safety-controls";
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  VerifiedIcon,
+} from "../../../components/icons";
 import { MessageComposer } from "../../../components/message-composer";
 import { blockCopy } from "../../../lib/chat/blocking";
 import { MessageHistory } from "../../../components/message-history";
@@ -67,7 +74,8 @@ export default function ConversationPage({
 
   const back = (
     <Link className="back-link" href="/chats">
-      ← Nazaj na klepete
+      <ChevronLeftIcon size={18} />
+      Nazaj na klepete
     </Link>
   );
 
@@ -154,25 +162,24 @@ export default function ConversationPage({
         <span className="avatar" aria-hidden="true">
           {initials(peer.name)}
         </span>
-        <div>
+        <div className="conversation-peer">
           <h1>
             {peer.name}
             {peer.verified && (
-              <span className="verified" aria-label="Preverjen študent">
-                {" "}
-                ✓
-              </span>
+              <VerifiedIcon
+                className="verified-icon"
+                size={20}
+                label="Preverjen študent"
+              />
             )}
           </h1>
           {peer.faculty && <p className="muted">{peer.faculty}</p>}
         </div>
+        <ChatSafetyMenu>
+          <ReportPersonLink peerId={peer.id} matchId={conversation.matchId} />
+          {!peer.deleted && <BlockPersonControl state={blockState} />}
+        </ChatSafetyMenu>
       </header>
-      <ChatSafetyControls
-        peerId={peer.id}
-        matchId={conversation.matchId}
-        state={blockState}
-        canBlock={!peer.deleted}
-      />
       {conversation.status === "accepted" && (
         <ChatCohabitation
           matchId={conversation.matchId}
@@ -206,7 +213,10 @@ export default function ConversationPage({
         <p className="conversation-notice" role="status">
           {notice}{" "}
           {conversation.status === "pending" && (
-            <Link href="/chats">Odpri zahteve →</Link>
+            <Link className="link-chevron" href="/chats">
+              Odpri zahteve
+              <ChevronRightIcon size={16} />
+            </Link>
           )}
         </p>
       ) : (
