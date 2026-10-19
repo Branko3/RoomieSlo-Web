@@ -214,7 +214,7 @@ export function AcademicDocumentUpload() {
       )}
       {upload.status === "done" && (
         <p className="success-message" role="status">
-          Naloženo: {upload.fileName} ✓ Potrdilo čaka na preverjanje skrbnika.
+          Naloženo: {upload.fileName}. Potrdilo čaka na preverjanje skrbnika.
         </p>
       )}
       {upload.status === "failed" && (

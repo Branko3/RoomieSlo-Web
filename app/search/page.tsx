@@ -11,7 +11,7 @@ import { CloseIcon, FiltersIcon } from "../../components/icons";
 import {
   DataState,
   EmptyState,
-  LoadingState,
+  ListingGridSkeleton,
   useOnlineStatus,
 } from "../../components/data-states";
 
@@ -213,7 +213,7 @@ export default function SearchPage() {
       )}
       <CacheNotice view={cachedListings ? fallback : null} onRetry={retry} />
       <div className="listing-grid">
-        {isLoading && <LoadingState label="Nalaganje oglasov ..." />}
+        {isLoading && <ListingGridSkeleton />}
         {!isLoading && error && (
           <DataState error={error} onRetry={retry}>
             <span />

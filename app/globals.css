@@ -801,18 +801,52 @@ button.text-link {
   animation: spin 0.8s linear infinite;
 }
 .state-icon {
-  display: block;
-  color: var(--color-action);
-  font-size: 32px;
-  font-weight: 700;
-  margin-bottom: 8px;
+  display: inline-grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-accent);
+  color: var(--color-text-accent);
+  margin-bottom: 12px;
 }
 .state-offline .state-icon {
+  background: var(--color-attention-surface);
   color: var(--color-attention-text);
 }
 .state-denied .state-icon,
 .state-error .state-icon {
+  background: var(--color-danger-surface);
   color: var(--color-danger);
+}
+.page-state h2 {
+  margin: 0 0 6px;
+}
+.page-state p {
+  color: var(--color-text-muted);
+  max-width: 45ch;
+  margin: 0 auto 16px;
+}
+
+/* Skeleton flyers: same geometry as the real cards, no shimmer. */
+.listing-grid > [role="status"] {
+  grid-column: 1 / -1;
+}
+.skeleton-card {
+  pointer-events: none;
+}
+.skeleton-block {
+  background: var(--color-surface-sunken);
+}
+.skeleton-line {
+  display: block;
+  height: 12px;
+  margin: 10px 0;
+  border-radius: var(--radius-paper);
+  background: var(--color-surface-sunken);
+}
+.skeleton-short {
+  width: 45%;
 }
 .state-actions {
   display: flex;
@@ -1456,6 +1490,32 @@ button.text-link {
   margin: 6px 0 0;
   line-height: 1.4;
 }
+.settings-list {
+  background: var(--panel-bg);
+  border: var(--panel-border);
+  border-radius: var(--panel-radius);
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+.settings-list > .profile-card {
+  border: 0;
+  border-radius: 0;
+  margin: 0;
+  border-top: 1px solid var(--color-border);
+}
+.settings-list > .profile-card:first-child {
+  border-top: 0;
+}
+.profile-footer {
+  margin-top: 32px;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-border);
+}
+.chip-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
 .questionnaire {
   background: var(--color-surface);
 }
@@ -1485,6 +1545,7 @@ button.text-link {
   background: var(--color-action);
 }
 .questionnaire > a {
+  flex: none;
   font-size: var(--text-sm);
   color: var(--color-text-accent);
   font-weight: 700;
@@ -1590,6 +1651,9 @@ button.text-link {
   width: 18px;
   height: 18px;
 }
+.likert label:hover {
+  color: var(--color-text-accent);
+}
 .likert .likert-skip {
   color: var(--color-text-muted);
 }
@@ -1617,9 +1681,6 @@ button.text-link {
   font-size: var(--text-sm);
   margin: 12px 0 0;
   overflow-wrap: anywhere;
-}
-.upload-progress span {
-  transition: width var(--duration-base) ease;
 }
 .upload-actions {
   display: flex;
@@ -2639,7 +2700,7 @@ button.text-link {
 }
 @media (max-width: 560px) {
   .form-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

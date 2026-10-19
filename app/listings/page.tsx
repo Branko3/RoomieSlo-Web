@@ -4,7 +4,7 @@ import { CacheNotice } from "../../components/cache-notice";
 import {
   DataState,
   EmptyState,
-  LoadingState,
+  ListingGridSkeleton,
 } from "../../components/data-states";
 import {
   BellIcon,
@@ -87,7 +87,7 @@ export default function ListingsPage() {
         </div>
       </div>
       <CacheNotice view={view} onRetry={retry} />
-      {isLoading && <LoadingState label="Nalaganje oglasov ..." />}
+      {isLoading && <ListingGridSkeleton />}
       {!isLoading && error && (
         <DataState error={error} onRetry={retry}>
           <span />

@@ -13,7 +13,7 @@ describe("empty/error/offline state route wiring", () => {
       "app/favorites/page.tsx",
     ]) {
       const page = source(path);
-      expect(page).toContain("LoadingState");
+      expect(page).toMatch(/LoadingState|ListingGridSkeleton/);
       expect(page).toContain("DataState");
       expect(page).toContain("EmptyState");
       expect(page).toMatch(/error \?|!isLoading && error/);

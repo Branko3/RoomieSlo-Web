@@ -23,19 +23,23 @@ export default function ProfilePage() {
       <OwnProfileSection configured={configured} />
       {configured && (
         <>
-          <AvailabilityCard />
-          <QuestionnaireProgressCard />
+          <div className="settings-list">
+            <AvailabilityCard />
+            <QuestionnaireProgressCard />
+          </div>
           <MyCohabitationsSection />
           <MyRatingsSection />
         </>
       )}
-      <LogoutButton />
-      <Link
-        className="text-link danger-link delete-account-link"
-        href="/profile/delete-account"
-      >
-        Izbriši račun
-      </Link>
+      <footer className="profile-footer">
+        <LogoutButton />
+        <Link
+          className="text-link danger-link delete-account-link"
+          href="/profile/delete-account"
+        >
+          Izbriši račun
+        </Link>
+      </footer>
     </div>
   );
 }
