@@ -128,6 +128,11 @@ describe("contrast helpers", () => {
       @media (prefers-color-scheme: dark) { :root { --b: #eeeeee; } }`;
     expect(readTokens(sample, "light").b).toBe("#111111");
     expect(readTokens(sample, "dark").b).toBe("#eeeeee");
+    // A second dark block, spaced differently, must not leak into light mode.
+    const split = `${sample}
+      @media (prefers-color-scheme:dark) { :root { --a: #222222; } }`;
+    expect(readTokens(split, "light").a).toBe("#111111");
+    expect(readTokens(split, "dark").a).toBe("#222222");
     const light = readTokens(css);
     expect(resolveColor("var(--color-action)", light)).toBe("#2f6f5e");
     expect(resolveColor("white", light)).toBe("#ffffff");
@@ -155,6 +160,18 @@ describe("token layering", () => {
     expect(css).toMatch(
       /:focus-visible\s*\{\s*outline:\s*3px solid var\(--color-focus\)/,
     );
+  });
+
+  it("keeps the browser theme-color in step with the page background", () => {
+    const layout = readFileSync(join(process.cwd(), "app/layout.tsx"), "utf8");
+    for (const mode of ["light", "dark"] as ColorMode[]) {
+      const meta = new RegExp(
+        `prefers-color-scheme: ${mode}\\)",\\s*color: "(#[0-9a-f]{3,6})"`,
+        "i",
+      ).exec(layout);
+      expect(meta, `themeColor for ${mode}`).not.toBeNull();
+      expect(meta![1].toLowerCase()).toBe(readTokens(css, mode)["color-bg"]);
+    }
   });
 
   it("keeps raw hex colours inside the token layer only", () => {

@@ -20,4 +20,10 @@ describe("formatPrice", () => {
   it("keeps the euro sign on the same line", () => {
     expect(formatPrice(320)).toBe("320 €");
   });
+
+  it("writes cents and thousands the Slovenian way", () => {
+    expect(formatPrice(320.5)).toBe("320,50 €");
+    expect(formatPrice(1200)).toBe("1200 €");
+    expect(formatPrice(12000)).toBe("12.000 €");
+  });
 });

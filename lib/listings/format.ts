@@ -11,7 +11,19 @@ export function formatMoveIn(available: string): string {
   return `${Number(day)}. ${Number(month)}. ${year}`;
 }
 
-/** "320 €", with a non-breaking space so the amount and unit never split. */
+const WHOLE_EUROS = new Intl.NumberFormat("sl-SI", {
+  maximumFractionDigits: 0,
+});
+const EUROS_AND_CENTS = new Intl.NumberFormat("sl-SI", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+/**
+ * Slovenian amount with a non-breaking space so the amount and unit never
+ * split: "320 €", "320,50 €", "12.000 €" (Slovenian groups from five digits).
+ */
 export function formatPrice(amount: number): string {
-  return `${amount} €`;
+  const format = Number.isInteger(amount) ? WHOLE_EUROS : EUROS_AND_CENTS;
+  return `${format.format(amount)} €`;
 }
