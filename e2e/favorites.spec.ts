@@ -69,9 +69,9 @@ test.describe("favorites", () => {
       }
     }, FAVORITES_KEY);
     await page.goto(`/listings/${listingId}`);
-    await page.getByRole("button", { name: "♡ Shrani oglas" }).click();
+    await page.getByRole("button", { name: "Shrani oglas" }).click();
     await expect(
-      page.getByRole("button", { name: "♥ Odstrani iz priljubljenih" }),
+      page.getByRole("button", { name: "Odstrani iz priljubljenih" }),
     ).toHaveAttribute("aria-pressed", "true");
 
     await page.goto("/favorites");

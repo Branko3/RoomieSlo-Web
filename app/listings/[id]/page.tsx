@@ -8,21 +8,132 @@ import { ListingPhoto } from "../../../components/listing-photo";
 import { ListingStatusControl } from "../../../components/listing-status-control";
 import { DeleteListingButton } from "../../../components/delete-listing-button";
 import { OwnerListingActions } from "../../../components/owner-listing-actions";
-import { useFavorites } from "../../../components/providers";
+import { FavoriteTextButton } from "../../../components/favorite-button";
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  FlagIcon,
+  MapPinIcon,
+} from "../../../components/icons";
 import { listingReportHref } from "../../../lib/reports/report";
 import {
   canRequestMatch,
   listingStatusLabel,
 } from "../../../lib/listings/listing-status";
+import { formatMoveIn, formatPrice } from "../../../lib/listings/format";
 import { useListing } from "../../../lib/supabase/hooks";
+import type { Listing } from "../../../lib/supabase/mappers";
 import { DataState, LoadingState } from "../../../components/data-states";
+
+const FILLED_NOTE = "Oglas je zapolnjen, zato zahteve za ujemanje niso mogoče.";
+
+function yesNo(value: boolean) {
+  return value ? "da" : "ne";
+}
+
+/** Facts the owner entered; anything unknown is left out rather than guessed. */
+function ListingFacts({ listing }: { listing: Listing }) {
+  const facts: Array<[string, string]> = [];
+  if (listing.sizeSqm != null)
+    facts.push(["Velikost", `${listing.sizeSqm} m²`]);
+  if (listing.deposit != null)
+    facts.push(["Varščina", formatPrice(listing.deposit)]);
+  if (listing.flatmates != null)
+    facts.push(["Sostanovalci", String(listing.flatmates)]);
+  if (listing.furnished != null)
+    facts.push(["Opremljeno", yesNo(listing.furnished)]);
+  if (listing.billsIncluded != null)
+    facts.push(["Stroški vključeni", yesNo(listing.billsIncluded)]);
+  if (facts.length === 0) return null;
+  return (
+    <dl className="fact-list">
+      {facts.map(([term, value]) => (
+        <div key={term}>
+          <dt>{term}</dt>
+          <dd>{value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+/** Supabase-backed request: sending, sent and failed states live in the button. */
+function LiveMatchRequest({
+  ownerId,
+  isFilled,
+}: {
+  ownerId: string;
+  isFilled: boolean;
+}) {
+  return (
+    <>
+      <MatchRequestButton
+        ownerId={ownerId}
+        disabled={!canRequestMatch(isFilled)}
+      />
+      {isFilled && (
+        <p className="field-hint" id="listing-filled-note">
+          {FILLED_NOTE}
+        </p>
+      )}
+    </>
+  );
+}
+
+/** Preview build without Supabase: the form only simulates a sent request. */
+function PreviewMatchRequest({ isFilled }: { isFilled: boolean }) {
+  const [sent, setSent] = useState(false);
+  const [message, setMessage] = useState("");
+  if (sent) {
+    return (
+      <div className="success-message full-button" aria-live="polite">
+        Zahteva je poslana.{" "}
+        <Link className="link-chevron" href="/chats">
+          Odpri klepete
+          <ChevronRightIcon size={16} />
+        </Link>
+      </div>
+    );
+  }
+  return (
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (!canRequestMatch(isFilled)) return;
+        setSent(true);
+      }}
+    >
+      <label className="sr-only" htmlFor="request-message">
+        Sporočilo lastniku (neobvezno)
+      </label>
+      <textarea
+        id="request-message"
+        className="request-message"
+        value={message}
+        onChange={(event) => setMessage(event.target.value)}
+        placeholder="Dodaj kratko sporočilo (neobvezno)"
+        rows={3}
+      />
+      <button
+        className="button full-button"
+        type="submit"
+        disabled={!canRequestMatch(isFilled)}
+        aria-describedby={isFilled ? "listing-filled-note" : undefined}
+      >
+        Pošlji zahtevo za ujemanje
+      </button>
+      {isFilled && (
+        <p className="field-hint" id="listing-filled-note">
+          {FILLED_NOTE}
+        </p>
+      )}
+    </form>
+  );
+}
 
 export default function ListingDetail({ params }: { params: { id: string } }) {
   const { id } = params;
   const { data: listing, isLoading, error, retry } = useListing(id);
-  const { isFavorite, toggleFavorite } = useFavorites();
-  const [requestState, setRequestState] = useState<"idle" | "success">("idle");
-  const [message, setMessage] = useState("");
   const [filledOverride, setFilledOverride] = useState<boolean | null>(null);
 
   if (isLoading) return <LoadingState label="Nalaganje oglasa ..." />;
@@ -44,18 +155,18 @@ export default function ListingDetail({ params }: { params: { id: string } }) {
     );
   }
 
-  const favorite = isFavorite(listing.id);
   const isFilled = filledOverride ?? listing.isFilled;
   return (
     <div className="content-wrap">
       <Link className="back-link" href="/listings">
-        ← Nazaj na oglase
+        <ChevronLeftIcon size={18} />
+        Nazaj na oglase
       </Link>
       <div className="detail-layout">
         <div className="detail-image">
           <ListingPhoto
             listing={listing}
-            sizes="(max-width: 900px) 100vw, 50vw"
+            sizes="(max-width: 900px) 100vw, 55vw"
             priority
           />
         </div>
@@ -76,106 +187,59 @@ export default function ListingDetail({ params }: { params: { id: string } }) {
             onChange={setFilledOverride}
           />
           <h1>{listing.title}</h1>
-          <p className="muted">⌖ {listing.district}</p>
-          <div className="price-large">
-            {listing.price} € <small>/ mesec</small>
-          </div>
+          <p className="flyer-place">
+            <MapPinIcon size={16} />
+            {listing.district}
+          </p>
+          <dl className="tear-strip tear-strip-large">
+            <div>
+              <dt>Najemnina</dt>
+              <dd className="tear-price">
+                {formatPrice(listing.price)} <span>/ mesec</span>
+              </dd>
+            </div>
+            <div>
+              <dt>Vselitev</dt>
+              <dd>{formatMoveIn(listing.available)}</dd>
+            </div>
+          </dl>
           <OwnerListingActions
             listingId={listing.id}
             ownerId={listing.ownerId}
           />
-          <p className="detail-description">
-            {listing.description?.trim() || "Lastnik še ni dodal opisa."}
-          </p>
-          <dl className="detail-stats">
-            {listing.sizeSqm != null && (
-              <div>
-                <dt>velikost</dt>
-                <dd>{listing.sizeSqm} m²</dd>
-              </div>
-            )}
-            <div>
-              <dt>vselitev</dt>
-              <dd>{listing.available}</dd>
-            </div>
-            {listing.deposit != null && (
-              <div>
-                <dt>varščina</dt>
-                <dd>{listing.deposit} €</dd>
-              </div>
-            )}
-          </dl>
           {getSupabaseConfig().configured ? (
-            <>
-              <MatchRequestButton
-                ownerId={listing.ownerId}
-                disabled={!canRequestMatch(isFilled)}
-              />
-              {isFilled && (
-                <p className="field-hint" id="listing-filled-note">
-                  Oglas je zapolnjen, zato zahteve za ujemanje niso mogoče.
-                </p>
-              )}
-            </>
-          ) : requestState === "success" ? (
-            <div className="success-message full-button" aria-live="polite">
-              Zahteva je poslana. <Link href="/chats">Odpri klepete →</Link>
-            </div>
+            <LiveMatchRequest ownerId={listing.ownerId} isFilled={isFilled} />
           ) : (
-            <>
-              <form
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  if (!canRequestMatch(isFilled)) return;
-                  setRequestState("success");
-                }}
-              >
-                <label className="sr-only" htmlFor="request-message">
-                  Sporočilo lastniku (neobvezno)
-                </label>
-                <textarea
-                  id="request-message"
-                  className="request-message"
-                  value={message}
-                  onChange={(event) => setMessage(event.target.value)}
-                  placeholder="Dodaj kratko sporočilo (neobvezno)"
-                  rows={3}
-                />
-                <button
-                  className="button full-button"
-                  type="submit"
-                  disabled={!canRequestMatch(isFilled)}
-                  aria-describedby={
-                    isFilled ? "listing-filled-note" : undefined
-                  }
-                >
-                  Pošlji zahtevo za ujemanje
-                </button>
-                {isFilled && (
-                  <p className="field-hint" id="listing-filled-note">
-                    Oglas je zapolnjen, zato zahteve za ujemanje niso mogoče.
-                  </p>
-                )}
-              </form>
-            </>
+            <PreviewMatchRequest isFilled={isFilled} />
           )}
-          <button
-            className="button button-outline full-button"
-            onClick={() => toggleFavorite(listing.id)}
-            aria-pressed={favorite}
-          >
-            {favorite ? "♥ Odstrani iz priljubljenih" : "♡ Shrani oglas"}
-          </button>
-          <Link
-            className="text-link report-link"
-            href={listingReportHref(listing.ownerId, listing.id)}
-          >
-            Prijavi oglas
-          </Link>
+          <FavoriteTextButton listingId={listing.id} />
           <DeleteListingButton
             listingId={listing.id}
             ownerId={listing.ownerId}
           />
+        </div>
+        <div className="detail-sections">
+          <section className="detail-section" aria-labelledby="about-title">
+            <h2 id="about-title">O prostoru</h2>
+            <p className="detail-description">
+              {listing.description?.trim() || "Lastnik še ni dodal opisa."}
+            </p>
+            <ListingFacts listing={listing} />
+          </section>
+          <section className="detail-section" aria-labelledby="safety-title">
+            <h2 id="safety-title">Varnost</h2>
+            <p className="muted">
+              Stanovanje si pred plačilom oglej v živo in varščine ne nakazuj
+              vnaprej.
+            </p>
+            <Link
+              className="text-link report-link"
+              href={listingReportHref(listing.ownerId, listing.id)}
+            >
+              <FlagIcon size={16} />
+              Prijavi oglas
+            </Link>
+          </section>
         </div>
       </div>
     </div>

@@ -7,6 +7,7 @@ import { listingCountLabel } from "../../lib/listings/result-label";
 import { useListingPages } from "../../lib/listings/use-listing-pages";
 import { useCachedListingsFallback } from "../../lib/listings/use-offline-listings";
 import { CacheNotice } from "../../components/cache-notice";
+import { CloseIcon, FiltersIcon } from "../../components/icons";
 import {
   DataState,
   EmptyState,
@@ -25,6 +26,8 @@ export default function SearchPage() {
     Number(params.get("maxPrice") ?? 600),
   );
   const [sort, setSort] = useState(params.get("sort") ?? "relevance");
+  // Phones only: the budget filter folds away behind "Filtri" (CSS shows it on wider screens).
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const {
     listings,
     isPending,
@@ -94,7 +97,10 @@ export default function SearchPage() {
           <h1>Iskanje sobe</h1>
         </div>
       </header>
-      <section className="filter-panel">
+      <section
+        className={`filter-panel ${filtersOpen ? "is-open" : ""}`}
+        aria-label="Filtri"
+      >
         <div className="field">
           <label htmlFor="location">Lokacija</label>
           <input
@@ -105,11 +111,13 @@ export default function SearchPage() {
               updateUrl({ location: event.target.value });
             }}
             placeholder="npr. Ljubljana"
+            autoComplete="off"
+            enterKeyHint="search"
           />
         </div>
-        <div className="field range-field">
+        <div className="field range-field" id="search-more-filters">
           <label htmlFor="price">
-            Največji proračun <b>{maxPrice} €</b>
+            Največji proračun <b>{maxPrice}&nbsp;€</b>
           </label>
           <input
             id="price"
@@ -125,60 +133,72 @@ export default function SearchPage() {
             }}
           />
         </div>
-        <button
-          className="button"
-          type="button"
-          onClick={() => updateUrl({ location, maxPrice })}
-        >
-          Poišči oglase
-        </button>
       </section>
-      <div className="section-heading">
+      <div className="results-bar">
         <div>
           <h2 aria-live="polite">
             {results.length} {resultLabel} zate
           </h2>
           <p className="muted">Razvrščeno po združljivosti</p>
         </div>
-        <label className="sort-control">
-          Razvrsti:
-          <select
-            value={sort}
-            onChange={(event) => {
-              setSort(event.target.value);
-              updateUrl({ sort: event.target.value });
-            }}
+        <div className="results-bar-actions">
+          <button
+            type="button"
+            className="button button-outline filters-toggle"
+            aria-expanded={filtersOpen}
+            aria-controls="search-more-filters"
+            onClick={() => setFiltersOpen((open) => !open)}
           >
-            <option value="relevance">Najbolj ustrezni</option>
-            <option value="newest">Najnovejši</option>
-            <option value="price-asc">Cena naraščajoče</option>
-            <option value="price-desc">Cena padajoče</option>
-          </select>
-        </label>
+            <FiltersIcon size={18} />
+            Filtri{maxPrice < 600 ? " (1)" : ""}
+          </button>
+          <label className="sort-control">
+            Razvrsti:
+            <select
+              value={sort}
+              onChange={(event) => {
+                setSort(event.target.value);
+                updateUrl({ sort: event.target.value });
+              }}
+            >
+              <option value="relevance">Najbolj ustrezni</option>
+              <option value="newest">Najnovejši</option>
+              <option value="price-asc">Cena naraščajoče</option>
+              <option value="price-desc">Cena padajoče</option>
+            </select>
+          </label>
+        </div>
       </div>
       {(location || maxPrice < 600) && (
         <div className="active-filters">
           {location && (
             <button
+              type="button"
+              aria-label={`Odstrani filter: ${location}`}
               onClick={() => {
                 setLocation("");
                 updateUrl({ location: "" });
               }}
             >
-              {location} ×
+              {location}
+              <CloseIcon size={16} />
             </button>
           )}
           {maxPrice < 600 && (
             <button
+              type="button"
+              aria-label={`Odstrani filter: do ${maxPrice} €`}
               onClick={() => {
                 setMaxPrice(600);
                 updateUrl({ maxPrice: 600 });
               }}
             >
-              do {maxPrice} € ×
+              do {maxPrice}&nbsp;€
+              <CloseIcon size={16} />
             </button>
           )}
           <button
+            type="button"
             className="clear-filters"
             onClick={() => {
               setLocation("");

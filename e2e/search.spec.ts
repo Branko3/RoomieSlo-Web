@@ -21,7 +21,7 @@ test.describe("search workflow", () => {
 
   test("removes a filter chip and clears all filters", async ({ page }) => {
     await page.goto("/search?location=Center&maxPrice=400&sort=newest");
-    await page.getByRole("button", { name: "Center ×" }).click();
+    await page.getByRole("button", { name: "Odstrani filter: Center" }).click();
     await expect(page.getByLabel("Lokacija")).toHaveValue("");
 
     await page.getByRole("button", { name: "Počisti filtre" }).click();

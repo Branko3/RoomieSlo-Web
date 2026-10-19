@@ -5,6 +5,9 @@ import Link from "next/link";
 import { useListings } from "../../lib/supabase/hooks";
 import { ListingPhoto } from "../../components/listing-photo";
 import { useFavorites } from "../../components/providers";
+import { FavoriteIconButton } from "../../components/favorite-button";
+import { SparkleIcon } from "../../components/icons";
+import { formatPrice } from "../../lib/listings/format";
 import {
   fetchFavoriteListings,
   type FavoritesClient,
@@ -17,7 +20,7 @@ import {
 } from "../../components/data-states";
 
 export default function FavoritesPage() {
-  const { favorites, toggleFavorite, userId } = useFavorites();
+  const { favorites, userId } = useFavorites();
   // Signed in: the user's favorites come straight from Supabase (one nested query).
   const remote = useQuery({
     queryKey: ["favorites", "listings", userId],
@@ -66,18 +69,14 @@ export default function FavoritesPage() {
                 <span>
                   <b>{listing.title}</b>
                   <small>
-                    {listing.district} · {listing.price} € / mesec
+                    {listing.district}, {formatPrice(listing.price)} / mesec
                   </small>
                 </span>
               </Link>
-              <button
-                className="heart-button liked"
-                onClick={() => toggleFavorite(listing.id)}
-                aria-label={`Odstrani ${listing.title} iz priljubljenih`}
-                aria-pressed="true"
-              >
-                ♥
-              </button>
+              <FavoriteIconButton
+                listingId={listing.id}
+                subject={listing.title}
+              />
             </div>
           ))}
         </div>
@@ -93,7 +92,7 @@ export default function FavoritesPage() {
         />
       )}
       <div className="tip-card">
-        <span>✦</span>
+        <SparkleIcon />
         <div>
           <b>Majhen nasvet</b>
           <p>Shranite oglase, ki so vam všeč, in jih primerjajte pozneje.</p>

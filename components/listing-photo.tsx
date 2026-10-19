@@ -2,12 +2,9 @@
 
 import Image from "next/image";
 import { useState } from "react";
-import {
-  photoAlt,
-  PHOTO_PLACEHOLDER,
-  safePhotoUrl,
-} from "../lib/listings/listing-photo";
+import { photoAlt, safePhotoUrl } from "../lib/listings/listing-photo";
 import type { Listing } from "../lib/supabase/mappers";
+import { HomeIcon } from "./icons";
 
 /**
  * Listing photo with a decorative placeholder when the listing has no usable
@@ -29,7 +26,7 @@ export function ListingPhoto({
   if (!url || failedUrl === url) {
     return (
       <span className="listing-placeholder" aria-hidden="true">
-        {PHOTO_PLACEHOLDER}
+        <HomeIcon size={40} strokeWidth={1.5} />
       </span>
     );
   }

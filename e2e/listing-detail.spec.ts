@@ -22,7 +22,7 @@ test.describe("listing detail", () => {
       .getByRole("button", { name: "Pošlji zahtevo za ujemanje" })
       .click();
     await expect(page.getByText("Zahteva je poslana.")).toBeVisible();
-    await page.getByRole("link", { name: "Odpri klepete →" }).click();
+    await page.getByRole("link", { name: "Odpri klepete" }).click();
     await expect(page).toHaveURL(/\/chats$/);
   });
 
@@ -32,7 +32,7 @@ test.describe("listing detail", () => {
       "Requires the authenticated project.",
     );
     await page.goto(`/listings/${listingId}`);
-    await page.getByRole("link", { name: "← Nazaj na oglase" }).click();
+    await page.getByRole("link", { name: "Nazaj na oglase" }).click();
     await expect(page).toHaveURL(/\/listings$/);
   });
 });
