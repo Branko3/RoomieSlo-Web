@@ -16,6 +16,7 @@ import {
   type RecommendationsClient,
 } from "../../lib/matching/recommendations";
 import { createSupabaseBrowserClient } from "../../lib/supabase/browser";
+import { VerifiedIcon } from "../../components/icons";
 
 export default function RecommendationsPage() {
   const configured = getSupabaseConfig().configured;
@@ -122,7 +123,10 @@ export default function RecommendationsPage() {
               </div>
               <div className="chips">
                 {profile.verified && (
-                  <span className="chip chip-green">✓ Preverjen študent</span>
+                  <span className="chip chip-green chip-icon">
+                    <VerifiedIcon size={14} />
+                    Preverjen študent
+                  </span>
                 )}
                 {profile.available && (
                   <span className="chip">Išče sostanovalca</span>

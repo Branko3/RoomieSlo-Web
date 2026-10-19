@@ -17,6 +17,7 @@ import {
   type ProfileRequestError,
 } from "../lib/profile/own-profile";
 import { createSupabaseBrowserClient } from "../lib/supabase/browser";
+import { VerifiedIcon } from "./icons";
 
 export const OWN_PROFILE_QUERY_KEY = ["profile", "own"] as const;
 
@@ -27,7 +28,10 @@ function PreviewHeader() {
       <div>
         <h2>Amar H.</h2>
         <p>FRI, Univerza v Ljubljani · 22 let</p>
-        <span className="verified-badge">✓ Preverjen študent</span>
+        <span className="verified-badge">
+          <VerifiedIcon size={16} />
+          Preverjen študent
+        </span>
       </div>
     </section>
   );
@@ -189,7 +193,10 @@ function ProfileHeader({
             <h2>{profile.display_name}</h2>
             {details && <p>{details}</p>}
             {profile.academic_status_verified && (
-              <span className="verified-badge">✓ Preverjen študent</span>
+              <span className="verified-badge">
+                <VerifiedIcon size={16} />
+                Preverjen študent
+              </span>
             )}
           </div>
           <button className="text-link" type="button" onClick={startEditing}>

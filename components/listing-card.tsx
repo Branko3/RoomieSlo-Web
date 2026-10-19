@@ -10,6 +10,8 @@ import type { Listing } from "../lib/supabase/mappers";
 /**
  * A listing as a notice-board flyer: photo, what and where, then a
  * perforated tear-off strip with the rent and the move-in date.
+ * `ListingGridSkeleton` (components/data-states.tsx) mirrors this structure;
+ * change both together so the grid does not jump when listings arrive.
  */
 export function ListingCard({ listing }: { listing: Listing }) {
   return (

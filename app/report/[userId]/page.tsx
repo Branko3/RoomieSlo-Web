@@ -17,6 +17,7 @@ import {
   type ReportClient,
 } from "../../../lib/reports/report";
 import { createSupabaseBrowserClient } from "../../../lib/supabase/browser";
+import { ChevronLeftIcon } from "../../../components/icons";
 
 function ReportForm({ userId }: { userId: string }) {
   const params = useSearchParams();
@@ -68,7 +69,8 @@ function ReportForm({ userId }: { userId: string }) {
   return (
     <div className="content-wrap report-page">
       <Link className="back-link" href={backHref(context)}>
-        ← Nazaj
+        <ChevronLeftIcon size={18} />
+        Nazaj
       </Link>
       <h1>
         {context?.kind === "listing" ? "Prijavi oglas" : "Prijavi uporabnika"}

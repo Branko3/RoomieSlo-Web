@@ -24,6 +24,7 @@ import {
   toggleFavoriteOptimistically,
 } from "../lib/favorites/favorites-sync";
 import { createSupabaseBrowserClient } from "../lib/supabase/browser";
+import { CloseIcon } from "./icons";
 
 type FavoriteContextValue = {
   favorites: string[];
@@ -205,7 +206,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
               onClick={() => setFavoriteError(null)}
               aria-label="Zapri obvestilo"
             >
-              ×
+              <CloseIcon />
             </button>
           </div>
         )}

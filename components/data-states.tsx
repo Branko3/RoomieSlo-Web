@@ -2,6 +2,13 @@
 
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
+import {
+  AlertIcon,
+  LockIcon,
+  OfflineIcon,
+  SearchIcon,
+  UserIcon,
+} from "./icons";
 
 export type DataErrorKind = "offline" | "permission" | "auth" | "error";
 
@@ -65,6 +72,39 @@ export function LoadingState({
   );
 }
 
+/**
+ * Loading placeholder shaped like the listing flyers it stands in for, so the
+ * page does not jump when they arrive. The label is announced once.
+ */
+export function ListingGridSkeleton({
+  label = "Nalaganje oglasov ...",
+  count = 3,
+}: {
+  label?: string;
+  count?: number;
+}) {
+  return (
+    <div role="status" aria-live="polite">
+      <span className="sr-only">{label}</span>
+      <div className="listing-grid" aria-hidden="true">
+        {Array.from({ length: count }, (_, index) => (
+          <div className="listing-card skeleton-card" key={index}>
+            <div className="listing-art skeleton-block" />
+            <div className="listing-body">
+              <span className="skeleton-line skeleton-short" />
+              <span className="skeleton-line" />
+              <span className="skeleton-line skeleton-short" />
+            </div>
+            <div className="tear-strip">
+              <span className="skeleton-line skeleton-short" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function EmptyState({
   title,
   description,
@@ -80,7 +120,7 @@ export function EmptyState({
       aria-labelledby="empty-state-title"
     >
       <span className="state-icon" aria-hidden="true">
-        ⌕
+        <SearchIcon size={28} />
       </span>
       <h2 id="empty-state-title">{title}</h2>
       <p>{description}</p>
@@ -97,7 +137,7 @@ export function OfflineState({ onRetry }: { onRetry?: () => void }) {
       aria-labelledby="offline-state-title"
     >
       <span className="state-icon" aria-hidden="true">
-        ⌁
+        <OfflineIcon size={28} />
       </span>
       <h2 id="offline-state-title">Trenutno si brez povezave</h2>
       <p>
@@ -121,7 +161,7 @@ export function PermissionDeniedState({ onRetry }: { onRetry?: () => void }) {
       aria-labelledby="denied-state-title"
     >
       <span className="state-icon" aria-hidden="true">
-        !
+        <LockIcon size={28} />
       </span>
       <h2 id="denied-state-title">Dostop do vsebine ni dovoljen</h2>
       <p>Tvoj račun nima dovoljenja za ogled te vsebine.</p>
@@ -148,6 +188,9 @@ export function AuthenticationRequiredState() {
       role="alert"
       aria-labelledby="auth-state-title"
     >
+      <span className="state-icon" aria-hidden="true">
+        <UserIcon size={28} />
+      </span>
       <h2 id="auth-state-title">Prijava je potrebna</h2>
       <p>Za ogled te vsebine se prijavi v svoj račun.</p>
       <Link className="button" href="/login">
@@ -172,6 +215,9 @@ export function ErrorState({
       role="alert"
       aria-labelledby="error-state-title"
     >
+      <span className="state-icon" aria-hidden="true">
+        <AlertIcon size={28} />
+      </span>
       <h2 id="error-state-title">{title}</h2>
       <p>Prišlo je do napake. Poskusi znova ali se vrni na oglase.</p>
       <div className="state-actions">

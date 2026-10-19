@@ -17,6 +17,7 @@ import {
 } from "../lib/questionnaire/persistence";
 import { createSupabaseBrowserClient } from "../lib/supabase/browser";
 import { OWN_PROFILE_QUERY_KEY } from "./own-profile-section";
+import { ChevronRightIcon } from "./icons";
 
 /**
  * "Iščem sostanovalca / sobo" (Android `setAvailability`): optimistic, saved to
@@ -134,8 +135,9 @@ export function QuestionnaireProgressCard() {
           <span style={{ width: `${progress?.percent ?? 0}%` }} />
         </div>
       </div>
-      <Link href="/profile/questionnaire">
-        {done ? "Uredi →" : progress?.answered ? "Nadaljuj →" : "Začni →"}
+      <Link className="link-chevron" href="/profile/questionnaire">
+        {done ? "Uredi" : progress?.answered ? "Nadaljuj" : "Začni"}
+        <ChevronRightIcon size={16} />
       </Link>
     </section>
   );

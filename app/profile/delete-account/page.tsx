@@ -11,6 +11,7 @@ import {
 } from "../../../lib/account/deletion";
 import { privacyContact } from "../../../lib/privacy/controller";
 import { createSupabaseBrowserClient } from "../../../lib/supabase/browser";
+import { ChevronLeftIcon } from "../../../components/icons";
 
 const contact = privacyContact();
 
@@ -47,7 +48,8 @@ export default function DeleteAccountPage() {
   return (
     <div className="content-wrap narrow-content delete-account">
       <Link className="back-link" href="/profile">
-        ← Nazaj na profil
+        <ChevronLeftIcon size={18} />
+        Nazaj na profil
       </Link>
       <h1>Izbriši račun</h1>
       <p>

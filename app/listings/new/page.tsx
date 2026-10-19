@@ -13,6 +13,7 @@ import {
   type ListingValues,
 } from "../../../lib/listings/listing-form";
 import { createSupabaseBrowserClient } from "../../../lib/supabase/browser";
+import { ChevronLeftIcon } from "../../../components/icons";
 
 export default function NewListingPage() {
   const router = useRouter();
@@ -36,7 +37,8 @@ export default function NewListingPage() {
   return (
     <div className="content-wrap narrow-content">
       <Link className="back-link" href="/listings">
-        ← Na oglase
+        <ChevronLeftIcon size={18} />
+        Na oglase
       </Link>
       <header className="topbar">
         <div>

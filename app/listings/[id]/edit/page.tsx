@@ -18,6 +18,7 @@ import {
   type ListingValues,
 } from "../../../../lib/listings/listing-form";
 import { createSupabaseBrowserClient } from "../../../../lib/supabase/browser";
+import { ChevronLeftIcon } from "../../../../components/icons";
 
 type State =
   | { status: "loading" }
@@ -141,7 +142,8 @@ export default function EditListingPage({
   return (
     <div className="content-wrap narrow-content">
       <Link className="back-link" href={`/listings/${encodeURIComponent(id)}`}>
-        ← Nazaj na oglas
+        <ChevronLeftIcon size={18} />
+        Nazaj na oglas
       </Link>
       <header className="topbar">
         <div>
