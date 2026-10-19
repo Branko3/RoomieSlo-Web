@@ -29,14 +29,14 @@ export default function ListingsPage() {
           aria-label="Odpri klepete in obvestila"
           href="/chats"
         >
-          ♧<span className="notification-dot" />
+          ♧
         </Link>
       </header>
       <section className="hero-banner">
         <div>
           <span className="eyebrow">NOVO V ROOMIESLO</span>
           <h2>Najdi prostor, kjer se boš počutil doma.</h2>
-          <p>Preverjeni študenti. Resnični oglasi. Boljši začetek.</p>
+          <p>Sobe in sostanovalci za študente. Boljši začetek.</p>
           <a className="button button-light" href="/search">
             Razišči oglase <span>→</span>
           </a>
