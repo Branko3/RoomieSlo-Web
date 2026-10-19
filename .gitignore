@@ -11,3 +11,12 @@ test-results/
 e2e/.auth/
 /coverage
 *.auth.json
+
+# Local tooling: MCP servers and cloned agent-skill repos
+.mcp.json
+/skills/
+/agent-skills/
+/ui-ux-pro-max-skill/
+
+# Non-technical docs are kept locally only
+docs/nontechnical/
