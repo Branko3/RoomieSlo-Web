@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ChevronRightIcon } from "./icons";
 import { useEffect, useState } from "react";
 import { getSupabaseConfig } from "../lib/config";
 import { createSupabaseBrowserClient } from "../lib/supabase/browser";
@@ -34,11 +35,19 @@ export function OwnerListingActions({
 
   if (!isOwner) return null;
   return (
-    <Link
-      className="button button-outline"
-      href={`/listings/${encodeURIComponent(listingId)}/edit`}
-    >
-      Uredi oglas
-    </Link>
+    <div className="owner-strip">
+      <div className="owner-strip-actions">
+        <Link
+          className="button button-outline"
+          href={`/listings/${encodeURIComponent(listingId)}/edit`}
+        >
+          Uredi oglas
+        </Link>
+        <Link className="text-link link-chevron" href="/listings/mine">
+          Vsi moji oglasi
+          <ChevronRightIcon size={16} />
+        </Link>
+      </div>
+    </div>
   );
 }

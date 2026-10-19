@@ -6,6 +6,7 @@ import { requireSignedIn } from "./env";
 const PAGES = [
   "/listings",
   "/search",
+  "/listings/mine",
   "/chats",
   "/favorites",
   "/profile",

@@ -67,6 +67,11 @@ function fakeClient(table: ListingRow[], fail?: unknown) {
       rows = rows.filter((r) => r[column as keyof ListingRow] === value);
       return builder;
     },
+    neq(column, value) {
+      calls.push(["neq", [column, value]]);
+      rows = rows.filter((r) => r[column as keyof ListingRow] !== value);
+      return builder;
+    },
     order(column, options) {
       calls.push(["order", [column, options]]);
       orders.push([column as keyof ListingRow, options.ascending]);
@@ -183,6 +188,23 @@ describe("fetchListingsPage query", () => {
       "limit",
     ]);
     expect(calls[4]).toEqual(["limit", [DEFAULT_PAGE_SIZE + 1]]);
+  });
+
+  it("leaves out the signed-in owner's listings when asked", async () => {
+    const table = [
+      { ...row("mine", "2026-01-03T10:00:00Z"), owner_id: "me" },
+      { ...row("other", "2026-01-02T10:00:00Z"), owner_id: "someone" },
+    ];
+    const { client, calls } = fakeClient(table);
+    const page = await fetchListingsPage(client, { excludeOwnerId: "me" });
+    expect(calls).toContainEqual(["neq", ["owner_id", "me"]]);
+    expect(page.items.map((listing) => listing.id)).toEqual(["other"]);
+  });
+
+  it("does not filter by owner without a user id", async () => {
+    const { client, calls } = fakeClient([]);
+    await fetchListingsPage(client, { excludeOwnerId: null });
+    expect(calls.some(([name]) => name === "neq")).toBe(false);
   });
 
   it("preserves backend errors", async () => {

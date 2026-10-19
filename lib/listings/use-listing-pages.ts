@@ -26,9 +26,10 @@ export function useListingPages(filters: {
   const query = useInfiniteQuery({
     queryKey: ["listings", "feed", location, filters.maxPrice ?? null],
     initialPageParam: null as ListingCursor | null,
+    // The signed-in user's own listings are left out; sign-out clears this cache.
     queryFn: ({ pageParam }) =>
       fetchPageAndCache(
-        () =>
+        async () =>
           fetchListingsPage(
             createSupabaseBrowserClient() as unknown as ListingPageClient,
             {
@@ -36,6 +37,7 @@ export function useListingPages(filters: {
               maxPrice: filters.maxPrice,
               cursor: pageParam,
               pageSize: DEFAULT_PAGE_SIZE,
+              excludeOwnerId: await readSessionUserId(),
             },
           ),
         readSessionUserId,

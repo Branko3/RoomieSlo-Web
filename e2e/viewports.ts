@@ -23,6 +23,7 @@ export const VIEWPORTS: readonly ViewportCase[] = [
 export const PAGES = [
   { path: "/listings", heading: "Oglasi za sobe" },
   { path: "/search", heading: "Iskanje sobe" },
+  { path: "/listings/mine", heading: "Moji oglasi" },
   { path: "/chats", heading: "Ujemanja in klepeti" },
   { path: "/favorites", heading: "Priljubljeni oglasi" },
   { path: "/profile", heading: "Profil" },

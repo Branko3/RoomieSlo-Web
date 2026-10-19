@@ -189,6 +189,26 @@ describe("readCachedListings", () => {
     ]);
   });
 
+  it("can leave out one owner's cached listings", async () => {
+    const store = createMemoryListingStore();
+    await cacheListingsPage(
+      store,
+      [
+        listing("mine", { ownerId: USER }),
+        listing("other", { ownerId: "someone" }),
+      ],
+      USER,
+      NOW,
+    );
+    expect(
+      ids(await readCachedListings(store, USER, { excludeOwnerId: USER })),
+    ).toEqual(["other"]);
+    expect(ids(await readCachedListings(store, USER))).toEqual([
+      "other",
+      "mine",
+    ]);
+  });
+
   it("filters by case-insensitive location substring and maximum price like Android", async () => {
     const store = await seeded();
     expect(

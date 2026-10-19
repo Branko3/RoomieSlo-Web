@@ -12,6 +12,8 @@ export type ListingPageQuery = {
   maxPrice?: number;
   cursor?: ListingCursor | null;
   pageSize?: number;
+  /** Leaves out this owner's listings: browsing feeds never show your own ("Moji oglasi" does). */
+  excludeOwnerId?: string | null;
 };
 
 export type ListingPage = {
@@ -25,6 +27,7 @@ type QueryResult = { data: Row<"listings">[] | null; error: unknown };
 export type ListingPageBuilder = PromiseLike<QueryResult> & {
   select: (columns: string) => ListingPageBuilder;
   eq: (column: string, value: unknown) => ListingPageBuilder;
+  neq: (column: string, value: unknown) => ListingPageBuilder;
   order: (
     column: string,
     options: { ascending: boolean },
@@ -80,6 +83,8 @@ export async function fetchListingsPage(
   if (location) request = request.ilike("location", `%${location}%`);
   if (query.maxPrice !== undefined)
     request = request.lte("price_per_month", query.maxPrice);
+  if (query.excludeOwnerId)
+    request = request.neq("owner_id", query.excludeOwnerId);
   if (query.cursor) request = request.or(cursorFilter(query.cursor));
 
   const { data, error } = await request;

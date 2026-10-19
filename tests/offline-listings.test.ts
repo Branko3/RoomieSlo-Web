@@ -78,6 +78,23 @@ describe("loadListingsWithFallback", () => {
     expect((await store.getAll()).map((r) => r.listing.id)).toEqual(["a"]);
   });
 
+  it("leaves the user's own cached listings out of a browsing feed", async () => {
+    const store = await seededStore([
+      listing("mine", { ownerId: USER }),
+      listing("other", { ownerId: "someone" }),
+    ]);
+    const view = await loadListingsWithFallback({
+      fetchFresh: () => Promise.reject(new TypeError("Failed to fetch")),
+      readUserId: async () => USER,
+      store,
+      excludeOwnListings: true,
+      now: NOW,
+    });
+    expect(view.source === "cache" && view.listings.map((l) => l.id)).toEqual([
+      "other",
+    ]);
+  });
+
   it("falls back to cached listings when the request fails", async () => {
     const synced = NOW - 2 * 60 * 60 * 1000;
     const store = await seededStore([listing("a"), listing("b")], synced);
