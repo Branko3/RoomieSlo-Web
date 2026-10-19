@@ -32,15 +32,72 @@ export function contrastRatio(a: string, b: string): number {
 export const MIN_RATIO = { text: 4.5, large: 3, ui: 3 } as const;
 export type ContrastKind = keyof typeof MIN_RATIO;
 
-/** Reads `--name: #hex;` custom properties from a stylesheet. */
-export function readTokens(css: string): Record<string, string> {
-  const tokens: Record<string, string> = {};
-  for (const [, name, value] of css.matchAll(
-    /--([\w-]+):\s*(#[0-9a-f]{3,6})\b/gi,
-  )) {
-    tokens[name] = value;
+export type ColorMode = "light" | "dark";
+
+/** Every dark-mode block, however it is spaced. */
+const DARK_QUERY = /@media\s*\(\s*prefers-color-scheme\s*:\s*dark\s*\)/gi;
+
+/** The body of the `{ … }` block that opens at or after `start`. */
+function blockBody(css: string, start: number): { body: string; end: number } {
+  const open = css.indexOf("{", start);
+  let depth = 0;
+  for (let i = open; i < css.length; i += 1) {
+    if (css[i] === "{") depth += 1;
+    if (css[i] === "}" && --depth === 0) {
+      return { body: css.slice(open + 1, i), end: i + 1 };
+    }
   }
-  return tokens;
+  throw new Error("Unbalanced braces in stylesheet");
+}
+
+/**
+ * `--name: value;` pairs (hex or `var(--other)`) in declaration order. Hex of
+ * any length is captured, so a form `parseHex` cannot read (#rgba, #rrggbbaa)
+ * fails loudly when used instead of silently vanishing.
+ */
+function declarations(css: string): Array<[string, string]> {
+  return [
+    ...css.matchAll(/--([\w-]+):\s*(#[0-9a-f]{3,8}\b|var\(--[\w-]+\))/gi),
+  ].map(([, name, value]) => [name, value]);
+}
+
+/**
+ * Reads colour custom properties from a stylesheet and resolves `var()`
+ * chains down to hex. Light mode ignores every prefers-color-scheme: dark
+ * block; dark mode applies them, in order, on top of the light values.
+ */
+export function readTokens(
+  css: string,
+  mode: ColorMode = "light",
+): Record<string, string> {
+  let base = "";
+  let dark = "";
+  let cursor = 0;
+  for (const match of css.matchAll(DARK_QUERY)) {
+    const start = match.index ?? 0;
+    if (start < cursor) continue;
+    const { body, end } = blockBody(css, start);
+    base += css.slice(cursor, start);
+    dark += `${body}\n`;
+    cursor = end;
+  }
+  base += css.slice(cursor);
+  const raw: Record<string, string> = {};
+  for (const [name, value] of declarations(base)) raw[name] = value;
+  if (mode === "dark") {
+    for (const [name, value] of declarations(dark)) raw[name] = value;
+  }
+  const resolved: Record<string, string> = {};
+  for (const name of Object.keys(raw)) {
+    let value = raw[name];
+    for (let hops = 0; value.startsWith("var("); hops += 1) {
+      const next = raw[value.slice(6, -1)];
+      if (!next || hops > 10) break;
+      value = next;
+    }
+    if (value.startsWith("#")) resolved[name] = value;
+  }
+  return resolved;
 }
 
 /** Resolves `var(--token)`, `white`, or a hex color. */

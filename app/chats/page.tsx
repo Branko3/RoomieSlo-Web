@@ -10,7 +10,6 @@ export default function ChatsPage() {
     <div className="content-wrap narrow-content">
       <header className="topbar">
         <div>
-          <p className="eyebrow">POVEŽI SE</p>
           <h1>Ujemanja in klepeti</h1>
         </div>
       </header>

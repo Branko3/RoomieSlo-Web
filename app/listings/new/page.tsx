@@ -40,7 +40,6 @@ export default function NewListingPage() {
       </Link>
       <header className="topbar">
         <div>
-          <p className="eyebrow">NOV OGLAS</p>
           <h1>Objavi oglas</h1>
         </div>
       </header>

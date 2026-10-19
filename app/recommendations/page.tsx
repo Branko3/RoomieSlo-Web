@@ -143,7 +143,6 @@ export default function RecommendationsPage() {
     <div className="content-wrap narrow-content">
       <header className="topbar">
         <div>
-          <p className="eyebrow">UJEMANJE</p>
           <h1>Priporočeni profili</h1>
           <p className="muted">
             Razvrščeni po združljivosti glede na vprašalnik o življenjskem

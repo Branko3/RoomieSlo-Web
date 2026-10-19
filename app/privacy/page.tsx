@@ -49,7 +49,6 @@ export default function PrivacyPage() {
     <div className="content-wrap narrow-content">
       <header className="topbar">
         <div>
-          <p className="eyebrow">ZASEBNOST</p>
           <h1>Tvoji podatki</h1>
         </div>
       </header>

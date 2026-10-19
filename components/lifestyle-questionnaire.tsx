@@ -85,7 +85,6 @@ export function LifestyleQuestionnaire() {
   const header = (
     <header className="topbar">
       <div>
-        <p className="eyebrow">TVOJ PROSTOR</p>
         <h1>Vprašalnik o življenjskem slogu</h1>
         {load.status === "ready" && (
           <p className="muted" aria-live="polite">

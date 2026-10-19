@@ -145,7 +145,6 @@ export default function EditListingPage({
       </Link>
       <header className="topbar">
         <div>
-          <p className="eyebrow">UREJANJE</p>
           <h1>Uredi oglas</h1>
         </div>
       </header>

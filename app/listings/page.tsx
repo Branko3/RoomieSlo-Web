@@ -22,7 +22,6 @@ export default function ListingsPage() {
     <div className="content-wrap">
       <header className="topbar">
         <div>
-          <p className="eyebrow">Dobrodošel nazaj, Amar 👋</p>
           <h1>Oglasi za sobe</h1>
         </div>
         <Link

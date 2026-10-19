@@ -17,7 +17,6 @@ export default function ProfilePage() {
     <div className="content-wrap narrow-content">
       <header className="topbar">
         <div>
-          <p className="eyebrow">TVOJ PROSTOR</p>
           <h1>Profil</h1>
         </div>
       </header>
