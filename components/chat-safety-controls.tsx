@@ -60,6 +60,7 @@ export function ChatSafetyMenu({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
   const toggleRef = useRef<HTMLButtonElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -69,12 +70,20 @@ export function ChatSafetyMenu({ children }: { children: React.ReactNode }) {
         toggleRef.current?.focus();
       }
     };
+    // A press anywhere outside the menu closes it, like any other popover.
+    const onPointer = (event: MouseEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    };
     document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+    document.addEventListener("mousedown", onPointer);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("mousedown", onPointer);
+    };
   }, [open]);
 
   return (
-    <div className="chat-safety">
+    <div className="chat-safety" ref={rootRef}>
       <button
         ref={toggleRef}
         type="button"
