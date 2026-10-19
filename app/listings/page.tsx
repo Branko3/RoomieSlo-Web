@@ -126,7 +126,7 @@ export default function ListingsPage() {
                 <b>{title}</b>
                 <small>{hint}</small>
               </span>
-              <ChevronRightIcon className="icon row-chevron" />
+              <ChevronRightIcon className="row-chevron" />
             </Link>
           </li>
         ))}

@@ -2046,15 +2046,23 @@ button.text-link {
   margin: 6px 0 0;
 }
 .cohabitation-banner,
+.cohabitation-suggestion {
+  border: 1px solid var(--color-attention-border);
+  border-radius: var(--radius-paper);
+  padding: 10px 14px;
+  margin: 0 0 12px;
+}
+.cohabitation-banner,
 .cohabitation-suggestion,
 .rating-banner {
   background: var(--color-attention-surface);
-  border-color: var(--color-attention-border);
   color: var(--color-attention-text);
 }
+/* Inside the chat strip the reminder fills the strip edge to edge. */
 .cohabitation .cohabitation-banner,
 .cohabitation .cohabitation-suggestion {
-  margin: 0;
+  margin: -10px -14px;
+  border: 0;
 }
 .cohabitation-banner p,
 .cohabitation-suggestion p {
@@ -2141,6 +2149,10 @@ button.text-link {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-paper);
+}
+/* After .rating, whose border shorthand would otherwise win. */
+.rating.rating-banner {
+  border-color: var(--color-attention-border);
 }
 .rating p {
   margin: 0 0 8px;
@@ -2596,9 +2608,9 @@ button.text-link {
   .is-focused .mobile-nav {
     display: none;
   }
+  /* The sticky composer pads itself for the home indicator. */
   .is-focused .main-content {
     padding-bottom: 0;
-    padding-bottom: env(safe-area-inset-bottom);
   }
   .is-focused .conversation-body {
     max-height: none;
