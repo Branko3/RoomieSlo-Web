@@ -281,11 +281,17 @@ textarea::placeholder {
   display: flex;
   min-height: 100vh;
 }
+/*
+ * viewport-fit=cover hands all four safe-area insets to the page: in landscape
+ * the notch sits on the left or right edge, so the shell grows by that inset.
+ */
 .sidebar {
   width: var(--sidebar-width);
+  width: calc(var(--sidebar-width) + env(safe-area-inset-left));
   background: var(--color-surface);
   border-right: 1px solid var(--color-border);
   padding: 28px 16px 20px;
+  padding-left: calc(16px + env(safe-area-inset-left));
   display: flex;
   flex-direction: column;
   position: fixed;
@@ -385,7 +391,9 @@ textarea::placeholder {
 }
 .main-content {
   margin-left: var(--sidebar-width);
+  margin-left: calc(var(--sidebar-width) + env(safe-area-inset-left));
   width: calc(100% - var(--sidebar-width));
+  width: calc(100% - var(--sidebar-width) - env(safe-area-inset-left));
   min-height: 100vh;
   min-width: 0;
 }
@@ -400,6 +408,7 @@ textarea::placeholder {
   max-width: var(--content-max);
   margin: 0 auto;
   padding: 44px 48px 72px;
+  padding-right: calc(48px + env(safe-area-inset-right));
 }
 .narrow-content {
   max-width: var(--content-narrow);
@@ -1210,9 +1219,17 @@ button.text-link {
 }
 .detail-copy {
   grid-area: summary;
-  position: -webkit-sticky;
-  position: sticky;
-  top: 24px;
+}
+/*
+ * Sticky only where the whole summary fits: an owner's summary (status,
+ * actions, request form, delete) outgrows a 720–768px laptop screen.
+ */
+@media (min-width: 651px) and (min-height: 800px) {
+  .detail-copy {
+    position: -webkit-sticky;
+    position: sticky;
+    top: 24px;
+  }
 }
 .detail-sections {
   grid-area: sections;
@@ -2080,15 +2097,23 @@ button.text-link {
   margin: 6px 0 0;
 }
 .cohabitation-banner,
+.cohabitation-suggestion {
+  border: 1px solid var(--color-attention-border);
+  border-radius: var(--radius-paper);
+  padding: 10px 14px;
+  margin: 0 0 12px;
+}
+.cohabitation-banner,
 .cohabitation-suggestion,
 .rating-banner {
   background: var(--color-attention-surface);
-  border-color: var(--color-attention-border);
   color: var(--color-attention-text);
 }
+/* Inside the chat strip the reminder fills the strip edge to edge. */
 .cohabitation .cohabitation-banner,
 .cohabitation .cohabitation-suggestion {
-  margin: 0;
+  margin: -10px -14px;
+  border: 0;
 }
 .cohabitation-banner p,
 .cohabitation-suggestion p {
@@ -2175,6 +2200,10 @@ button.text-link {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-paper);
+}
+/* After .rating, whose border shorthand would otherwise win. */
+.rating.rating-banner {
+  border-color: var(--color-attention-border);
 }
 .rating p {
   margin: 0 0 8px;
@@ -2401,6 +2430,7 @@ button.text-link {
   position: absolute;
   top: 28px;
   left: 44px;
+  left: calc(44px + env(safe-area-inset-left));
   display: flex;
   align-items: center;
   gap: 10px;
@@ -2495,13 +2525,17 @@ button.text-link {
 @media (max-width: 900px) {
   .sidebar {
     width: var(--sidebar-width-narrow);
+    width: calc(var(--sidebar-width-narrow) + env(safe-area-inset-left));
   }
   .main-content {
     margin-left: var(--sidebar-width-narrow);
+    margin-left: calc(var(--sidebar-width-narrow) + env(safe-area-inset-left));
     width: calc(100% - var(--sidebar-width-narrow));
+    width: calc(100% - var(--sidebar-width-narrow) - env(safe-area-inset-left));
   }
   .content-wrap {
     padding: 32px 24px;
+    padding-right: calc(24px + env(safe-area-inset-right));
   }
   .listing-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2625,9 +2659,9 @@ button.text-link {
   .is-focused .mobile-nav {
     display: none;
   }
+  /* The sticky composer pads itself for the home indicator. */
   .is-focused .main-content {
     padding-bottom: 0;
-    padding-bottom: env(safe-area-inset-bottom);
   }
   .is-focused .conversation-body {
     max-height: none;
@@ -2665,14 +2699,12 @@ button.text-link {
     margin: 0 -16px;
     border-radius: 0;
   }
-  .detail-copy {
-    position: static;
-  }
   .detail-copy h1 {
     font-size: var(--text-2xl);
   }
   .auth-brand {
     left: 20px;
+    left: calc(20px + env(safe-area-inset-left));
   }
   .auth-card {
     padding: 28px 20px;

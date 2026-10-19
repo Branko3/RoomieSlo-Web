@@ -22,40 +22,10 @@ import {
 } from "../../../lib/listings/listing-status";
 import { formatMoveIn, formatPrice } from "../../../lib/listings/format";
 import { useListing } from "../../../lib/supabase/hooks";
-import type { Listing } from "../../../lib/supabase/mappers";
 import { DataState, LoadingState } from "../../../components/data-states";
+import { ListingAbout } from "../../../components/listing-about";
 
 const FILLED_NOTE = "Oglas je zapolnjen, zato zahteve za ujemanje niso mogoče.";
-
-function yesNo(value: boolean) {
-  return value ? "da" : "ne";
-}
-
-/** Facts the owner entered; anything unknown is left out rather than guessed. */
-function ListingFacts({ listing }: { listing: Listing }) {
-  const facts: Array<[string, string]> = [];
-  if (listing.sizeSqm != null)
-    facts.push(["Velikost", `${listing.sizeSqm} m²`]);
-  if (listing.deposit != null)
-    facts.push(["Varščina", formatPrice(listing.deposit)]);
-  if (listing.flatmates != null)
-    facts.push(["Sostanovalci", String(listing.flatmates)]);
-  if (listing.furnished != null)
-    facts.push(["Opremljeno", yesNo(listing.furnished)]);
-  if (listing.billsIncluded != null)
-    facts.push(["Stroški vključeni", yesNo(listing.billsIncluded)]);
-  if (facts.length === 0) return null;
-  return (
-    <dl className="fact-list">
-      {facts.map(([term, value]) => (
-        <div key={term}>
-          <dt>{term}</dt>
-          <dd>{value}</dd>
-        </div>
-      ))}
-    </dl>
-  );
-}
 
 /** Supabase-backed request: sending, sent and failed states live in the button. */
 function LiveMatchRequest({
@@ -219,13 +189,7 @@ export default function ListingDetail({ params }: { params: { id: string } }) {
           />
         </div>
         <div className="detail-sections">
-          <section className="detail-section" aria-labelledby="about-title">
-            <h2 id="about-title">O prostoru</h2>
-            <p className="detail-description">
-              {listing.description?.trim() || "Lastnik še ni dodal opisa."}
-            </p>
-            <ListingFacts listing={listing} />
-          </section>
+          <ListingAbout listing={listing} />
           <section className="detail-section" aria-labelledby="safety-title">
             <h2 id="safety-title">Varnost</h2>
             <p className="muted">

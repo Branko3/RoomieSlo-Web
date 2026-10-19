@@ -14,8 +14,17 @@ import {
   ListingGridSkeleton,
   useOnlineStatus,
 } from "../../components/data-states";
+import { formatPrice } from "../../lib/listings/format";
 
 const OFFLINE_ERROR = new Error("Brez povezave");
+
+/** What the current sort does, said under the result count. */
+const SORT_NOTE: Record<string, string> = {
+  relevance: "Razvrščeno po združljivosti",
+  newest: "Najprej najnovejši",
+  "price-asc": "Od najcenejšega",
+  "price-desc": "Od najdražjega",
+};
 
 export default function SearchPage() {
   const router = useRouter();
@@ -97,9 +106,15 @@ export default function SearchPage() {
           <h1>Iskanje sobe</h1>
         </div>
       </header>
-      <section
+      {/* Filtering is live; the form only lets the keyboard's search key close the keyboard. */}
+      <form
+        role="search"
         className={`filter-panel ${filtersOpen ? "is-open" : ""}`}
         aria-label="Filtri"
+        onSubmit={(event) => {
+          event.preventDefault();
+          (document.activeElement as HTMLElement | null)?.blur();
+        }}
       >
         <div className="field">
           <label htmlFor="location">Lokacija</label>
@@ -117,7 +132,7 @@ export default function SearchPage() {
         </div>
         <div className="field range-field" id="search-more-filters">
           <label htmlFor="price">
-            Največji proračun <b>{maxPrice}&nbsp;€</b>
+            Največji proračun <b>{formatPrice(maxPrice)}</b>
           </label>
           <input
             id="price"
@@ -133,13 +148,13 @@ export default function SearchPage() {
             }}
           />
         </div>
-      </section>
+      </form>
       <div className="results-bar">
         <div>
           <h2 aria-live="polite">
             {results.length} {resultLabel} zate
           </h2>
-          <p className="muted">Razvrščeno po združljivosti</p>
+          <p className="muted">{SORT_NOTE[sort] ?? SORT_NOTE.relevance}</p>
         </div>
         <div className="results-bar-actions">
           <button
@@ -147,7 +162,17 @@ export default function SearchPage() {
             className="button button-outline filters-toggle"
             aria-expanded={filtersOpen}
             aria-controls="search-more-filters"
-            onClick={() => setFiltersOpen((open) => !open)}
+            onClick={() => {
+              const opening = !filtersOpen;
+              setFiltersOpen(opening);
+              // The bar is sticky, so the panel may be scrolled away above it.
+              if (opening)
+                requestAnimationFrame(() =>
+                  document
+                    .getElementById("search-more-filters")
+                    ?.scrollIntoView({ block: "nearest" }),
+                );
+            }}
           >
             <FiltersIcon size={18} />
             Filtri{maxPrice < 600 ? " (1)" : ""}
@@ -187,13 +212,13 @@ export default function SearchPage() {
           {maxPrice < 600 && (
             <button
               type="button"
-              aria-label={`Odstrani filter: do ${maxPrice} €`}
+              aria-label={`Odstrani filter: do ${formatPrice(maxPrice)}`}
               onClick={() => {
                 setMaxPrice(600);
                 updateUrl({ maxPrice: 600 });
               }}
             >
-              do {maxPrice}&nbsp;€
+              do {formatPrice(maxPrice)}
               <CloseIcon size={16} />
             </button>
           )}

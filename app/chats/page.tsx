@@ -15,7 +15,7 @@ export default function ChatsPage() {
         </div>
       </header>
       <div className="match-banner">
-        <SparkleIcon className="icon match-icon" />
+        <SparkleIcon className="match-icon" />
         <div>
           <b>Priporočeni profili</b>
           <p>Na podlagi tvojih odgovorov</p>

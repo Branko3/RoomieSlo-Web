@@ -71,14 +71,18 @@ export function ChatSafetyMenu({ children }: { children: React.ReactNode }) {
       }
     };
     // A press anywhere outside the menu closes it, like any other popover.
-    const onPointer = (event: MouseEvent) => {
+    // touchstart too: iOS Safari fires no mousedown for taps on plain text,
+    // and pointer events are missing from Safari 12 (browserslist).
+    const onPointer = (event: MouseEvent | TouchEvent) => {
       if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
     };
     document.addEventListener("keydown", onKey);
     document.addEventListener("mousedown", onPointer);
+    document.addEventListener("touchstart", onPointer, { passive: true });
     return () => {
       document.removeEventListener("keydown", onKey);
       document.removeEventListener("mousedown", onPointer);
+      document.removeEventListener("touchstart", onPointer);
     };
   }, [open]);
 

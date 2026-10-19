@@ -167,7 +167,7 @@ export default function ConversationPage({
             {peer.name}
             {peer.verified && (
               <VerifiedIcon
-                className="icon verified-icon"
+                className="verified-icon"
                 size={20}
                 label="Preverjen študent"
               />

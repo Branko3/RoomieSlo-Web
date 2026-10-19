@@ -15,14 +15,14 @@ strip carrying the price. Everything else stays quiet.
 
 ## Colour
 
-| Name          | Light                 | Dark                  | Role                                                                           |
-| ------------- | --------------------- | --------------------- | ------------------------------------------------------------------------------ |
-| Smreka        | `#2f6f5e`             | `#7cc4a8`             | Action colour, active nav                                                      |
-| Gozd          | `#1d5143`             | `#9ed3bf`             | Focus ring, accent text, links                                                 |
-| Med           | `#e7b75f`             | `#e7b75f`             | Attention only (new, recommended, unread); never text on light, never a button |
-| Tinta         | `#1c2925`             | `#e4ede8`             | Text                                                                           |
-| Papir / Deska | `#f5f8f6` / `#ffffff` | `#111d19` / `#18271f` | Page / surfaces                                                                |
-| Opeka         | `#a12a1f`             | `#f0a39b`             | Destructive, errors                                                            |
+| Name          | Light                 | Dark                  | Role                                                                                                                    |
+| ------------- | --------------------- | --------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Smreka        | `#2f6f5e`             | `#7cc4a8`             | Action colour, active nav                                                                                               |
+| Gozd          | `#1d5143`             | `#9ed3bf`             | Focus ring, accent text, links                                                                                          |
+| Med           | `#e7b75f`             | `#e7b75f`             | Attention only (new, recommended, unread), plus the one rule in the dashboard hero; never text on light, never a button |
+| Tinta         | `#1c2925`             | `#e4ede8`             | Text                                                                                                                    |
+| Papir / Deska | `#f5f8f6` / `#ffffff` | `#111d19` / `#18271f` | Page / surfaces                                                                                                         |
+| Opeka         | `#a12a1f`             | `#f0a39b`             | Destructive, errors                                                                                                     |
 
 - Components use semantic tokens only (`--color-text`, `--color-action`, …).
   Raw hex is allowed only above `/* ---- END TOKENS ---- */`; `tests/contrast.test.ts`
