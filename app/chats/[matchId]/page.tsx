@@ -2,8 +2,25 @@
 
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { ChatCohabitation } from "../../../components/chat-cohabitation";
-import { ChatRating } from "../../../components/chat-rating";
+import dynamic from "next/dynamic";
+
+// The cohabitation and rating strips are secondary (accepted matches only, and
+// they load their own data), so they arrive after the conversation instead of
+// counting towards this route's first-load budget.
+const ChatCohabitation = dynamic(
+  () =>
+    import("../../../components/chat-cohabitation").then(
+      (module) => module.ChatCohabitation,
+    ),
+  { loading: () => null },
+);
+const ChatRating = dynamic(
+  () =>
+    import("../../../components/chat-rating").then(
+      (module) => module.ChatRating,
+    ),
+  { loading: () => null },
+);
 import {
   BlockPersonControl,
   ChatSafetyMenu,

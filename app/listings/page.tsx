@@ -15,6 +15,7 @@ import {
   UsersIcon,
 } from "../../components/icons";
 import { ListingCard } from "../../components/listing-card";
+import { MyListingsShortcut } from "../../components/my-listings-links";
 import { useOfflineListings } from "../../lib/listings/use-offline-listings";
 import Link from "next/link";
 
@@ -70,6 +71,7 @@ export default function ListingsPage() {
           </Link>
         </div>
       </section>
+      <MyListingsShortcut />
       <div className="section-heading">
         <div>
           <h2>Priporočeni oglasi</h2>

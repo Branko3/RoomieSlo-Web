@@ -1133,6 +1133,33 @@ button.text-link {
   color: var(--color-text-muted);
 }
 
+/* --- Own listings ("Moji oglasi") --- */
+/* Above the title link's full-card hit area, like the heart button. */
+.own-listing-actions {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 0 16px 16px;
+}
+.own-listing-actions .listing-status-control {
+  margin: 0;
+}
+.my-listings-shortcut {
+  margin: -16px 0 32px;
+}
+.owner-strip {
+  margin: 0 0 16px;
+}
+.owner-strip-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
 /* --- Search --- */
 .filter-panel {
   background: var(--panel-bg);
@@ -1510,6 +1537,13 @@ button.text-link {
 }
 .settings-list > .profile-card:first-child {
   border-top: 0;
+}
+.settings-link {
+  color: inherit;
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+.settings-link:hover {
+  background: var(--color-surface-hover);
 }
 .profile-footer {
   margin-top: 32px;

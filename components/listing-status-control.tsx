@@ -11,39 +11,21 @@ import {
 import { createSupabaseBrowserClient } from "../lib/supabase/browser";
 
 /**
- * Owner-only "Označi kot zapolnjeno / na voljo" toggle. Hiding it for other
- * users is UI only; RLS (`auth.uid() = owner_id`) is the boundary.
+ * "Označi kot zapolnjeno / na voljo" for a listing the caller already knows
+ * is the user's own (e.g. the "Moji oglasi" list, which only loads them).
+ * RLS (`auth.uid() = owner_id`) remains the boundary.
  */
-export function ListingStatusControl({
+export function ListingStatusToggle({
   listingId,
-  ownerId,
   isFilled,
   onChange,
 }: {
   listingId: string;
-  ownerId: string;
   isFilled: boolean;
   onChange: (filled: boolean) => void;
 }) {
-  const [isOwner, setIsOwner] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!getSupabaseConfig().configured) return;
-    let active = true;
-    createSupabaseBrowserClient()
-      .auth.getUser()
-      .then(({ data }) => {
-        if (active) setIsOwner(Boolean(data.user && data.user.id === ownerId));
-      })
-      .catch(() => undefined);
-    return () => {
-      active = false;
-    };
-  }, [ownerId]);
-
-  if (!isOwner) return null;
 
   async function toggle() {
     if (saving) return;
@@ -77,5 +59,46 @@ export function ListingStatusControl({
         </p>
       )}
     </div>
+  );
+}
+
+/**
+ * The same toggle on a listing page anyone can open: shown only to the
+ * owner. Hiding it for other users is UI only; RLS is the boundary.
+ */
+export function ListingStatusControl({
+  listingId,
+  ownerId,
+  isFilled,
+  onChange,
+}: {
+  listingId: string;
+  ownerId: string;
+  isFilled: boolean;
+  onChange: (filled: boolean) => void;
+}) {
+  const [isOwner, setIsOwner] = useState(false);
+
+  useEffect(() => {
+    if (!getSupabaseConfig().configured) return;
+    let active = true;
+    createSupabaseBrowserClient()
+      .auth.getUser()
+      .then(({ data }) => {
+        if (active) setIsOwner(Boolean(data.user && data.user.id === ownerId));
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [ownerId]);
+
+  if (!isOwner) return null;
+  return (
+    <ListingStatusToggle
+      listingId={listingId}
+      isFilled={isFilled}
+      onChange={onChange}
+    />
   );
 }

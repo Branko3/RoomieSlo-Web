@@ -97,6 +97,8 @@ export type CachedListingQuery = {
   location?: string;
   maxPrice?: number;
   limit?: number;
+  /** Leaves out this owner's listings (the cache may hold rows from before feeds excluded them). */
+  excludeOwnerId?: string | null;
 };
 
 /**
@@ -114,6 +116,7 @@ export async function readCachedListings(
   const rows = (await store.getAll()).filter(
     ({ listing }) =>
       !listing.isFilled &&
+      (!query.excludeOwnerId || listing.ownerId !== query.excludeOwnerId) &&
       (!location ||
         listing.location.toLocaleLowerCase("sl").includes(location)) &&
       (query.maxPrice === undefined || listing.price <= query.maxPrice),

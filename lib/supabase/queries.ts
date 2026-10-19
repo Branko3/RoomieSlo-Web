@@ -6,6 +6,8 @@ export type ListingQuery = {
   maxPrice?: number;
   cursor?: string;
   limit?: number;
+  /** Leaves out this owner's listings: browsing feeds never show your own ("Moji oglasi" does). */
+  excludeOwnerId?: string | null;
 };
 
 export async function fetchListings(
@@ -22,6 +24,8 @@ export async function fetchListings(
     request = request.ilike("location", `%${query.location.trim()}%`);
   if (query.maxPrice !== undefined)
     request = request.lte("price_per_month", query.maxPrice);
+  if (query.excludeOwnerId)
+    request = request.neq("owner_id", query.excludeOwnerId);
   if (query.cursor) request = request.lt("created_at", query.cursor);
   const { data, error } = await request;
   if (error) throw error;

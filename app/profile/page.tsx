@@ -10,6 +10,7 @@ import {
 } from "../../components/profile-status-cards";
 import { getSupabaseConfig } from "../../lib/config";
 import { LogoutButton } from "../../components/logout-button";
+import { MyListingsSettingsRow } from "../../components/my-listings-links";
 
 export default function ProfilePage() {
   const configured = getSupabaseConfig().configured;
@@ -26,6 +27,7 @@ export default function ProfilePage() {
           <div className="settings-list">
             <AvailabilityCard />
             <QuestionnaireProgressCard />
+            <MyListingsSettingsRow />
           </div>
           <MyCohabitationsSection />
           <MyRatingsSection />

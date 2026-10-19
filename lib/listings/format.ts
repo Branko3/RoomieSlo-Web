@@ -11,6 +11,24 @@ export function formatMoveIn(available: string): string {
   return `${Number(day)}. ${Number(month)}. ${year}`;
 }
 
+const LJUBLJANA_DAY = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Europe/Ljubljana",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+/**
+ * Slovenian date for a moment such as `created_at`: the calendar day in
+ * Ljubljana, so a listing posted at 00:30 local time is not shown as the
+ * previous (UTC) day. Unparseable values are returned unchanged.
+ */
+export function formatTimestampDate(timestamp: string): string {
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return timestamp;
+  return formatMoveIn(LJUBLJANA_DAY.format(date));
+}
+
 const WHOLE_EUROS = new Intl.NumberFormat("sl-SI", {
   maximumFractionDigits: 0,
 });

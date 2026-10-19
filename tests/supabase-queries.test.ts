@@ -34,6 +34,10 @@ function makeClient(result: QueryResult) {
       calls.push(["lte", args]);
       return builder;
     },
+    neq: (...args: unknown[]) => {
+      calls.push(["neq", args]);
+      return builder;
+    },
     lt: (...args: unknown[]) => {
       calls.push(["lt", args]);
       return builder;
@@ -105,6 +109,22 @@ describe("Supabase listing query boundary", () => {
       ["lte", ["price_per_month", 500]],
       ["lt", ["created_at", "2026-01-03T00:00:00Z"]],
     ]);
+  });
+
+  it("leaves out the signed-in owner's listings only when an id is given", async () => {
+    const mock = makeClient({ data: [listing], error: null });
+    vi.mocked(createSupabaseBrowserClient).mockReturnValue(
+      mock.client as never,
+    );
+    await fetchListings({ excludeOwnerId: "me" });
+    expect(mock.calls).toContainEqual(["neq", ["owner_id", "me"]]);
+
+    const anonymous = makeClient({ data: [listing], error: null });
+    vi.mocked(createSupabaseBrowserClient).mockReturnValue(
+      anonymous.client as never,
+    );
+    await fetchListings({ excludeOwnerId: null });
+    expect(anonymous.calls.some(([name]) => name === "neq")).toBe(false);
   });
 
   it("returns an unknown id as null and preserves backend errors", async () => {

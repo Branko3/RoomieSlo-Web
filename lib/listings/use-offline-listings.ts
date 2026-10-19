@@ -38,13 +38,15 @@ export function useOfflineListings(query: ListingQuery = {}) {
     let active = true;
     setState((current) => ({ ...current, isLoading: true }));
     loadListingsWithFallback({
-      fetchFresh: () =>
+      fetchFresh: async () =>
         fetchListings({
           location: query.location,
           maxPrice: query.maxPrice,
           cursor: query.cursor,
           limit: query.limit,
+          excludeOwnerId: await readSessionUserId(),
         }),
+      excludeOwnListings: true,
       readUserId: readSessionUserId,
       store: getListingCacheStore(),
       query: {
@@ -94,6 +96,7 @@ export function useCachedListingsFallback(
       store: getListingCacheStore(),
       query: { location: query.location, maxPrice: query.maxPrice },
       isOnline: reason !== "offline",
+      excludeOwnListings: true,
     }).then((next) => {
       if (active) setView(next);
     });

@@ -24,6 +24,8 @@ export type LoadListingsOptions = {
   query?: CachedListingQuery;
   /** `navigator.onLine`; when false the network is skipped instead of waiting for a timeout. */
   isOnline?: boolean;
+  /** Browsing feeds: cached rows owned by the signed-in user are left out too. */
+  excludeOwnListings?: boolean;
   now?: number;
 };
 
@@ -44,6 +46,7 @@ export async function loadListingsWithFallback({
   store,
   query,
   isOnline = true,
+  excludeOwnListings = false,
   now = Date.now(),
 }: LoadListingsOptions): Promise<ListingsView> {
   let failure: Error;
@@ -61,7 +64,10 @@ export async function loadListingsWithFallback({
 
   try {
     const userId = await readUserId();
-    const cached = await readCachedListings(store, userId, query);
+    const cached = await readCachedListings(store, userId, {
+      ...query,
+      excludeOwnerId: excludeOwnListings ? userId : undefined,
+    });
     if (cached.length > 0) {
       return {
         source: "cache",
