@@ -69,6 +69,21 @@ describe("Supabase contract mappers", () => {
     });
   });
 
+  it("reads numeric listing facts like the price, and rejects garbage", () => {
+    const numericAsText = {
+      ...row,
+      deposit: "320.00",
+      size_sqm: "16",
+    } as unknown as Row<"listings">;
+    expect(mapListing(numericAsText)).toMatchObject({
+      deposit: 320,
+      sizeSqm: 16,
+    });
+    expect(() =>
+      mapListing({ ...row, deposit: "n/a" } as unknown as Row<"listings">),
+    ).toThrow("listings.deposit");
+  });
+
   it("rejects incomplete rows instead of returning an empty domain object", () => {
     expect(() => mapListing({ ...row, id: "" })).toThrow("listings.id");
   });

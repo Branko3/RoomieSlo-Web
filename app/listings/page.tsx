@@ -64,7 +64,7 @@ export default function ListingsPage() {
       <section className="hero-banner" aria-labelledby="hero-title">
         <div>
           <h2 id="hero-title">Najdi prostor, kjer se boš počutil doma.</h2>
-          <p>Preverjeni študenti. Resnični oglasi. Boljši začetek.</p>
+          <p>Sobe in sostanovalci za študente. Boljši začetek.</p>
           <Link className="button button-light" href="/search">
             Razišči oglase
           </Link>

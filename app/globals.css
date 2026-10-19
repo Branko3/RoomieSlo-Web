@@ -281,11 +281,17 @@ textarea::placeholder {
   display: flex;
   min-height: 100vh;
 }
+/*
+ * viewport-fit=cover hands all four safe-area insets to the page: in landscape
+ * the notch sits on the left or right edge, so the shell grows by that inset.
+ */
 .sidebar {
   width: var(--sidebar-width);
+  width: calc(var(--sidebar-width) + env(safe-area-inset-left));
   background: var(--color-surface);
   border-right: 1px solid var(--color-border);
   padding: 28px 16px 20px;
+  padding-left: calc(16px + env(safe-area-inset-left));
   display: flex;
   flex-direction: column;
   position: fixed;
@@ -385,7 +391,9 @@ textarea::placeholder {
 }
 .main-content {
   margin-left: var(--sidebar-width);
+  margin-left: calc(var(--sidebar-width) + env(safe-area-inset-left));
   width: calc(100% - var(--sidebar-width));
+  width: calc(100% - var(--sidebar-width) - env(safe-area-inset-left));
   min-height: 100vh;
   min-width: 0;
 }
@@ -400,6 +408,7 @@ textarea::placeholder {
   max-width: var(--content-max);
   margin: 0 auto;
   padding: 44px 48px 72px;
+  padding-right: calc(48px + env(safe-area-inset-right));
 }
 .narrow-content {
   max-width: var(--content-narrow);
@@ -2284,6 +2293,7 @@ button.text-link {
   position: absolute;
   top: 28px;
   left: 44px;
+  left: calc(44px + env(safe-area-inset-left));
   display: flex;
   align-items: center;
   gap: 10px;
@@ -2378,13 +2388,17 @@ button.text-link {
 @media (max-width: 900px) {
   .sidebar {
     width: var(--sidebar-width-narrow);
+    width: calc(var(--sidebar-width-narrow) + env(safe-area-inset-left));
   }
   .main-content {
     margin-left: var(--sidebar-width-narrow);
+    margin-left: calc(var(--sidebar-width-narrow) + env(safe-area-inset-left));
     width: calc(100% - var(--sidebar-width-narrow));
+    width: calc(100% - var(--sidebar-width-narrow) - env(safe-area-inset-left));
   }
   .content-wrap {
     padding: 32px 24px;
+    padding-right: calc(24px + env(safe-area-inset-right));
   }
   .listing-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2530,6 +2544,7 @@ button.text-link {
   }
   .auth-brand {
     left: 20px;
+    left: calc(20px + env(safe-area-inset-left));
   }
   .auth-card {
     padding: 28px 20px;
