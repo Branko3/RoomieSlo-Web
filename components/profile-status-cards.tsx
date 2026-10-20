@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, type CSSProperties } from "react";
 import {
   fetchOwnProfile,
   updateAvailability,
@@ -112,7 +112,11 @@ export function QuestionnaireProgressCard() {
 
   return (
     <section className="profile-card questionnaire">
-      <div className="progress-ring" aria-hidden="true">
+      <div
+        className="progress-ring"
+        aria-hidden="true"
+        style={{ "--percent": progress?.percent ?? 0 } as CSSProperties}
+      >
         {progress ? `${progress.percent}%` : "…"}
       </div>
       <div>
