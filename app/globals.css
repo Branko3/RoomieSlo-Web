@@ -1558,13 +1558,27 @@ button.text-link {
 .questionnaire {
   background: var(--color-surface);
 }
+.questionnaire > div:nth-child(2) {
+  flex: 1;
+}
 .progress-ring {
-  border: 5px solid var(--color-surface-accent);
-  border-top-color: var(--color-action);
+  /* Filled arc = --percent; the inner disc masks the centre into a 5px ring. */
+  --percent: 0;
+  background:
+    radial-gradient(
+      closest-side,
+      var(--color-surface) calc(100% - 5px),
+      transparent calc(100% - 5px)
+    ),
+    conic-gradient(
+      var(--color-action) calc(var(--percent) * 1%),
+      var(--color-surface-accent) 0
+    );
   border-radius: 50%;
   height: 57px;
   width: 57px;
-  flex: none;
+  aspect-ratio: 1;
+  flex: none !important;
   display: grid;
   place-items: center;
   font-weight: 700;
