@@ -30,6 +30,31 @@ const securityHeaders = [
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  webpack(config, { isServer }) {
+    const splitChunks = config.optimization?.splitChunks;
+    if (!isServer && splitChunks) {
+      // The i18n runtime (provider, formatters, switcher) is used by the root
+      // layout and by most pages. Small shared modules are otherwise copied
+      // into every page chunk, so each page would pay for it a second time
+      // in its first-load JavaScript (perf-budget.json).
+      splitChunks.cacheGroups = {
+        ...splitChunks.cacheGroups,
+        i18n: {
+          // App code only (Next has its own shared/lib/i18n), never the catalogs.
+          test: (module) =>
+            !/[\\/]node_modules[\\/]/.test(module.resource ?? "") &&
+            /[\\/](lib[\\/]i18n[\\/](?!messages[\\/])|components[\\/]language-switcher)/.test(
+              module.resource ?? "",
+            ),
+          name: "i18n",
+          chunks: "all",
+          enforce: true,
+          priority: 50,
+        },
+      };
+    }
+    return config;
+  },
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },
