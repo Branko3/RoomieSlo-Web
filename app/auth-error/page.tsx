@@ -1,3 +1,5 @@
+import { LanguageSwitcher } from "../../components/language-switcher";
+
 export const metadata = {
   title: "Napaka prijave",
   robots: { index: false, follow: false },
@@ -16,6 +18,7 @@ export default function AuthErrorPage({
     <div className="page-state" role="alert">
       <h1>Prijava ni na voljo</h1>
       <p>{message}</p>
+      <LanguageSwitcher className="page-language" />
     </div>
   );
 }

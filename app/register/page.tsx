@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import { LanguageSwitcher } from "../../components/language-switcher";
 import { createSupabaseBrowserClient } from "../../lib/supabase/browser";
 import {
   getRegistrationErrorMessage,
@@ -194,6 +195,7 @@ export default function RegisterPage() {
           Že imaš račun? <Link href="/login">Prijava</Link>
         </p>
       </div>
+      <LanguageSwitcher className="page-language" />
     </div>
   );
 }

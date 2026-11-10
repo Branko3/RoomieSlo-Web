@@ -9,6 +9,7 @@ import {
   SearchIcon,
   UserIcon,
 } from "./icons";
+import { useI18n } from "../lib/i18n/provider";
 
 export type DataErrorKind = "offline" | "permission" | "auth" | "error";
 
@@ -59,15 +60,12 @@ export function subscribeToOnlineStatus(update: () => void) {
   };
 }
 
-export function LoadingState({
-  label = "Nalaganje vsebine ...",
-}: {
-  label?: string;
-}) {
+export function LoadingState({ label }: { label?: string }) {
+  const { m } = useI18n();
   return (
     <div className="page-state state-loading" role="status" aria-live="polite">
       <span className="state-spinner" aria-hidden="true" />
-      <p>{label}</p>
+      <p>{label ?? m.common.loading.content}</p>
     </div>
   );
 }
@@ -77,15 +75,16 @@ export function LoadingState({
  * page does not jump when they arrive. The label is announced once.
  */
 export function ListingGridSkeleton({
-  label = "Nalaganje oglasov ...",
+  label,
   count = 3,
 }: {
   label?: string;
   count?: number;
 }) {
+  const { m } = useI18n();
   return (
     <div role="status" aria-live="polite">
-      <span className="sr-only">{label}</span>
+      <span className="sr-only">{label ?? m.common.loading.listings}</span>
       <div className="listing-grid" aria-hidden="true">
         {Array.from({ length: count }, (_, index) => (
           <div className="listing-card skeleton-card" key={index}>
@@ -130,6 +129,7 @@ export function EmptyState({
 }
 
 export function OfflineState({ onRetry }: { onRetry?: () => void }) {
+  const { m } = useI18n();
   return (
     <section
       className="page-state state-offline"
@@ -139,14 +139,11 @@ export function OfflineState({ onRetry }: { onRetry?: () => void }) {
       <span className="state-icon" aria-hidden="true">
         <OfflineIcon size={28} />
       </span>
-      <h2 id="offline-state-title">Trenutno si brez povezave</h2>
-      <p>
-        Preveri internetno povezavo. Ko bo povezava spet na voljo, poskusi
-        znova.
-      </p>
+      <h2 id="offline-state-title">{m.errors.offline.title}</h2>
+      <p>{m.errors.offline.body}</p>
       {onRetry && (
         <button className="button" type="button" onClick={onRetry}>
-          Poskusi znova
+          {m.common.actions.retry}
         </button>
       )}
     </section>
@@ -154,6 +151,7 @@ export function OfflineState({ onRetry }: { onRetry?: () => void }) {
 }
 
 export function PermissionDeniedState({ onRetry }: { onRetry?: () => void }) {
+  const { m } = useI18n();
   return (
     <section
       className="page-state state-denied"
@@ -163,25 +161,26 @@ export function PermissionDeniedState({ onRetry }: { onRetry?: () => void }) {
       <span className="state-icon" aria-hidden="true">
         <LockIcon size={28} />
       </span>
-      <h2 id="denied-state-title">Dostop do vsebine ni dovoljen</h2>
-      <p>Tvoj račun nima dovoljenja za ogled te vsebine.</p>
+      <h2 id="denied-state-title">{m.errors.permission.title}</h2>
+      <p>{m.errors.permission.body}</p>
       {onRetry && (
         <button
           className="button button-outline"
           type="button"
           onClick={onRetry}
         >
-          Poskusi znova
+          {m.common.actions.retry}
         </button>
       )}
       <Link className="button" href="/listings">
-        Na dovoljeno vsebino
+        {m.errors.permission.action}
       </Link>
     </section>
   );
 }
 
 export function AuthenticationRequiredState() {
+  const { m } = useI18n();
   return (
     <section
       className="page-state state-auth"
@@ -191,10 +190,10 @@ export function AuthenticationRequiredState() {
       <span className="state-icon" aria-hidden="true">
         <UserIcon size={28} />
       </span>
-      <h2 id="auth-state-title">Prijava je potrebna</h2>
-      <p>Za ogled te vsebine se prijavi v svoj račun.</p>
+      <h2 id="auth-state-title">{m.errors.authRequired.title}</h2>
+      <p>{m.errors.authRequired.body}</p>
       <Link className="button" href="/login">
-        Na prijavo
+        {m.errors.authRequired.action}
       </Link>
     </section>
   );
@@ -203,12 +202,13 @@ export function AuthenticationRequiredState() {
 export function ErrorState({
   onRetry,
   action,
-  title = "Vsebine ni mogoče naložiti",
+  title,
 }: {
   onRetry?: () => void;
   action?: React.ReactNode;
   title?: string;
 }) {
+  const { m } = useI18n();
   return (
     <section
       className="page-state state-error"
@@ -218,17 +218,17 @@ export function ErrorState({
       <span className="state-icon" aria-hidden="true">
         <AlertIcon size={28} />
       </span>
-      <h2 id="error-state-title">{title}</h2>
-      <p>Prišlo je do napake. Poskusi znova ali se vrni na oglase.</p>
+      <h2 id="error-state-title">{title ?? m.errors.load.title}</h2>
+      <p>{m.errors.load.body}</p>
       <div className="state-actions">
         {onRetry && (
           <button className="button" type="button" onClick={onRetry}>
-            Poskusi znova
+            {m.common.actions.retry}
           </button>
         )}
         {action ?? (
           <Link className="button button-outline" href="/listings">
-            Na oglase
+            {m.common.actions.toListings}
           </Link>
         )}
       </div>

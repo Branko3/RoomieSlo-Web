@@ -11,6 +11,7 @@ import {
 import { getSupabaseConfig } from "../../lib/config";
 import { LogoutButton } from "../../components/logout-button";
 import { MyListingsSettingsRow } from "../../components/my-listings-links";
+import { LanguageSwitcher } from "../../components/language-switcher";
 
 export default function ProfilePage() {
   const configured = getSupabaseConfig().configured;
@@ -33,6 +34,12 @@ export default function ProfilePage() {
           <MyRatingsSection />
         </>
       )}
+      {/* The sidebar's switcher is hidden on phones; this one is always here. */}
+      <div className="settings-list">
+        <div className="profile-card">
+          <LanguageSwitcher />
+        </div>
+      </div>
       <footer className="profile-footer">
         <LogoutButton />
         <Link

@@ -2,6 +2,7 @@
 
 import { useMutation } from "@tanstack/react-query";
 import Link from "next/link";
+import { LanguageSwitcher } from "../../components/language-switcher";
 import {
   ExportError,
   exportCopy,
@@ -206,6 +207,7 @@ export default function PrivacyPage() {
           <p className="muted">Kontakt za zasebnost še ni nastavljen.</p>
         )}
       </section>
+      <LanguageSwitcher className="page-language" />
     </div>
   );
 }

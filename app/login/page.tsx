@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useRef, useState } from "react";
 import { useAuth } from "../../components/auth-provider";
+import { LanguageSwitcher } from "../../components/language-switcher";
 import {
   authMessage,
   safeDestination,
@@ -111,6 +112,7 @@ export default function LoginPage() {
           Še nimaš računa? <Link href="/register">Registriraj se</Link>
         </p>
       </form>
+      <LanguageSwitcher className="page-language" />
     </div>
   );
 }
