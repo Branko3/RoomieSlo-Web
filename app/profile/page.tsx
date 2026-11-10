@@ -12,14 +12,16 @@ import { getSupabaseConfig } from "../../lib/config";
 import { LogoutButton } from "../../components/logout-button";
 import { MyListingsSettingsRow } from "../../components/my-listings-links";
 import { LanguageSwitcher } from "../../components/language-switcher";
+import { useI18n } from "../../lib/i18n/provider";
 
 export default function ProfilePage() {
   const configured = getSupabaseConfig().configured;
+  const { m } = useI18n();
   return (
     <div className="content-wrap narrow-content">
       <header className="topbar">
         <div>
-          <h1>Profil</h1>
+          <h1>{m.profile.title}</h1>
         </div>
       </header>
       <OwnProfileSection configured={configured} />
@@ -46,7 +48,7 @@ export default function ProfilePage() {
           className="text-link danger-link delete-account-link"
           href="/profile/delete-account"
         >
-          Izbriši račun
+          {m.profile.deleteAccount}
         </Link>
       </footer>
     </div>

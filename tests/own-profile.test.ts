@@ -3,7 +3,6 @@ import {
   draftFromProfile,
   fetchOwnProfile,
   initialsFor,
-  profileErrorMessages,
   ProfileRequestError,
   updateAvailability,
   updateOwnProfile,
@@ -121,7 +120,6 @@ describe("fetchOwnProfile", () => {
     });
     await expect(fetchOwnProfile(client)).rejects.toMatchObject({
       kind: "permission",
-      message: profileErrorMessages.permission,
     });
   });
 
@@ -129,7 +127,6 @@ describe("fetchOwnProfile", () => {
     const { client } = makeClient({ select: new TypeError("Failed to fetch") });
     await expect(fetchOwnProfile(client)).rejects.toMatchObject({
       kind: "offline",
-      message: profileErrorMessages.offline,
     });
   });
 
@@ -201,7 +198,6 @@ describe("updateOwnProfile", () => {
     );
     expect(error).toMatchObject({
       kind: "unknown",
-      message: profileErrorMessages.unknown,
     });
     expect((error as Error).message).not.toContain("check failed");
   });
@@ -268,18 +264,22 @@ describe("validateProfileDraft", () => {
   });
 
   it.each([
-    ["displayName", draft({ displayName: " a " })],
-    ["displayName", draft({ displayName: "x".repeat(61) })],
-    ["faculty", draft({ faculty: "x".repeat(121) })],
-    ["bio", draft({ bio: "x".repeat(501) })],
-    ["age", draft({ age: "17" })],
-    ["age", draft({ age: "100" })],
-    ["age", draft({ age: "22.5" })],
-    ["age", draft({ age: "dvaindvajset" })],
-  ])("rejects an invalid %s", (field, input) => {
+    ["displayName", "display-name-short", draft({ displayName: " a " })],
+    [
+      "displayName",
+      "display-name-long",
+      draft({ displayName: "x".repeat(61) }),
+    ],
+    ["faculty", "faculty-long", draft({ faculty: "x".repeat(121) })],
+    ["bio", "bio-long", draft({ bio: "x".repeat(501) })],
+    ["age", "age-range", draft({ age: "17" })],
+    ["age", "age-range", draft({ age: "100" })],
+    ["age", "age-range", draft({ age: "22.5" })],
+    ["age", "age-range", draft({ age: "dvaindvajset" })],
+  ])("rejects an invalid %s with %s", (field, code, input) => {
     const result = validateProfileDraft(input);
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(Object.keys(result.errors)).toEqual([field]);
+    if (!result.ok) expect(result.errors).toEqual({ [field]: code });
   });
 
   it("accepts the boundary values", () => {

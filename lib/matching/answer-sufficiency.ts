@@ -1,4 +1,5 @@
 import type { CompatibilityAnswer } from "../compatibility/compatibility";
+import type { I18n } from "../i18n/i18n";
 
 /**
  * Minimum number of expressed questionnaire answers before recommendations are
@@ -10,7 +11,7 @@ export const MIN_EXPRESSED_ANSWERS = 3;
 
 export const QUESTIONNAIRE_ROUTE = "/profile/questionnaire";
 
-/** Statements the user actually answered ("Ne želim odgovoriti" has weight 0). */
+/** Statements the user actually answered ("prefer not to say" has weight 0). */
 export function expressedAnswerCount(
   answers: readonly CompatibilityAnswer[] | null,
 ): number {
@@ -38,29 +39,34 @@ export function recommendationReadiness(
   return { status: "ready" };
 }
 
-/** Slovenian plural for "trditev" (1 trditev, 2 trditvi, 3–4 trditve, 5+ trditev). */
-export function statementsLabel(count: number): string {
-  const mod100 = count % 100;
-  if (mod100 === 1) return `${count} trditev`;
-  if (mod100 === 2) return `${count} trditvi`;
-  if (mod100 === 3 || mod100 === 4) return `${count} trditve`;
-  return `${count} trditev`;
-}
+/** The catalog access `readinessMessage` needs: `useI18n()` or `getI18n()`. */
+export type ReadinessText = Pick<I18n, "m" | "format" | "plural">;
 
-export function readinessMessage(readiness: RecommendationReadiness): {
+/** Title and body of the notice shown instead of recommendations; null when ready. */
+export function readinessMessage(
+  readiness: RecommendationReadiness,
+  { m, format, plural }: ReadinessText,
+): {
   title: string;
   body: string;
 } | null {
   if (readiness.status === "ready") return null;
+  const t = m.questionnaire.readiness;
+  const statements = (count: number) => plural(t.statements, count);
   if (readiness.status === "no-answers") {
     return {
-      title: "Najprej izpolni vprašalnik",
-      body: `Priporočila razvrstimo po združljivosti tvojih odgovorov. Odgovori na vsaj ${statementsLabel(MIN_EXPRESSED_ANSWERS)} o življenjskem slogu.`,
+      title: t.noAnswersTitle,
+      body: format(t.noAnswersBody, {
+        statements: statements(MIN_EXPRESSED_ANSWERS),
+      }),
     };
   }
   const missing = readiness.required - readiness.answered;
   return {
-    title: "Za priporočila potrebujemo več odgovorov",
-    body: `Odgovoril(a) si na ${statementsLabel(readiness.answered)}. Odgovori še na ${statementsLabel(missing)}, da bodo ocene združljivosti zanesljive.`,
+    title: t.insufficientTitle,
+    body: format(t.insufficientBody, {
+      answered: statements(readiness.answered),
+      missing: statements(missing),
+    }),
   };
 }

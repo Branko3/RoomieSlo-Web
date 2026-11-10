@@ -3,6 +3,8 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { currentMonth, monthLabel } from "../../lib/cohabitation/months";
+import { catalogs } from "../../lib/i18n/messages";
+import { I18nProvider } from "../../lib/i18n/provider";
 
 const ME = "11111111-1111-4111-8111-111111111111";
 const PEER = "22222222-2222-4222-8222-222222222222";
@@ -57,11 +59,11 @@ function row(overrides: Row = {}): Row {
   };
 }
 
-function renderChat(props: { canDeclare?: boolean } = {}) {
+function renderChat(props: { canDeclare?: boolean; english?: boolean } = {}) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return render(
+  const chat = (
     <QueryClientProvider client={client}>
       <ChatCohabitation
         matchId={MATCH}
@@ -69,7 +71,16 @@ function renderChat(props: { canDeclare?: boolean } = {}) {
         peerName="Ana"
         canDeclare={props.canDeclare ?? true}
       />
-    </QueryClientProvider>,
+    </QueryClientProvider>
+  );
+  return render(
+    props.english ? (
+      <I18nProvider locale="en" messages={catalogs.en}>
+        {chat}
+      </I18nProvider>
+    ) : (
+      chat
+    ),
   );
 }
 
@@ -106,7 +117,7 @@ describe("ChatCohabitation", () => {
     const select = screen.getByLabelText("Mesec vselitve");
     expect(select).toHaveFocus();
     expect(
-      screen.getByRole("option", { name: monthLabel(month) }),
+      screen.getByRole("option", { name: monthLabel(month, "sl") }),
     ).toBeInTheDocument();
 
     await user.keyboard("{Escape}");
@@ -123,7 +134,7 @@ describe("ChatCohabitation", () => {
     });
     expect(
       await screen.findByText(
-        `Čakamo, da Ana potrdi, da živita skupaj od ${monthLabel(month)}.`,
+        `Čakamo, da Ana potrdi, da živita skupaj od ${monthLabel(month, "sl")}.`,
       ),
     ).toBeInTheDocument();
     expect(screen.getByText("Poslano v potrditev.")).toBeInTheDocument();
@@ -209,7 +220,7 @@ describe("ChatCohabitation", () => {
     renderChat();
 
     expect(
-      await screen.findByText(`Živita skupaj od ${monthLabel(month)}`),
+      await screen.findByText(`Živita skupaj od ${monthLabel(month, "sl")}`),
     ).toBeInTheDocument();
     await user.click(
       screen.getByRole("button", { name: "Ne živiva več skupaj" }),
@@ -286,6 +297,44 @@ describe("ChatCohabitation", () => {
     await waitFor(() =>
       expect(screen.queryByRole("button", { name: "Potrdi" })).toBeNull(),
     );
+  });
+
+  it("speaks English: banner, actions, month picker and refusals", async () => {
+    const user = userEvent.setup();
+    fake.user = { id: PEER };
+    fake.rows = [row({ started_month: "2026-10-01" })];
+    fake.rpc.mockResolvedValue({
+      data: null,
+      error: { code: "42501", message: "a block exists" },
+    });
+    renderChat({ english: true });
+
+    expect(
+      await screen.findByText("Ana says you've lived together since Oct 2026."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Not true" }),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Confirm" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "This can't be done in this chat right now.",
+    );
+  });
+
+  it("speaks English in the declare form", async () => {
+    const user = userEvent.setup();
+    const month = currentMonth();
+    renderChat({ english: true });
+    await user.click(
+      await screen.findByRole("button", { name: "We live together" }),
+    );
+    expect(screen.getByLabelText("Move-in month")).toHaveFocus();
+    expect(
+      screen.getByRole("option", { name: monthLabel(month, "en") }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Send for confirmation" }),
+    ).toBeInTheDocument();
   });
 
   it("offers a retry when loading fails, and sign-in when signed out", async () => {

@@ -3,25 +3,21 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState } from "react";
 import { loadMatchCohabitations } from "../lib/cohabitation/cohabitation";
-import { dateLabel } from "../lib/cohabitation/months";
+import { useI18n } from "../lib/i18n/provider";
 import {
   loadMyRating,
   ratableCohabitation,
   RatingError,
   ratingLoadFailure,
-  ratingMessages,
   submitRating,
   type MyRating,
   type RatingAnswers,
 } from "../lib/ratings/ratings";
 import { ratingAction, ratingReminder } from "../lib/ratings/rules";
-import { ratingCopy } from "../lib/ratings/summary";
 import {
   IMPROVEMENT_TAGS,
-  improvementLabels,
   MAX_TAGS,
   STRENGTH_TAGS,
-  strengthLabels,
   type ImprovementTag,
   type StrengthTag,
 } from "../lib/ratings/tags";
@@ -53,6 +49,8 @@ export function RatingForm({
   onSubmit: (answers: RatingAnswers) => void;
   onCancel: () => void;
 }) {
+  const { m, format } = useI18n();
+  const t = m.ratings;
   const id = useId();
   const [wouldLiveAgain, setWouldLiveAgain] = useState<boolean | null>(
     initial?.wouldLiveAgain ?? null,
@@ -86,20 +84,20 @@ export function RatingForm({
       }}
     >
       <p id={`${id}-title`}>
-        <b>Ocena sobivanja z osebo {peerName}</b>
+        <b>{format(t.form.title, { name: peerName })}</b>
       </p>
-      <p className="muted">{ratingCopy.anonymity}</p>
+      <p className="muted">{t.anonymity}</p>
 
       <fieldset
         aria-describedby={missingAnswer ? `${id}-missing` : undefined}
         aria-invalid={missingAnswer || undefined}
       >
-        <legend>Bi spet živel(a) s to osebo? (obvezno)</legend>
+        <legend>{t.form.wouldLiveAgain}</legend>
         {[
-          { value: true, label: "Da" },
-          { value: false, label: "Ne" },
+          { value: true, label: t.form.yes },
+          { value: false, label: t.form.no },
         ].map((option, index) => (
-          <label key={option.label} className="rating-option">
+          <label key={String(option.value)} className="rating-option">
             <input
               ref={index === 0 ? first : undefined}
               type="radio"
@@ -115,15 +113,13 @@ export function RatingForm({
         ))}
         {missingAnswer && (
           <p id={`${id}-missing`} className="error-message" role="alert">
-            Odgovori Da ali Ne.
+            {t.form.missingAnswer}
           </p>
         )}
       </fieldset>
 
       <fieldset>
-        <legend>
-          Močne točke (največ {MAX_TAGS}, vidne drugim v povzetku)
-        </legend>
+        <legend>{format(t.form.strengthsLegend, { max: MAX_TAGS })}</legend>
         {STRENGTH_TAGS.map((tag) => (
           <label key={tag} className="rating-option">
             <input
@@ -134,16 +130,13 @@ export function RatingForm({
               }
               onChange={() => setStrengths(toggle(strengths, tag))}
             />
-            {strengthLabels[tag]}
+            {t.strengths[tag]}
           </label>
         ))}
       </fieldset>
 
       <fieldset>
-        <legend>
-          Področja za izboljšanje (največ {MAX_TAGS}, vidi jih samo ta oseba v
-          povzetku)
-        </legend>
+        <legend>{format(t.form.improvementsLegend, { max: MAX_TAGS })}</legend>
         {IMPROVEMENT_TAGS.map((tag) => (
           <label key={tag} className="rating-option">
             <input
@@ -154,7 +147,7 @@ export function RatingForm({
               }
               onChange={() => setImprovements(toggle(improvements, tag))}
             />
-            {improvementLabels[tag]}
+            {t.improvements[tag]}
           </label>
         ))}
       </fieldset>
@@ -165,7 +158,7 @@ export function RatingForm({
           className="button button-outline"
           onClick={onCancel}
         >
-          Prekliči
+          {t.form.cancel}
         </button>
         <button
           type="submit"
@@ -182,13 +175,19 @@ export function RatingForm({
 
 /** My submitted answers, visible only to me. */
 function OwnRatingSummary({ rating }: { rating: MyRating }) {
+  const { m, format } = useI18n();
+  const t = m.ratings;
   const tags = [
-    ...rating.strengths.map((tag) => strengthLabels[tag]),
-    ...rating.improvements.map((tag) => `${improvementLabels[tag]} (zasebno)`),
+    ...rating.strengths.map((tag) => t.strengths[tag]),
+    ...rating.improvements.map((tag) =>
+      format(t.chat.privateTag, { label: t.improvements[tag] }),
+    ),
   ];
   return (
     <p className="muted">
-      Tvoja ocena: {rating.wouldLiveAgain ? "Da" : "Ne"}
+      {format(t.chat.ownRating, {
+        answer: rating.wouldLiveAgain ? t.form.yes : t.form.no,
+      })}
       {tags.length > 0 && ` · ${tags.join(", ")}`}
     </p>
   );
@@ -206,9 +205,11 @@ export function ChatRating({
   matchId: string;
   peerName: string;
 }) {
+  const { m, format, formatters } = useI18n();
+  const t = m.ratings;
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [announcement, setAnnouncement] = useState("");
+  const [announced, setAnnounced] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
   const cohabitations = useQuery({
     queryKey: matchCohabitationsKey(matchId),
@@ -228,7 +229,7 @@ export function ChatRating({
     onSuccess: (rating) => {
       queryClient.setQueryData(myRatingKey(rating.cohabitationId), rating);
       setOpen(false);
-      setAnnouncement("Ocena je shranjena.");
+      setAnnounced(true);
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: RATINGS_KEY }),
   });
@@ -239,13 +240,15 @@ export function ChatRating({
   if (mine.isError)
     return (
       <div className="rating" role="alert">
-        <p className="error-message">{ratingLoadFailure(mine.error)}</p>
+        <p className="error-message">
+          {t.loadErrors[ratingLoadFailure(mine.error)]}
+        </p>
         <button
           type="button"
           className="text-link"
           onClick={() => mine.refetch()}
         >
-          Poskusi znova
+          {t.chat.retry}
         </button>
       </div>
     );
@@ -262,24 +265,26 @@ export function ChatRating({
   };
   const actionLabel =
     action.kind === "rate"
-      ? "Oceni"
+      ? t.chat.rate
       : action.kind === "edit"
-        ? "Uredi oceno"
+        ? t.chat.edit
         : action.kind === "update"
-          ? "Posodobi oceno"
+          ? t.chat.update
           : null;
 
   return (
     <section
       className={reminder ? "rating rating-banner" : "rating"}
-      aria-label="Ocena sobivanja"
+      aria-label={t.chat.sectionLabel}
     >
       {reminder && (
         <p>
-          <b>Lahko oceniš sobivanje z osebo {peerName}.</b>{" "}
+          <b>{format(t.chat.reminder, { name: peerName })}</b>{" "}
           {reminder === "closing" && action.window?.closesAt
-            ? `Ocenjevanje se zapre ${dateLabel(action.window.closesAt)}.`
-            : "Ocena je anonimna."}
+            ? format(t.chat.closesOn, {
+                date: formatters.date(action.window.closesAt),
+              })
+            : t.chat.anonymous}
         </p>
       )}
       {rating && (
@@ -287,10 +292,12 @@ export function ChatRating({
           <OwnRatingSummary rating={rating} />
           <p className="muted">
             {rating.status === "hidden"
-              ? "Tvoja ocena še ni vidna: prikaže se, ko oceni tudi druga oseba ali po 14 dneh."
+              ? t.chat.hidden
               : action.kind === "locked" && action.until
-                ? `Oceno lahko posodobiš od ${dateLabel(action.until)} dalje.`
-                : "Tvoja ocena je upoštevana."}
+                ? format(t.chat.updateFrom, {
+                    date: formatters.date(action.until),
+                  })
+                : t.chat.counted}
           </p>
         </>
       )}
@@ -310,20 +317,24 @@ export function ChatRating({
           peerName={peerName}
           initial={rating}
           busy={mutation.isPending}
-          submitLabel={rating ? "Shrani oceno" : "Oddaj oceno"}
+          submitLabel={rating ? t.chat.save : t.chat.submit}
           onCancel={closePanel}
           onSubmit={(answers) => mutation.mutate(answers)}
         />
       )}
       {mutation.isError && (
         <p className="error-message" role="alert">
-          {mutation.error instanceof RatingError
-            ? mutation.error.message
-            : ratingMessages.unknown}
+          {
+            t.errors[
+              mutation.error instanceof RatingError
+                ? mutation.error.kind
+                : "unknown"
+            ]
+          }
         </p>
       )}
       <p className="sr-only" role="status">
-        {announcement}
+        {announced && t.chat.saved}
       </p>
     </section>
   );

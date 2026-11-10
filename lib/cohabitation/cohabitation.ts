@@ -1,11 +1,4 @@
-import {
-  dateLabel,
-  endedMonthProblem,
-  isMonth,
-  monthLabel,
-  startedMonthProblem,
-  type MonthProblem,
-} from "./months";
+import { endedMonthProblem, isMonth, startedMonthProblem } from "./months";
 
 /**
  * Cohabitation declarations ("Živiva skupaj"). Only the two participants can
@@ -91,32 +84,7 @@ export type CohabitationClient = {
   ): Thenable<unknown>;
 };
 
-export const cohabitationCopy = {
-  declareAction: "Živiva skupaj",
-  declareTitle: "Živita skupaj?",
-  declareHint:
-    "Izberi mesec, ko sta se vselila. Druga oseba mora to potrditi. Sobivanje vidita samo vidva. Ko živita skupaj, se lahko po dveh mesecih anonimno ocenita.",
-  startedMonthLabel: "Mesec vselitve",
-  endedMonthLabel: "Mesec izselitve",
-  submitDeclare: "Pošlji v potrditev",
-  confirm: "Potrdi",
-  decline: "Ne drži",
-  endAction: "Ne živiva več skupaj",
-  endTitle: "Od kdaj ne živita več skupaj?",
-  submitEnd: "Potrdi konec",
-  cancel: "Prekliči",
-  notConfirmed: "Ni potrjeno",
-  loading: "Nalaganje sobivanja …",
-  banner: (name: string, month: string) =>
-    `${name} pravi, da živita skupaj od ${monthLabel(month)}.`,
-  active: (month: string) => `Živita skupaj od ${monthLabel(month)}`,
-  awaitingPeer: (name: string, month: string) =>
-    `Čakamo, da ${name} potrdi, da živita skupaj od ${monthLabel(month)}.`,
-  cooldown: (until: Date) =>
-    `Znova lahko predlagaš od ${dateLabel(until)} dalje.`,
-  attention: "Čaka na tvoj odgovor o sobivanju",
-} as const;
-
+/** Keys of `m.cohabitation.errors`. */
 export type CohabitationErrorKind =
   | "signed-out"
   | "permission"
@@ -126,42 +94,24 @@ export type CohabitationErrorKind =
   | "invalid-month"
   | "unknown";
 
-export const cohabitationMessages: Record<CohabitationErrorKind, string> = {
-  "signed-out": "Za to dejanje se prijavi.",
-  permission: "Tega v tem klepetu zdaj ni mogoče narediti.",
-  offline: "Ni povezave. Preveri internet in poskusi znova.",
-  conflict: "Stanje se je medtem spremenilo. Prikazujemo novo stanje.",
-  cooldown: `Po zavrnitvi lahko znova predlagaš šele po ${COOLDOWN_DAYS} dneh.`,
-  "invalid-month":
-    "Izberi mesec, ki ni v prihodnosti in ni pred začetkom vajinega ujemanja.",
-  unknown: "Dejanja ni bilo mogoče izvesti. Poskusi znova.",
-};
-
-export const monthProblemMessages: Record<MonthProblem, string> = {
-  "not-a-month": "Izberi mesec.",
-  future: "Mesec ne sme biti v prihodnosti.",
-  "before-match": "Mesec ne sme biti pred začetkom vajinega ujemanja.",
-  "before-start": "Mesec izselitve ne sme biti pred mesecem vselitve.",
-};
-
-export const loadErrorMessage = "Podatkov o sobivanju ni bilo mogoče naložiti.";
+/** Keys of `m.cohabitation.loadErrors`. */
+export type CohabitationLoadFailure =
+  "signed-out" | "offline" | "permission" | "unknown";
 
 /** What a failed load shows: the specific reason when it helps, otherwise a general message. */
-export function loadFailureMessage(error: unknown): string {
+export function loadFailure(error: unknown): CohabitationLoadFailure {
   return error instanceof CohabitationError &&
     (error.kind === "signed-out" ||
       error.kind === "offline" ||
       error.kind === "permission")
-    ? error.message
-    : loadErrorMessage;
+    ? error.kind
+    : "unknown";
 }
 
 export class CohabitationError extends Error {
-  constructor(
-    public readonly kind: CohabitationErrorKind,
-    message: string = cohabitationMessages[kind],
-  ) {
-    super(message);
+  constructor(public readonly kind: CohabitationErrorKind) {
+    // The text shown is m.cohabitation.errors[kind]; the message is for logs.
+    super(`Cohabitation request failed: ${kind}`);
     this.name = "CohabitationError";
   }
 }
@@ -292,7 +242,8 @@ export async function loadMatchCohabitations(
 
 export type MyCohabitation = Cohabitation & {
   peerId: string;
-  peerName: string;
+  /** Null when the name is unknown; the list then shows `m.cohabitation.mine.unknownPeer`. */
+  peerName: string | null;
 };
 
 /** All my cohabitations with the other person's name, newest first. */
@@ -326,7 +277,7 @@ export async function loadMyCohabitations(
       me: myId,
       cohabitations: rows.map((c) => {
         const peerId = c.userIdA === myId ? c.userIdB : c.userIdA;
-        return { ...c, peerId, peerName: names.get(peerId) || "Uporabnik" };
+        return { ...c, peerId, peerName: names.get(peerId) || null };
       }),
     };
   } catch (error) {
@@ -463,21 +414,21 @@ export function chatCohabitationView(
   };
 }
 
-/** Status line for the "Moje sobivanje" list. */
-export function cohabitationStatusLabel(
+/** Keys of `m.cohabitation.status`. */
+export type CohabitationStatusKey =
+  "active" | "ended" | "declined" | "awaitingPeer" | "awaitingMe";
+
+/** Status line for the "Moje sobivanje" list (a key of `m.cohabitation.status`). */
+export function cohabitationStatus(
   cohabitation: Cohabitation,
   myId: string,
-): string {
+): CohabitationStatusKey {
   switch (cohabitation.status) {
     case "active":
-      return "Živita skupaj";
     case "ended":
-      return "Ne živita več skupaj";
     case "declined":
-      return cohabitationCopy.notConfirmed;
+      return cohabitation.status;
     case "pending":
-      return cohabitation.initiatedBy === myId
-        ? "Čaka na potrditev"
-        : "Čaka na tvoj odgovor";
+      return cohabitation.initiatedBy === myId ? "awaitingPeer" : "awaitingMe";
   }
 }

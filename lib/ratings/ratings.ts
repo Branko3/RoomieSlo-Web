@@ -83,6 +83,7 @@ export type RatingClient = {
   rpc(fn: "my_rating_summary"): Thenable<unknown>;
 };
 
+/** Keys of `m.ratings.errors`. */
 export type RatingErrorKind =
   | "signed-out"
   | "permission"
@@ -92,25 +93,10 @@ export type RatingErrorKind =
   | "locked"
   | "unknown";
 
-export const ratingMessages: Record<RatingErrorKind, string> = {
-  "signed-out": "Za to dejanje se prijavi.",
-  permission: "Te osebe zdaj ne moreš oceniti.",
-  offline: "Ni povezave. Preveri internet in poskusi znova.",
-  invalid:
-    "Odgovori na vprašanje Da/Ne in izberi največ 3 oznake v vsakem sklopu.",
-  window: "Ocenjevanje za to sobivanje trenutno ni odprto.",
-  locked: "Oceno lahko posodobiš šele 6 mesecev po zadnji oddaji.",
-  unknown: "Ocene ni bilo mogoče shraniti. Poskusi znova.",
-};
-
-export const ratingLoadMessage = "Ocen ni bilo mogoče naložiti.";
-
 export class RatingError extends Error {
-  constructor(
-    public readonly kind: RatingErrorKind,
-    message: string = ratingMessages[kind],
-  ) {
-    super(message);
+  constructor(public readonly kind: RatingErrorKind) {
+    // The text shown is m.ratings.errors[kind]; the message is for logs.
+    super(`Rating request failed: ${kind}`);
     this.name = "RatingError";
   }
 }
@@ -150,14 +136,18 @@ export function toRatingError(error: unknown): RatingError {
   return new RatingError("unknown");
 }
 
-/** What a failed load shows. */
-export function ratingLoadFailure(error: unknown): string {
+/** Keys of `m.ratings.loadErrors`. */
+export type RatingLoadFailure =
+  "signed-out" | "offline" | "permission" | "unknown";
+
+/** What a failed load shows: the specific reason when it helps, otherwise a general message. */
+export function ratingLoadFailure(error: unknown): RatingLoadFailure {
   return error instanceof RatingError &&
     (error.kind === "signed-out" ||
       error.kind === "offline" ||
       error.kind === "permission")
-    ? error.message
-    : ratingLoadMessage;
+    ? error.kind
+    : "unknown";
 }
 
 const text = (value: unknown): value is string =>

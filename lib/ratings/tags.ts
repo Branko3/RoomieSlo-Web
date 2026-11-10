@@ -26,25 +26,9 @@ export const IMPROVEMENT_TAGS = [
 export type StrengthTag = (typeof STRENGTH_TAGS)[number];
 export type ImprovementTag = (typeof IMPROVEMENT_TAGS)[number];
 
-/** Public in aggregate. */
-export const strengthLabels: Record<StrengthTag, string> = {
-  reliable_costs: "Zanesljiv(a) pri stroških",
-  clean_tidy: "Čist(a) in urejen(a)",
-  respects_quiet: "Spoštuje mir in počitek",
-  good_communication: "Dobra komunikacija",
-  keeps_agreements: "Upošteva dogovore",
-  pleasant: "Prijeten/-tna sostanovalec/-ka",
-};
-
-/** Private: only the rated person sees them, in aggregate. */
-export const improvementLabels: Record<ImprovementTag, string> = {
-  costs: "Stroški",
-  cleanliness: "Čistoča",
-  noise: "Hrup",
-  communication: "Komunikacija",
-  agreements: "Dogovori",
-  visitors: "Obiski",
-};
+// Labels are in the "ratings" catalog: m.ratings.strengths (public in
+// aggregate) and m.ratings.improvements (private: only the rated person sees
+// them, in aggregate).
 
 export const MAX_TAGS = 3;
 

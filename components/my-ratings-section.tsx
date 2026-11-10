@@ -6,17 +6,16 @@ import {
   loadMySummary,
   RatingError,
   ratingLoadFailure,
-  ratingMessages,
   setRatingsVisible,
 } from "../lib/ratings/ratings";
 import {
   belowThresholdLabel,
   improvementCountLabel,
-  ratingCopy,
   shownHeadline,
   strengthCountLabel,
   type MyRatingSummary,
 } from "../lib/ratings/summary";
+import { useI18n } from "../lib/i18n/provider";
 import { MY_RATING_SUMMARY_KEY, ratingClient } from "./cohabitation-queries";
 
 /**
@@ -25,6 +24,8 @@ import { MY_RATING_SUMMARY_KEY, ratingClient } from "./cohabitation-queries";
  * "Prikaži ocene sostanovalcev" setting. Never who gave which rating.
  */
 export function MyRatingsSection() {
+  const i18n = useI18n();
+  const t = i18n.m.ratings;
   const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: MY_RATING_SUMMARY_KEY,
@@ -41,16 +42,18 @@ export function MyRatingsSection() {
 
   let content: React.ReactNode;
   if (query.isPending) {
-    content = <p role="status">Nalaganje ocen …</p>;
+    content = <p role="status">{t.mine.loading}</p>;
   } else if (query.isError) {
     const signedOut =
       query.error instanceof RatingError && query.error.kind === "signed-out";
     content = (
       <div role="alert">
-        <p className="error-message">{ratingLoadFailure(query.error)}</p>
+        <p className="error-message">
+          {t.loadErrors[ratingLoadFailure(query.error)]}
+        </p>
         {signedOut ? (
           <Link className="button" href="/login">
-            Prijava
+            {t.mine.signIn}
           </Link>
         ) : (
           <button
@@ -58,7 +61,7 @@ export function MyRatingsSection() {
             type="button"
             onClick={() => query.refetch()}
           >
-            Poskusi znova
+            {t.mine.retry}
           </button>
         )}
       </div>
@@ -68,51 +71,48 @@ export function MyRatingsSection() {
     content = (
       <>
         {summary.state === "insufficient" ? (
-          <p>{belowThresholdLabel(summary.count)}</p>
+          <p>{belowThresholdLabel(summary.count, i18n)}</p>
         ) : (
           <>
             <p>
-              <b>{shownHeadline(summary)}</b>
+              <b>{shownHeadline(summary, i18n)}</b>
             </p>
             {summary.strengths.length > 0 && (
-              <ul className="chips" aria-label="Najpogostejše močne točke">
+              <ul className="chips" aria-label={t.topStrengths}>
                 {summary.strengths.map((s) => (
                   <li key={s.tag} className="chip chip-green rating-chip">
-                    {strengthCountLabel(s)}
+                    {strengthCountLabel(s, i18n)}
                   </li>
                 ))}
               </ul>
             )}
-            <h3 className="rating-subtitle">{ratingCopy.improvementsTitle}</h3>
+            <h3 className="rating-subtitle">{t.improvementsTitle}</h3>
             {summary.improvements.length > 0 ? (
               <ul className="rating-improvements">
                 {summary.improvements.map((s) => (
-                  <li key={s.tag}>{improvementCountLabel(s)}</li>
+                  <li key={s.tag}>{improvementCountLabel(s, i18n)}</li>
                 ))}
               </ul>
             ) : (
-              <p className="muted">Nihče ni označil področij za izboljšanje.</p>
+              <p className="muted">{t.mine.noImprovements}</p>
             )}
-            <p className="muted">
-              Področja za izboljšanje vidiš samo ti. Nihče ne vidi, kdo je dal
-              katero oceno.
-            </p>
+            <p className="muted">{t.mine.privacyNote}</p>
           </>
         )}
 
         <div className="profile-card rating-visibility">
           <div>
-            <b id="ratings-visible-label">Prikaži ocene sostanovalcev</b>
-            <p>
-              {summary.visible
-                ? "Vklopljeno: drugi vidijo povzetek, ko imaš vsaj 3 ocene. Lahko ga kadar koli spet izklopiš."
-                : "Izklopljeno: ocene se zbirajo zasebno in jih vidiš samo ti. Drugim jih pokažemo šele, ko to vklopiš."}
-            </p>
+            <b id="ratings-visible-label">{t.mine.visibilityTitle}</b>
+            <p>{summary.visible ? t.mine.visibleOn : t.mine.visibleOff}</p>
             {visibility.isError && (
               <p className="error-message" role="alert">
-                {visibility.error instanceof RatingError
-                  ? visibility.error.message
-                  : ratingMessages.unknown}
+                {
+                  t.errors[
+                    visibility.error instanceof RatingError
+                      ? visibility.error.kind
+                      : "unknown"
+                  ]
+                }
               </p>
             )}
           </div>
@@ -139,11 +139,8 @@ export function MyRatingsSection() {
       className="profile-section rating-section"
       aria-labelledby="my-ratings-title"
     >
-      <h2 id="my-ratings-title">Ocene sostanovalcev</h2>
-      <p className="muted">
-        Ocenijo te lahko samo osebe, s katerimi imaš potrjeno sobivanje. Drugim
-        jih pokažemo samo, če to vklopiš, in šele od 3 ocen naprej.
-      </p>
+      <h2 id="my-ratings-title">{t.mine.title}</h2>
+      <p className="muted">{t.mine.intro}</p>
       {content}
     </section>
   );

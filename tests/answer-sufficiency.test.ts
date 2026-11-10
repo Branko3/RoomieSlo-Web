@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { CompatibilityAnswer } from "../lib/compatibility/compatibility";
+import { createI18n } from "../lib/i18n/i18n";
+import { catalogs } from "../lib/i18n/messages";
 import {
   expressedAnswerCount,
   MIN_EXPRESSED_ANSWERS,
@@ -7,7 +9,6 @@ import {
   readinessMessage,
   recommendationReadiness,
   sharedStatementCount,
-  statementsLabel,
 } from "../lib/matching/answer-sufficiency";
 
 const answer = (
@@ -83,7 +84,10 @@ describe("sharedStatementCount", () => {
   });
 });
 
-describe("statementsLabel", () => {
+const sl = createI18n("sl", catalogs.sl);
+const en = createI18n("en", catalogs.en);
+
+describe("statement counts", () => {
   it.each([
     [1, "1 trditev"],
     [2, "2 trditvi"],
@@ -94,17 +98,19 @@ describe("statementsLabel", () => {
     [101, "101 trditev"],
     [102, "102 trditvi"],
   ])("formats %i as %s", (count, label) => {
-    expect(statementsLabel(count)).toBe(label);
+    expect(sl.plural(sl.m.questionnaire.readiness.statements, count)).toBe(
+      label,
+    );
   });
 });
 
 describe("readinessMessage", () => {
   it("returns nothing when recommendations can be shown", () => {
-    expect(readinessMessage({ status: "ready" })).toBeNull();
+    expect(readinessMessage({ status: "ready" }, sl)).toBeNull();
   });
 
   it("explains the questionnaire requirement for users without answers", () => {
-    expect(readinessMessage({ status: "no-answers" })).toEqual({
+    expect(readinessMessage({ status: "no-answers" }, sl)).toEqual({
       title: "Najprej izpolni vprašalnik",
       body: "Priporočila razvrstimo po združljivosti tvojih odgovorov. Odgovori na vsaj 3 trditve o življenjskem slogu.",
     });
@@ -112,11 +118,27 @@ describe("readinessMessage", () => {
 
   it("says how many more answers are needed", () => {
     expect(
-      readinessMessage({ status: "insufficient", answered: 1, required: 3 }),
+      readinessMessage(
+        { status: "insufficient", answered: 1, required: 3 },
+        sl,
+      ),
     ).toEqual({
       title: "Za priporočila potrebujemo več odgovorov",
       body: "Odgovoril(a) si na 1 trditev. Odgovori še na 2 trditvi, da bodo ocene združljivosti zanesljive.",
     });
+  });
+
+  it("speaks English with the English catalog", () => {
+    expect(readinessMessage({ status: "no-answers" }, en)).toEqual({
+      title: "Fill in the questionnaire first",
+      body: "We rank recommendations by how compatible your answers are. Answer at least 3 statements about your lifestyle.",
+    });
+    expect(
+      readinessMessage({ status: "insufficient", answered: 1, required: 3 }, en)
+        ?.body,
+    ).toBe(
+      "You've answered 1 statement. Answer another 2 statements so the compatibility scores are reliable.",
+    );
   });
 
   it("points to the questionnaire route", () => {

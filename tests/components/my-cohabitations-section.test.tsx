@@ -2,6 +2,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { catalogs } from "../../lib/i18n/messages";
+import { I18nProvider } from "../../lib/i18n/provider";
 
 const ME = "11111111-1111-4111-8111-111111111111";
 const PEER = "22222222-2222-4222-8222-222222222222";
@@ -120,6 +122,46 @@ beforeEach(() => {
 });
 
 describe("MyCohabitationsSection", () => {
+  it("speaks English", async () => {
+    fake.rows = [
+      row(),
+      row({
+        id: "c0",
+        match_id: "m0",
+        status: "ended",
+        started_month: "2025-10-01",
+        ended_month: "2026-06-01",
+      }),
+    ];
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    render(
+      <I18nProvider locale="en" messages={catalogs.en}>
+        <QueryClientProvider client={client}>
+          <MyCohabitationsSection />
+        </QueryClientProvider>
+      </I18nProvider>,
+    );
+    expect(
+      screen.getByRole("heading", { name: "Living together" }),
+    ).toBeInTheDocument();
+    const items = await screen.findAllByRole("listitem");
+    expect(items[0]).toHaveTextContent("Living together · since Sept 2026");
+    expect(items[1]).toHaveTextContent(
+      "No longer living together · Oct 2025 – Jun 2026",
+    );
+    expect(
+      within(items[0]).getByRole("link", { name: "Open chat with Ana" }),
+    ).toHaveAttribute("href", "/chats/m1");
+    expect(
+      await screen.findByRole("region", {
+        name: /turn off “Looking for a roommate \/ room”/,
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Not now" })).toBeInTheDocument();
+  });
+
   it("lists my cohabitations, without declined declarations", async () => {
     fake.rows = [
       row(),

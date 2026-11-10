@@ -14,23 +14,37 @@ import {
   type ProfileClient,
   type ProfileDraft,
   type ProfileField,
+  type ProfileFieldError,
   type ProfileRequestError,
 } from "../lib/profile/own-profile";
+import { useI18n } from "../lib/i18n/provider";
 import { createSupabaseBrowserClient } from "../lib/supabase/browser";
 import { VerifiedIcon } from "./icons";
 
 export const OWN_PROFILE_QUERY_KEY = ["profile", "own"] as const;
 
+/** The `{min}`/`{max}` values of each validation message. */
+const validationLimits: Record<ProfileFieldError, Record<string, number>> = {
+  "display-name-short": { min: PROFILE_LIMITS.displayNameMin },
+  "display-name-long": { max: PROFILE_LIMITS.displayNameMax },
+  "faculty-long": { max: PROFILE_LIMITS.facultyMax },
+  "bio-long": { max: PROFILE_LIMITS.bioMax },
+  "age-range": { min: PROFILE_LIMITS.ageMin, max: PROFILE_LIMITS.ageMax },
+};
+
 function PreviewHeader() {
+  const { m, plural } = useI18n();
   return (
     <section className="profile-header">
       <span className="avatar avatar-large">AH</span>
       <div>
-        <h2>Amar H.</h2>
-        <p>FRI, Univerza v Ljubljani · 22 let</p>
+        <h2>{m.profile.preview.name}</h2>
+        <p>
+          {m.profile.preview.faculty} · {plural(m.profile.age, 22)}
+        </p>
         <span className="verified-badge">
           <VerifiedIcon size={16} />
-          Preverjen študent
+          {m.profile.verified}
         </span>
       </div>
     </section>
@@ -43,6 +57,8 @@ export function OwnProfileSection({ configured }: { configured: boolean }) {
 }
 
 function ConnectedProfile() {
+  const { m } = useI18n();
+  const t = m.profile;
   const client = useMemo(
     () => createSupabaseBrowserClient() as unknown as ProfileClient,
     [],
@@ -56,7 +72,7 @@ function ConnectedProfile() {
     return (
       <section className="profile-header" aria-busy="true">
         <span className="avatar avatar-large" aria-hidden="true" />
-        <p role="status">Nalaganje profila …</p>
+        <p role="status">{t.loading}</p>
       </section>
     );
   }
@@ -65,8 +81,8 @@ function ConnectedProfile() {
     return (
       <section className="profile-card" role="alert">
         <div>
-          <b>Profila ni bilo mogoče naložiti</b>
-          <p>{query.error.message}</p>
+          <b>{t.loadFailedTitle}</b>
+          <p>{t.errors[query.error.kind]}</p>
         </div>
         <button
           className="button button-outline"
@@ -74,7 +90,7 @@ function ConnectedProfile() {
           onClick={() => query.refetch()}
           disabled={query.isFetching}
         >
-          Poskusi znova
+          {t.retry}
         </button>
       </section>
     );
@@ -85,11 +101,11 @@ function ConnectedProfile() {
     return (
       <section className="profile-card">
         <div>
-          <b>Nisi prijavljen</b>
-          <p>Prijavi se, da vidiš in urejaš svoj profil.</p>
+          <b>{t.signedOutTitle}</b>
+          <p>{t.signedOutBody}</p>
         </div>
         <Link className="button" href="/login">
-          Prijava
+          {t.signIn}
         </Link>
       </section>
     );
@@ -99,11 +115,8 @@ function ConnectedProfile() {
     return (
       <section className="profile-card" role="alert">
         <div>
-          <b>Profil še ni pripravljen</b>
-          <p>
-            Tvoj račun še nima profila. Osveži stran čez nekaj trenutkov ali se
-            obrni na podporo.
-          </p>
+          <b>{t.missingTitle}</b>
+          <p>{t.missingBody}</p>
         </div>
       </section>
     );
@@ -124,14 +137,16 @@ function ProfileHeader({
   result: Extract<OwnProfileResult, { status: "ready" }>;
 }) {
   const { profile } = result;
+  const { m, format, plural } = useI18n();
+  const t = m.profile;
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<ProfileDraft>(() =>
     draftFromProfile(profile),
   );
-  const [errors, setErrors] = useState<Partial<Record<ProfileField, string>>>(
-    {},
-  );
+  const [errors, setErrors] = useState<
+    Partial<Record<ProfileField, ProfileFieldError>>
+  >({});
   const [saved, setSaved] = useState(false);
 
   const mutation = useMutation({
@@ -178,7 +193,10 @@ function ProfileHeader({
     (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       setDraft((current) => ({ ...current, [field]: event.target.value }));
 
-  const details = [profile.faculty, profile.age ? `${profile.age} let` : ""]
+  const details = [
+    profile.faculty,
+    profile.age ? plural(t.age, profile.age) : "",
+  ]
     .filter(Boolean)
     .join(" · ");
 
@@ -195,18 +213,18 @@ function ProfileHeader({
             {profile.academic_status_verified && (
               <span className="verified-badge">
                 <VerifiedIcon size={16} />
-                Preverjen študent
+                {t.verified}
               </span>
             )}
           </div>
           <button className="text-link" type="button" onClick={startEditing}>
-            Uredi
+            {t.edit}
           </button>
         </section>
         {profile.bio && <p className="profile-bio">{profile.bio}</p>}
         {saved && (
           <p className="success-message" role="status">
-            Profil je shranjen.
+            {t.saved}
           </p>
         )}
       </>
@@ -222,18 +240,22 @@ function ProfileHeader({
     disabled: mutation.isPending,
   });
 
-  const fieldError = (field: ProfileField) =>
-    errors[field] && (
-      <small className="field-error" id={`${field}-error`}>
-        {errors[field]}
-      </small>
+  const fieldError = (field: ProfileField) => {
+    const error = errors[field];
+    return (
+      error && (
+        <small className="field-error" id={`${field}-error`}>
+          {format(t.validation[error], validationLimits[error])}
+        </small>
+      )
     );
+  };
 
   return (
     <form className="profile-form" onSubmit={onSubmit} noValidate>
-      <h2>Uredi profil</h2>
+      <h2>{t.form.title}</h2>
       <label>
-        Ime in priimek
+        {t.form.displayName}
         <input
           {...fieldProps("displayName")}
           autoComplete="name"
@@ -242,20 +264,20 @@ function ProfileHeader({
         {fieldError("displayName")}
       </label>
       <label>
-        Fakulteta
+        {t.form.faculty}
         <input
           {...fieldProps("faculty")}
-          placeholder="FRI, Univerza v Ljubljani"
+          placeholder={t.form.facultyPlaceholder}
         />
         {fieldError("faculty")}
       </label>
       <label>
-        Starost
+        {t.form.age}
         <input {...fieldProps("age")} inputMode="numeric" />
         {fieldError("age")}
       </label>
       <label>
-        O meni
+        {t.form.bio}
         <textarea {...fieldProps("bio")} rows={4} />
         <small className="field-hint">
           {draft.bio.trim().length}/{PROFILE_LIMITS.bioMax}
@@ -264,7 +286,7 @@ function ProfileHeader({
       </label>
       {mutation.isError && (
         <p className="error-message" role="alert">
-          {(mutation.error as ProfileRequestError).message}
+          {t.errors[(mutation.error as ProfileRequestError).kind]}
         </p>
       )}
       <div className="profile-form-actions">
@@ -274,10 +296,10 @@ function ProfileHeader({
           onClick={() => setEditing(false)}
           disabled={mutation.isPending}
         >
-          Prekliči
+          {t.form.cancel}
         </button>
         <button className="button" type="submit" disabled={mutation.isPending}>
-          {mutation.isPending ? "Shranjevanje …" : "Shrani"}
+          {mutation.isPending ? t.form.saving : t.form.save}
         </button>
       </div>
     </form>

@@ -10,6 +10,7 @@ import {
   type ProfileClient,
   type ProfileRequestError,
 } from "../lib/profile/own-profile";
+import { useI18n } from "../lib/i18n/provider";
 import { questionnaireProgress } from "../lib/questionnaire/model";
 import {
   loadMyAnswers,
@@ -24,6 +25,8 @@ import { ChevronRightIcon } from "./icons";
  * `profiles.is_available`, rolled back with a message if the save fails.
  */
 export function AvailabilityCard() {
+  const { m } = useI18n();
+  const t = m.profile.availability;
   const client = useMemo(
     () => createSupabaseBrowserClient() as unknown as ProfileClient,
     [],
@@ -69,11 +72,11 @@ export function AvailabilityCard() {
   return (
     <section className="profile-card">
       <div>
-        <b>Iščem sostanovalca / sobo</b>
-        <p>Ko je vklopljeno, se tvoj profil prikazuje med priporočenimi.</p>
+        <b>{t.title}</b>
+        <p>{t.body}</p>
         {mutation.isError && (
           <p className="error-message" role="alert">
-            {mutation.error.message}
+            {m.profile.errors[mutation.error.kind]}
           </p>
         )}
       </div>
@@ -86,7 +89,7 @@ export function AvailabilityCard() {
             mutation.mutate({ userId, isAvailable: !available });
         }}
         aria-busy={mutation.isPending || undefined}
-        aria-label="Preklopi razpoložljivost"
+        aria-label={t.toggle}
         aria-pressed={available}
       >
         <span />
@@ -97,6 +100,8 @@ export function AvailabilityCard() {
 
 /** Questionnaire progress from the saved answers (Android "Izpolnjenih X od N trditev"). */
 export function QuestionnaireProgressCard() {
+  const { m, format } = useI18n();
+  const t = m.questionnaire;
   const client = useMemo(
     () => createSupabaseBrowserClient() as unknown as QuestionnaireClient,
     [],
@@ -120,18 +125,21 @@ export function QuestionnaireProgressCard() {
         {progress ? `${progress.percent}%` : "…"}
       </div>
       <div>
-        <b>Vprašalnik o življenjskem slogu</b>
+        <b>{t.title}</b>
         <p role={query.isPending ? "status" : undefined}>
           {progress
-            ? `Izpolnjenih ${progress.answered} od ${progress.total} trditev`
+            ? format(t.progress, {
+                answered: progress.answered,
+                total: progress.total,
+              })
             : query.isError
-              ? "Napredka ni bilo mogoče naložiti."
-              : "Nalaganje …"}
+              ? t.card.progressFailed
+              : t.card.loading}
         </p>
         <div
           className="progress"
           role="progressbar"
-          aria-label="Izpolnjenost vprašalnika"
+          aria-label={t.card.progressLabel}
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={progress?.percent ?? 0}
@@ -140,7 +148,11 @@ export function QuestionnaireProgressCard() {
         </div>
       </div>
       <Link className="link-chevron" href="/profile/questionnaire">
-        {done ? "Uredi" : progress?.answered ? "Nadaljuj" : "Začni"}
+        {done
+          ? t.card.edit
+          : progress?.answered
+            ? t.card.continue
+            : t.card.start}
         <ChevronRightIcon size={16} />
       </Link>
     </section>
