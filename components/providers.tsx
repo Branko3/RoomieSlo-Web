@@ -15,6 +15,7 @@ import { getSupabaseConfig } from "../lib/config";
 import {
   addFavorite,
   removeFavorite,
+  type FavoriteErrorKind,
   type FavoritesClient,
 } from "../lib/favorites/favorites-api";
 import {
@@ -176,7 +177,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
             : removeFavorite(client, userId, id),
         () => favoritesRef.current,
       ).then((result) => {
-        if (!result.ok) setFavoriteError(result.error.message);
+        if (!result.ok) setFavoriteError(result.error.kind);
       });
     },
     [applyFavorites, userId],
@@ -185,7 +186,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const favoriteMessage =
     favoriteError === FAVORITES_LOAD_FAILED
       ? m.errors.favoritesLoad
-      : favoriteError;
+      : favoriteError
+        ? (m.favorites.errors[favoriteError as FavoriteErrorKind] ??
+          m.favorites.errors.unknown)
+        : null;
 
   const favoriteValue = useMemo<FavoriteContextValue>(
     () => ({

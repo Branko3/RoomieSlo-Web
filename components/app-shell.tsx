@@ -35,7 +35,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { signOut } = useAuth();
   const { m } = useI18n();
-  const profile = profileSummary(useSession());
+  const profile = profileSummary(useSession(), m.auth.session.fallbackName);
   if (!requiresSession(getRouteAccess(pathname))) return <>{children}</>;
   const active = activeSection(pathname);
   // A conversation is a focused task: on phones the composer replaces the bottom bar.

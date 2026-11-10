@@ -3,9 +3,6 @@ import { format, plural } from "../lib/i18n/format";
 import { createI18n } from "../lib/i18n/i18n";
 import { catalogs } from "../lib/i18n/messages";
 import { pluralForms } from "../lib/i18n/messages/plural";
-import { activeListingsLabel } from "../lib/listings/my-listings";
-import { listingCountLabel } from "../lib/listings/result-label";
-import { statementsLabel } from "../lib/matching/answer-sufficiency";
 
 describe("format", () => {
   it("fills named placeholders, also repeated ones", () => {
@@ -48,28 +45,6 @@ describe("plural", () => {
     ];
     for (const [count, expected] of cases) {
       expect(plural("sl", oglasi, count)).toBe(expected);
-    }
-  });
-
-  it("matches the hand-written Slovenian plural helpers it replaces", () => {
-    const active = pluralForms({
-      one: "{count} aktiven oglas",
-      two: "{count} aktivna oglasa",
-      few: "{count} aktivni oglasi",
-      other: "{count} aktivnih oglasov",
-    });
-    const statements = pluralForms({
-      one: "{count} trditev",
-      two: "{count} trditvi",
-      few: "{count} trditve",
-      other: "{count} trditev",
-    });
-    for (let count = 0; count <= 250; count += 1) {
-      expect(plural("sl", oglasi, count)).toBe(
-        `${count} ${listingCountLabel(count)}`,
-      );
-      expect(plural("sl", active, count)).toBe(activeListingsLabel(count));
-      expect(plural("sl", statements, count)).toBe(statementsLabel(count));
     }
   });
 

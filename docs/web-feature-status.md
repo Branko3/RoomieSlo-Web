@@ -193,11 +193,8 @@ what would most increase their trust in the compatibility score. Planned 2026-10
 | 4   | Live chat list                             |   Yes   |     No      |     No     |     No     | Subscribe on `/chats` so the last message and its delivery state update without a reload; then the two-browser Realtime check.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | 5   | Listing photo upload                       |   Yes   |     No      |     No     |     No     | Not in the study; raised 2026-10-19. Public `listing-photos` bucket with owner-scoped Storage policies, a file input on create/edit, type and size limits, and either `listings.photo_url` or a `listing_photos` table for several photos. Removed on listing and account deletion.                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | 6   | Personalized weights (long-term, research) |   Yes   |     No      |     No     |     No     | Needs outcome data from many real cohabitations; the current sample is far too small. Ratings from #79 already collect the signal. Near-term deliverable only: an operator script correlating rating outcomes with compatibility at match time and reporting suggested weights. No change to the live formula.                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| 7   | English interface                          |   Yes   |     No      |     No     |     No     | Not in the study; raised 2026-11-09. Slovenian stays the default; English through a cookie-backed switcher (signed in and signed out), `Accept-Language` on the first visit, no URL prefixes. A typed in-repo dictionary (`lib/i18n/`, no library): the server passes the active catalog to a client provider, so the second language adds no first-load JavaScript. Locale-aware date, time, amount and plural formatting. Stored values (report reasons, the deletion phrase) stay Slovenian. Plan and acceptance criteria: `docs/features/english-interface.md`.                                                                                                                                                             |
 
 Suggested order: 1 → 2 → 3 (verification queue first) → 4 → 5; 6 when there is enough data.
-7 is independent of the others and can land at any point; features built after it add their
-text to both catalogs.
 Each item is one branch and PR with its own record in `docs/features/`.
 
 ## Open questions
@@ -238,10 +235,6 @@ Each item is one branch and PR with its own record in `docs/features/`.
    for a retention period?
 4. **Personalized weights:** may rating outcomes be used for weight research? This probably
    needs a line in the privacy notice, or opt-in consent.
-5. **English interface:** the English `/privacy` is a convenience translation in which the
-   Slovenian text prevails; it needs your review before launch. Supabase Auth emails
-   (confirmation, password reset) stay Slovenian-only unless the dashboard templates become
-   bilingual. Should they?
 
 ## Automated verification
 

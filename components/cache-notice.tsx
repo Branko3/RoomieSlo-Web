@@ -14,8 +14,9 @@ export function CacheNotice({
   view: ListingsView | null;
   onRetry: () => void;
 }) {
-  const { m } = useI18n();
-  const notice = view ? cacheNotice(view) : null;
+  const i18n = useI18n();
+  const { m } = i18n;
+  const notice = view ? cacheNotice(view, i18n) : null;
   if (!notice) return null;
   return (
     <div className="cache-notice" role="status">
