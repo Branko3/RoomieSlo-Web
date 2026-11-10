@@ -4,7 +4,12 @@ import Link from "next/link";
 import { FavoriteIconButton } from "./favorite-button";
 import { MapPinIcon } from "./icons";
 import { ListingPhoto } from "./listing-photo";
-import { formatMoveIn, formatPrice } from "../lib/listings/format";
+import { useI18n } from "../lib/i18n/provider";
+import {
+  listingDetails,
+  moveInLabel,
+  roomTypeLabel,
+} from "../lib/listings/format";
 import type { Listing } from "../lib/supabase/mappers";
 
 /**
@@ -14,6 +19,9 @@ import type { Listing } from "../lib/supabase/mappers";
  * change both together so the grid does not jump when listings arrive.
  */
 export function ListingCard({ listing }: { listing: Listing }) {
+  const i18n = useI18n();
+  const { m, formatters } = i18n;
+  const details = listingDetails(listing, i18n);
   return (
     <article className="listing-card flyer">
       <div className="listing-art">
@@ -25,9 +33,13 @@ export function ListingCard({ listing }: { listing: Listing }) {
       </div>
       <div className="listing-body">
         <div className="chips">
-          <span className="chip">{listing.roomType}</span>
+          <span className="chip">
+            {roomTypeLabel(listing.roomType, m.listings)}
+          </span>
           {!listing.isFilled && (
-            <span className="chip chip-green">Na voljo</span>
+            <span className="chip chip-green">
+              {m.listings.status.available}
+            </span>
           )}
         </div>
         <h3 className="flyer-heading">
@@ -39,20 +51,19 @@ export function ListingCard({ listing }: { listing: Listing }) {
           <MapPinIcon size={16} />
           {listing.district}
         </p>
-        {listing.details && (
-          <p className="listing-details">{listing.details}</p>
-        )}
+        {details && <p className="listing-details">{details}</p>}
       </div>
       <dl className="tear-strip">
         <div>
-          <dt>Najemnina</dt>
+          <dt>{m.listings.card.rent}</dt>
           <dd className="tear-price">
-            {formatPrice(listing.price)} <span>/ mesec</span>
+            {formatters.currency(listing.price)}{" "}
+            <span>{m.listings.card.perMonth}</span>
           </dd>
         </div>
         <div>
-          <dt>Na voljo od</dt>
-          <dd>{formatMoveIn(listing.available)}</dd>
+          <dt>{m.listings.card.availableFrom}</dt>
+          <dd>{moveInLabel(listing.availableFrom, m.listings, formatters)}</dd>
         </div>
       </dl>
     </article>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ChevronRightIcon } from "./icons";
 import { useEffect, useState } from "react";
 import { getSupabaseConfig } from "../lib/config";
+import { useI18n } from "../lib/i18n/provider";
 import { createSupabaseBrowserClient } from "../lib/supabase/browser";
 
 /**
@@ -17,6 +18,7 @@ export function OwnerListingActions({
   listingId: string;
   ownerId: string;
 }) {
+  const { m } = useI18n();
   const [isOwner, setIsOwner] = useState(false);
 
   useEffect(() => {
@@ -41,10 +43,10 @@ export function OwnerListingActions({
           className="button button-outline"
           href={`/listings/${encodeURIComponent(listingId)}/edit`}
         >
-          Uredi oglas
+          {m.listings.owner.editListing}
         </Link>
         <Link className="text-link link-chevron" href="/listings/mine">
-          Vsi moji oglasi
+          {m.listings.owner.allMine}
           <ChevronRightIcon size={16} />
         </Link>
       </div>

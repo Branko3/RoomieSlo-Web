@@ -38,16 +38,10 @@ export type FavoritesClient = {
 
 export type FavoriteErrorKind = "permission" | "gone" | "offline" | "unknown";
 
-export const favoriteErrorMessages: Record<FavoriteErrorKind, string> = {
-  permission: "Za shranjevanje priljubljenih se moraš znova prijaviti.",
-  gone: "Oglas ne obstaja več, zato ga ni mogoče shraniti.",
-  offline: "Ni povezave. Priljubljeni oglas ni bil shranjen.",
-  unknown: "Priljubljenih ni bilo mogoče posodobiti.",
-};
-
+/** Errors carry a kind; the UI shows `m.favorites.errors[kind]`. */
 export class FavoriteError extends Error {
   constructor(public readonly kind: FavoriteErrorKind) {
-    super(favoriteErrorMessages[kind]);
+    super(`Favorite update failed: ${kind}`);
     this.name = "FavoriteError";
   }
 }

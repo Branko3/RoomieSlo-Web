@@ -4,8 +4,8 @@ import Link from "next/link";
 import { MapPinIcon } from "./icons";
 import { ListingPhoto } from "./listing-photo";
 import { ListingStatusToggle } from "./listing-status-control";
-import { formatPrice, formatTimestampDate } from "../lib/listings/format";
-import { listingStatusLabel } from "../lib/listings/listing-status";
+import { useI18n } from "../lib/i18n/provider";
+import { roomTypeLabel, timestampDate } from "../lib/listings/format";
 import type { Listing } from "../lib/supabase/mappers";
 
 /**
@@ -20,6 +20,7 @@ export function OwnListingCard({
   listing: Listing;
   onFilledChange: (filled: boolean) => void;
 }) {
+  const { m, format, formatters } = useI18n();
   return (
     <article className="listing-card flyer own-listing">
       <div className="listing-art">
@@ -30,12 +31,16 @@ export function OwnListingCard({
       </div>
       <div className="listing-body">
         <div className="chips">
-          <span className="chip">{listing.roomType}</span>
+          <span className="chip">
+            {roomTypeLabel(listing.roomType, m.listings)}
+          </span>
           <span
             className={`chip ${listing.isFilled ? "chip-filled" : "chip-available"}`}
             aria-live="polite"
           >
-            {listingStatusLabel(listing.isFilled)}
+            {listing.isFilled
+              ? m.listings.status.filled
+              : m.listings.status.available}
           </span>
         </div>
         <h3 className="flyer-heading">
@@ -50,23 +55,26 @@ export function OwnListingCard({
       </div>
       <dl className="tear-strip">
         <div>
-          <dt>Najemnina</dt>
+          <dt>{m.listings.card.rent}</dt>
           <dd className="tear-price">
-            {formatPrice(listing.price)} <span>/ mesec</span>
+            {formatters.currency(listing.price)}{" "}
+            <span>{m.listings.card.perMonth}</span>
           </dd>
         </div>
         <div>
-          <dt>Objavljeno</dt>
-          <dd>{formatTimestampDate(listing.createdAt)}</dd>
+          <dt>{m.listings.card.published}</dt>
+          <dd>{timestampDate(listing.createdAt, formatters)}</dd>
         </div>
       </dl>
       <div className="own-listing-actions">
         <Link
           className="button button-outline"
           href={`/listings/${encodeURIComponent(listing.id)}/edit`}
-          aria-label={`Uredi oglas ${listing.title}`}
+          aria-label={format(m.listings.mine.editNamed, {
+            title: listing.title,
+          })}
         >
-          Uredi
+          {m.listings.mine.edit}
         </Link>
         <ListingStatusToggle
           listingId={listing.id}

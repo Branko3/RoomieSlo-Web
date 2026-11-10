@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { ListingForm } from "../../../../components/listing-form";
 import { getSupabaseConfig } from "../../../../lib/config";
+import { useI18n } from "../../../../lib/i18n/provider";
 import {
   ListingConflictError,
   loadListingForEdit,
@@ -14,7 +15,7 @@ import {
 } from "../../../../lib/listings/listing-edit";
 import {
   ListingSaveError,
-  listingSaveErrorMessages,
+  type ListingSubmitFailure,
   type ListingValues,
 } from "../../../../lib/listings/listing-form";
 import { createSupabaseBrowserClient } from "../../../../lib/supabase/browser";
@@ -32,6 +33,8 @@ export default function EditListingPage({
 }) {
   const { id } = params;
   const router = useRouter();
+  const { m } = useI18n();
+  const text = m.listings.edit;
   const configured = getSupabaseConfig().configured;
   const client = useMemo(
     () =>
@@ -61,41 +64,40 @@ export default function EditListingPage({
     };
   }, [client, id, attempt]);
 
-  async function save(values: ListingValues): Promise<string | null> {
-    if (!client || state.status !== "ready")
-      return listingSaveErrorMessages.unknown;
+  async function save(
+    values: ListingValues,
+  ): Promise<ListingSubmitFailure | null> {
+    if (!client || state.status !== "ready") return "unknown";
     try {
       await updateListing(client, id, state.version, values);
       router.push(`/listings/${encodeURIComponent(id)}`);
       return null;
     } catch (error) {
-      if (error instanceof ListingConflictError) return error.message;
-      return error instanceof ListingSaveError
-        ? error.message
-        : listingSaveErrorMessages.unknown;
+      if (error instanceof ListingConflictError) return "conflict";
+      return error instanceof ListingSaveError ? error.kind : "unknown";
     }
   }
 
   let body: React.ReactNode;
   if (state.status === "loading") {
-    body = <p role="status">Nalaganje oglasa …</p>;
+    body = <p role="status">{text.loading}</p>;
   } else if (state.status === "not-found") {
     body = (
       <div className="page-state">
-        <h2>Oglas ni več na voljo</h2>
-        <p>Ta oglas ne obstaja ali je bil odstranjen.</p>
+        <h2>{text.goneTitle}</h2>
+        <p>{text.goneBody}</p>
         <Link className="button" href="/listings">
-          Na oglase
+          {text.toListings}
         </Link>
       </div>
     );
   } else if (state.status === "not-owner") {
     body = (
       <div className="page-state" role="alert">
-        <h2>Tega oglasa ne moreš urejati</h2>
-        <p>Urejati ga lahko samo lastnik oglasa.</p>
+        <h2>{text.notOwnerTitle}</h2>
+        <p>{text.notOwnerBody}</p>
         <Link className="button" href={`/listings/${encodeURIComponent(id)}`}>
-          Nazaj na oglas
+          {text.backToListing}
         </Link>
       </div>
     );
@@ -103,17 +105,17 @@ export default function EditListingPage({
     const signedOut = state.error.kind === "signed-out";
     body = (
       <div className="page-state" role="alert">
-        <h2>{signedOut ? "Nisi prijavljen" : "Oglasa ni mogoče naložiti"}</h2>
+        <h2>{signedOut ? text.signedOutTitle : text.loadFailedTitle}</h2>
         <p>
           {!configured
-            ? "Urejanje oglasov trenutno ni na voljo."
+            ? text.unavailable
             : signedOut
-              ? "Za urejanje oglasa se moraš prijaviti."
-              : state.error.message}
+              ? text.signedOutBody
+              : m.listings.form.saveErrors[state.error.kind]}
         </p>
         {signedOut ? (
           <Link className="button" href="/login">
-            Prijava
+            {text.signIn}
           </Link>
         ) : (
           configured && (
@@ -122,7 +124,7 @@ export default function EditListingPage({
               type="button"
               onClick={() => setAttempt((value) => value + 1)}
             >
-              Poskusi znova
+              {m.common.actions.retry}
             </button>
           )
         )}
@@ -133,7 +135,7 @@ export default function EditListingPage({
       <ListingForm
         key={state.version}
         initialDraft={state.draft}
-        submitLabel="Shrani spremembe"
+        submitLabel={text.submit}
         onSubmit={save}
       />
     );
@@ -143,11 +145,11 @@ export default function EditListingPage({
     <div className="content-wrap narrow-content">
       <Link className="back-link" href={`/listings/${encodeURIComponent(id)}`}>
         <ChevronLeftIcon size={18} />
-        Nazaj na oglas
+        {text.back}
       </Link>
       <header className="topbar">
         <div>
-          <h1>Uredi oglas</h1>
+          <h1>{text.title}</h1>
         </div>
       </header>
       {body}

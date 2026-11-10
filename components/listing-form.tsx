@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useI18n } from "../lib/i18n/provider";
 import {
   digitsOnly,
   DISTRICTS,
@@ -8,9 +9,12 @@ import {
   ROOM_TYPES,
   validateListingDraft,
   type ListingDraft,
+  type ListingErrors,
   type ListingField,
+  type ListingSubmitFailure,
   type ListingValues,
 } from "../lib/listings/listing-form";
+import { roomTypeLabel } from "../lib/listings/format";
 
 const NUMERIC_FIELDS: ListingField[] = [
   "price",
@@ -20,8 +24,9 @@ const NUMERIC_FIELDS: ListingField[] = [
 ];
 
 /**
- * Listing form shared by create (and later edit). Validation runs on submit;
- * the first invalid field is focused and every error is linked to its input.
+ * Listing form shared by create and edit. Validation runs on submit; the
+ * first invalid field is focused and every error is linked to its input.
+ * `onSubmit` resolves to `null` on success or to the failure to show.
  */
 export function ListingForm({
   initialDraft,
@@ -30,20 +35,21 @@ export function ListingForm({
 }: {
   initialDraft: ListingDraft;
   submitLabel: string;
-  onSubmit: (values: ListingValues) => Promise<string | null>;
+  onSubmit: (values: ListingValues) => Promise<ListingSubmitFailure | null>;
 }) {
+  const { m, format } = useI18n();
+  const text = m.listings.form;
   const [draft, setDraft] = useState<ListingDraft>(initialDraft);
-  const [errors, setErrors] = useState<Partial<Record<ListingField, string>>>(
-    {},
-  );
+  // Codes, not text, so the messages follow a language switch.
+  const [errors, setErrors] = useState<ListingErrors>({});
   const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<ListingSubmitFailure | null>(null);
 
   function set<K extends ListingField>(field: K, value: ListingDraft[K]) {
     setDraft((current) => ({ ...current, [field]: value }));
   }
 
-  function text(field: ListingField) {
+  function control(field: ListingField) {
     return {
       id: `listing-${field}`,
       name: field,
@@ -65,12 +71,16 @@ export function ListingForm({
     };
   }
 
-  const error = (field: ListingField) =>
-    errors[field] && (
-      <small className="field-error" id={`listing-${field}-error`}>
-        {errors[field]}
-      </small>
+  const error = (field: ListingField) => {
+    const fieldError = errors[field];
+    return (
+      fieldError && (
+        <small className="field-error" id={`listing-${field}-error`}>
+          {format(text.errors[fieldError.code], { max: fieldError.max ?? "" })}
+        </small>
+      )
     );
+  };
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -96,29 +106,29 @@ export function ListingForm({
   return (
     <form className="listing-form" onSubmit={submit} noValidate>
       <fieldset>
-        <legend>Osnovni podatki</legend>
-        <label htmlFor="listing-title">Naslov</label>
+        <legend>{text.basics}</legend>
+        <label htmlFor="listing-title">{text.title}</label>
         <input
-          {...text("title")}
-          placeholder="Svetla soba blizu FRI"
+          {...control("title")}
+          placeholder={text.titlePlaceholder}
           maxLength={LISTING_LIMITS.titleMax + 20}
         />
         {error("title")}
 
-        <label htmlFor="listing-location">Lokacija *</label>
+        <label htmlFor="listing-location">{text.location}</label>
         <input
-          {...text("location")}
+          {...control("location")}
           required
-          placeholder="Ljubljana"
+          placeholder={text.locationPlaceholder}
           autoComplete="address-level2"
         />
         {error("location")}
 
         <div className="form-row">
           <div>
-            <label htmlFor="listing-district">Četrt</label>
-            <select {...text("district")}>
-              <option value="">Ni izbrano</option>
+            <label htmlFor="listing-district">{text.district}</label>
+            <select {...control("district")}>
+              <option value="">{text.notSelected}</option>
               {DISTRICTS.map((district) => (
                 <option key={district}>{district}</option>
               ))}
@@ -126,19 +136,21 @@ export function ListingForm({
             {error("district")}
           </div>
           <div>
-            <label htmlFor="listing-roomType">Vrsta nastanitve</label>
-            <select {...text("roomType")}>
-              <option value="">Ni izbrano</option>
+            <label htmlFor="listing-roomType">{text.roomType}</label>
+            <select {...control("roomType")}>
+              <option value="">{text.notSelected}</option>
               {ROOM_TYPES.map((type) => (
-                <option key={type}>{type}</option>
+                <option key={type} value={type}>
+                  {roomTypeLabel(type, m.listings)}
+                </option>
               ))}
             </select>
             {error("roomType")}
           </div>
         </div>
 
-        <label htmlFor="listing-description">Opis</label>
-        <textarea {...text("description")} rows={5} />
+        <label htmlFor="listing-description">{text.description}</label>
+        <textarea {...control("description")} rows={5} />
         <small className="field-hint">
           {draft.description.trim().length}/{LISTING_LIMITS.descriptionMax}
         </small>
@@ -146,34 +158,34 @@ export function ListingForm({
       </fieldset>
 
       <fieldset>
-        <legend>Cena in podrobnosti</legend>
+        <legend>{text.priceSection}</legend>
         <div className="form-row">
           <div>
-            <label htmlFor="listing-price">Cena na mesec (€) *</label>
-            <input {...text("price")} inputMode="numeric" required />
+            <label htmlFor="listing-price">{text.price}</label>
+            <input {...control("price")} inputMode="numeric" required />
             {error("price")}
           </div>
           <div>
-            <label htmlFor="listing-deposit">Varščina (€)</label>
-            <input {...text("deposit")} inputMode="numeric" />
+            <label htmlFor="listing-deposit">{text.deposit}</label>
+            <input {...control("deposit")} inputMode="numeric" />
             {error("deposit")}
           </div>
         </div>
         <div className="form-row">
           <div>
-            <label htmlFor="listing-sizeSqm">Velikost (m²)</label>
-            <input {...text("sizeSqm")} inputMode="numeric" />
+            <label htmlFor="listing-sizeSqm">{text.size}</label>
+            <input {...control("sizeSqm")} inputMode="numeric" />
             {error("sizeSqm")}
           </div>
           <div>
-            <label htmlFor="listing-flatmates">Število sostanovalcev</label>
-            <input {...text("flatmates")} inputMode="numeric" />
+            <label htmlFor="listing-flatmates">{text.flatmates}</label>
+            <input {...control("flatmates")} inputMode="numeric" />
             {error("flatmates")}
           </div>
         </div>
-        <label htmlFor="listing-availableFrom">Vselitev</label>
-        <input {...text("availableFrom")} type="date" />
-        <small className="field-hint">Prazno pomeni „po dogovoru“.</small>
+        <label htmlFor="listing-availableFrom">{text.moveIn}</label>
+        <input {...control("availableFrom")} type="date" />
+        <small className="field-hint">{text.moveInHint}</small>
         {error("availableFrom")}
 
         <label className="checkbox-row">
@@ -184,7 +196,7 @@ export function ListingForm({
             disabled={saving}
             onChange={(event) => set("billsIncluded", event.target.checked)}
           />
-          Stroški so vključeni v ceno
+          {text.billsIncluded}
         </label>
         <label className="checkbox-row">
           <input
@@ -194,17 +206,19 @@ export function ListingForm({
             disabled={saving}
             onChange={(event) => set("furnished", event.target.checked)}
           />
-          Opremljeno
+          {text.furnished}
         </label>
       </fieldset>
 
       {saveError && (
         <p className="error-message" role="alert">
-          {saveError}
+          {saveError === "conflict"
+            ? m.listings.edit.conflict
+            : text.saveErrors[saveError]}
         </p>
       )}
       <button className="button full-button" type="submit" disabled={saving}>
-        {saving ? "Shranjevanje …" : submitLabel}
+        {saving ? text.saving : submitLabel}
       </button>
     </form>
   );

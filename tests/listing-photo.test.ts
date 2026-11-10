@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { format } from "../lib/i18n/format";
+import { catalogs } from "../lib/i18n/messages";
 import {
   photoAlt,
   PHOTO_PLACEHOLDER,
@@ -47,17 +49,27 @@ describe("safePhotoUrl", () => {
 });
 
 describe("photoAlt", () => {
+  const alt = (listing: { title: string; district: string }) =>
+    photoAlt(listing, catalogs.sl.listings, format);
+
   it("describes the photo with the title and district", () => {
-    expect(photoAlt({ title: "Svetla soba", district: "Vič" })).toBe(
+    expect(alt({ title: "Svetla soba", district: "Vič" })).toBe(
       "Fotografija oglasa: Svetla soba, Vič",
     );
+    expect(
+      photoAlt(
+        { title: "Bright room", district: "Vič" },
+        catalogs.en.listings,
+        format,
+      ),
+    ).toBe("Listing photo: Bright room, Vič");
   });
 
   it("does not repeat the place when the district equals the title", () => {
-    expect(photoAlt({ title: "Ljubljana", district: "Ljubljana" })).toBe(
+    expect(alt({ title: "Ljubljana", district: "Ljubljana" })).toBe(
       "Fotografija oglasa: Ljubljana",
     );
-    expect(photoAlt({ title: "Soba", district: "" })).toBe(
+    expect(alt({ title: "Soba", district: "" })).toBe(
       "Fotografija oglasa: Soba",
     );
   });

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ChevronRightIcon, HomeIcon } from "./icons";
+import { useI18n } from "../lib/i18n/provider";
 import { myListingsSummary } from "../lib/listings/my-listings";
 import { useMyListings } from "../lib/listings/use-my-listings";
 
@@ -10,6 +11,7 @@ import { useMyListings } from "../lib/listings/use-my-listings";
  * something; before that, "Objavi oglas" on the same page is the entry point.
  */
 export function MyListingsShortcut() {
+  const i18n = useI18n();
   const { data } = useMyListings();
   if (!data || data.length === 0) return null;
   return (
@@ -20,8 +22,8 @@ export function MyListingsShortcut() {
             <HomeIcon />
           </span>
           <span className="row-text">
-            <b>Moji oglasi</b>
-            <small>{myListingsSummary(data)}</small>
+            <b>{i18n.m.listings.mine.title}</b>
+            <small>{myListingsSummary(data, i18n)}</small>
           </span>
           <ChevronRightIcon className="row-chevron" />
         </Link>
@@ -32,18 +34,20 @@ export function MyListingsShortcut() {
 
 /** "Moji oglasi" row in the profile's settings panel; always present. */
 export function MyListingsSettingsRow() {
+  const i18n = useI18n();
+  const text = i18n.m.listings.mine;
   const { data, isError } = useMyListings();
   const hint = isError
-    ? "Seznama trenutno ni mogoče naložiti."
+    ? text.settingsError
     : !data
-      ? "Nalaganje …"
+      ? text.settingsLoading
       : data.length === 0
-        ? "Še nimaš objavljenih oglasov."
-        : myListingsSummary(data);
+        ? text.settingsEmpty
+        : myListingsSummary(data, i18n);
   return (
     <Link href="/listings/mine" className="profile-card settings-link">
       <div>
-        <b>Moji oglasi</b>
+        <b>{text.title}</b>
         <p>{hint}</p>
       </div>
       <ChevronRightIcon className="row-chevron" />

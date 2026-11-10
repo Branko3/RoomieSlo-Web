@@ -37,6 +37,8 @@ vi.mock("../../lib/supabase/browser", () => {
 });
 
 import MyListingsPage from "../../app/listings/mine/page";
+import { catalogs } from "../../lib/i18n/messages";
+import { I18nProvider } from "../../lib/i18n/provider";
 
 function listing(id: string, overrides: Partial<Listing> = {}): Listing {
   return {
@@ -46,10 +48,8 @@ function listing(id: string, overrides: Partial<Listing> = {}): Listing {
     district: "Center",
     location: "Ljubljana",
     price: 300,
-    available: "po dogovoru",
     availableFrom: null,
     roomType: "soba",
-    details: "",
     image: "",
     isFilled: false,
     createdAt: "2026-10-19T08:00:00Z",
@@ -134,5 +134,38 @@ describe("Moji oglasi", () => {
       screen.getByRole("button", { name: "Označi kot zapolnjeno" }),
     );
     await waitFor(() => expect(hook.setFilled).toHaveBeenCalledWith("a", true));
+  });
+});
+
+describe("My listings in English", () => {
+  it("renders the summary, status and owner actions in English", () => {
+    hook.state = {
+      isPending: false,
+      error: null,
+      data: [listing("a"), listing("b", { isFilled: true })],
+    };
+    render(
+      <I18nProvider locale="en" messages={catalogs.en}>
+        <MyListingsPage />
+      </I18nProvider>,
+    );
+    expect(
+      screen.getByRole("heading", { name: "My listings" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("1 active listing, 1 filled")).toBeInTheDocument();
+    const [available, filled] = screen.getAllByRole("article");
+    expect(within(available).getByText("Available")).toBeInTheDocument();
+    expect(within(available).getByText("Rent")).toBeInTheDocument();
+    expect(within(available).getByText("Posted")).toBeInTheDocument();
+    expect(within(available).getByText("19/10/2026")).toBeInTheDocument();
+    expect(
+      within(available).getByRole("link", { name: "Edit listing Soba a" }),
+    ).toHaveTextContent("Edit");
+    expect(
+      within(filled).getByRole("button", { name: "Mark as available" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByRole("link", { name: "Post a listing" }),
+    ).toHaveLength(1);
   });
 });

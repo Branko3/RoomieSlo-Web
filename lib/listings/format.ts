@@ -1,47 +1,70 @@
+import type { Formatters } from "../i18n/formatters";
+import type { I18n } from "../i18n/i18n";
+import type { Messages } from "../i18n/types";
+import type { Listing } from "../supabase/mappers";
+import { isRoomType, ROOM_TYPE_KEYS } from "./room-types";
+
+type ListingsText = Messages["listings"];
+
 /**
- * Slovenian date for a listing's move-in value: "2026-09-20" → "20. 9. 2026".
- * Parsed by hand (no Date/Intl) so the calendar day never shifts with the
- * viewer's time zone. Anything that is not an ISO date ("po dogovoru") is
- * returned unchanged.
+ * Label for a stored `room_type`. An empty value reads as a room (the
+ * historical default); a value outside the list (free text written by an
+ * older client) is shown as stored.
  */
-export function formatMoveIn(available: string): string {
-  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(available);
-  if (!match) return available;
-  const [, year, month, day] = match;
-  return `${Number(day)}. ${Number(month)}. ${year}`;
+export function roomTypeLabel(
+  roomType: string | null | undefined,
+  m: ListingsText,
+): string {
+  const value = roomType?.trim() ?? "";
+  if (!value) return m.roomTypes.room;
+  return isRoomType(value) ? m.roomTypes[ROOM_TYPE_KEYS[value]] : value;
 }
 
-const LJUBLJANA_DAY = new Intl.DateTimeFormat("en-CA", {
-  timeZone: "Europe/Ljubljana",
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-});
-
 /**
- * Slovenian date for a moment such as `created_at`: the calendar day in
- * Ljubljana, so a listing posted at 00:30 local time is not shown as the
- * previous (UTC) day. Unparseable values are returned unchanged.
+ * Move-in day: the calendar date without a time-zone shift, or "by
+ * arrangement" when the owner left it empty.
  */
-export function formatTimestampDate(timestamp: string): string {
-  const date = new Date(timestamp);
-  if (Number.isNaN(date.getTime())) return timestamp;
-  return formatMoveIn(LJUBLJANA_DAY.format(date));
+export function moveInLabel(
+  availableFrom: string | null | undefined,
+  m: ListingsText,
+  formatters: Pick<Formatters, "calendarDate">,
+): string {
+  return availableFrom
+    ? formatters.calendarDate(availableFrom)
+    : m.moveInByAgreement;
 }
 
-const WHOLE_EUROS = new Intl.NumberFormat("sl-SI", {
-  maximumFractionDigits: 0,
-});
-const EUROS_AND_CENTS = new Intl.NumberFormat("sl-SI", {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
+/**
+ * Short fact line for a listing card ("16 m² · 2 sostanovalca · stroški
+ * vključeni"). Facts that are unknown, zero or false are left out; listings
+ * cached before the facts were mapped simply show none.
+ */
+export function listingDetails(
+  listing: Pick<Listing, "sizeSqm" | "flatmates" | "billsIncluded">,
+  { m, format, plural }: Pick<I18n, "m" | "format" | "plural">,
+): string {
+  const text = m.listings.details;
+  return [
+    listing.sizeSqm == null
+      ? null
+      : format(text.size, { size: listing.sizeSqm }),
+    listing.flatmates ? plural(text.flatmates, listing.flatmates) : null,
+    listing.billsIncluded ? text.billsIncluded : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
 
 /**
- * Slovenian amount with a non-breaking space so the amount and unit never
- * split: "320 €", "320,50 €", "12.000 €" (Slovenian groups from five digits).
+ * Ljubljana calendar day of a moment such as `created_at`, so a listing
+ * posted at 00:30 local time is not shown as the previous (UTC) day.
+ * Unparseable values are returned unchanged instead of throwing.
  */
-export function formatPrice(amount: number): string {
-  const format = Number.isInteger(amount) ? WHOLE_EUROS : EUROS_AND_CENTS;
-  return `${format.format(amount)} €`;
+export function timestampDate(
+  timestamp: string,
+  formatters: Pick<Formatters, "date">,
+): string {
+  return Number.isNaN(new Date(timestamp).getTime())
+    ? timestamp
+    : formatters.date(timestamp);
 }

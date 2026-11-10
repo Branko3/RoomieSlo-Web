@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { createI18n } from "../lib/i18n/i18n";
+import { catalogs } from "../lib/i18n/messages";
 import {
-  activeListingsLabel,
   fetchMyListings,
-  filledListingsLabel,
   groupMyListings,
   MY_LISTINGS_LIMIT,
   myListingsSummary,
@@ -11,6 +11,9 @@ import {
 } from "../lib/listings/my-listings";
 import type { Listing } from "../lib/supabase/mappers";
 import type { Row } from "../lib/supabase/types";
+
+const sl = createI18n("sl", catalogs.sl);
+const en = createI18n("en", catalogs.en);
 
 function row(id: string, overrides: Partial<Row<"listings">> = {}) {
   return {
@@ -139,7 +142,7 @@ describe("grouping and Slovenian counts", () => {
     [101, "101 aktiven oglas"],
     [111, "111 aktivnih oglasov"],
   ])("%i → %s", (count, label) => {
-    expect(activeListingsLabel(count)).toBe(label);
+    expect(sl.plural(sl.m.listings.mine.active, count)).toBe(label);
   });
 
   it.each([
@@ -148,17 +151,22 @@ describe("grouping and Slovenian counts", () => {
     [3, "3 zapolnjeni"],
     [5, "5 zapolnjenih"],
   ])("%i → %s", (count, label) => {
-    expect(filledListingsLabel(count)).toBe(label);
+    expect(sl.plural(sl.m.listings.mine.filled, count)).toBe(label);
   });
 
   it("mentions filled listings only when there are some", () => {
-    expect(myListingsSummary([listing("a", false)])).toBe("1 aktiven oglas");
-    expect(
-      myListingsSummary([
-        listing("a", false),
-        listing("b", false),
-        listing("c", true),
-      ]),
-    ).toBe("2 aktivna oglasa, 1 zapolnjen");
+    expect(myListingsSummary([listing("a", false)], sl)).toBe(
+      "1 aktiven oglas",
+    );
+    const mixed = [
+      listing("a", false),
+      listing("b", false),
+      listing("c", true),
+    ];
+    expect(myListingsSummary(mixed, sl)).toBe("2 aktivna oglasa, 1 zapolnjen");
+    expect(myListingsSummary(mixed, en)).toBe("2 active listings, 1 filled");
+    expect(myListingsSummary([listing("a", false)], en)).toBe(
+      "1 active listing",
+    );
   });
 });

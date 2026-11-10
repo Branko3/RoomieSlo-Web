@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
+import { catalogs } from "../lib/i18n/messages";
 import {
-  deleteErrorMessages,
   deleteListing,
   ListingDeleteError,
   type ListingDeleteClient,
@@ -68,7 +68,6 @@ describe("deleteListing", () => {
     const { client } = makeClient({ result: { data: [], error: null } });
     await expect(deleteListing(client, "listing-1")).rejects.toMatchObject({
       kind: "gone",
-      message: deleteErrorMessages.gone,
     });
     const { client: nullData } = makeClient({
       result: { data: null, error: null },
@@ -112,18 +111,21 @@ describe("deleteListing", () => {
     const { client } = makeClient({ result: new TypeError("Failed to fetch") });
     await expect(deleteListing(client, "listing-1")).rejects.toMatchObject({
       kind: "offline",
-      message: deleteErrorMessages.offline,
     });
   });
 });
 
 describe("delete copy", () => {
-  it("uses Slovenian messages", () => {
-    expect(deleteErrorMessages.unknown).toBe(
+  it("has a message for every error kind in both languages", () => {
+    const kinds = ["signed-out", "gone", "permission", "offline", "unknown"];
+    for (const catalog of [catalogs.sl, catalogs.en]) {
+      expect(Object.keys(catalog.listings.delete.errors).sort()).toEqual(
+        [...kinds].sort(),
+      );
+    }
+    expect(catalogs.sl.listings.delete.errors.unknown).toBe(
       "Oglasa ni bilo mogoče izbrisati.",
     );
-    for (const message of Object.values(deleteErrorMessages)) {
-      expect(message.length).toBeGreaterThan(10);
-    }
+    expect(new ListingDeleteError("gone").message).not.toMatch(/[čšž]/);
   });
 });

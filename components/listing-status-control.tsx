@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { getSupabaseConfig } from "../lib/config";
+import { useI18n } from "../lib/i18n/provider";
 import {
-  filledToggleLabel,
   setListingFilled,
   toggleFilledOptimistically,
   type ListingStatusClient,
+  type StatusErrorKind,
 } from "../lib/listings/listing-status";
 import { createSupabaseBrowserClient } from "../lib/supabase/browser";
 
@@ -24,8 +25,10 @@ export function ListingStatusToggle({
   isFilled: boolean;
   onChange: (filled: boolean) => void;
 }) {
+  const { m } = useI18n();
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // The kind, not the text, so the message follows a language switch.
+  const [error, setError] = useState<StatusErrorKind | null>(null);
 
   async function toggle() {
     if (saving) return;
@@ -38,7 +41,7 @@ export function ListingStatusToggle({
       onChange,
       (next) => setListingFilled(client, listingId, next),
     );
-    if (!result.ok) setError(result.error.message);
+    if (!result.ok) setError(result.error.kind);
     setSaving(false);
   }
 
@@ -51,11 +54,13 @@ export function ListingStatusToggle({
         disabled={saving}
         aria-busy={saving || undefined}
       >
-        {filledToggleLabel(isFilled)}
+        {isFilled
+          ? m.listings.status.markAvailable
+          : m.listings.status.markFilled}
       </button>
       {error && (
         <p className="error-message" role="alert">
-          {error}
+          {m.listings.statusErrors[error]}
         </p>
       )}
     </div>

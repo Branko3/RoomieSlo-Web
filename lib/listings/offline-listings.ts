@@ -1,3 +1,4 @@
+import type { I18n } from "../i18n/i18n";
 import type { Listing } from "../supabase/mappers";
 import { writeListingsToCache, type SessionReader } from "./cache-sync";
 import {
@@ -82,35 +83,31 @@ export async function loadListingsWithFallback({
   return { source: "error", error: failure, offline: !isOnline };
 }
 
-const syncFormatter = new Intl.DateTimeFormat("sl-SI", {
-  day: "numeric",
-  month: "numeric",
-  year: "numeric",
-  hour: "2-digit",
-  minute: "2-digit",
-  timeZone: "Europe/Ljubljana",
-});
+/** What `formatSyncedAt` and `cacheNotice` need from `useI18n()`. */
+export type CacheNoticeI18n = Pick<I18n, "m" | "format" | "formatters">;
 
-/** Slovenian "last updated" text for cached data. */
+/** "Last updated" text for cached data, in the active language. */
 export function formatSyncedAt(
   syncedAt: number | null,
+  { m, format, formatters }: CacheNoticeI18n,
   now: number = Date.now(),
 ): string {
-  if (syncedAt === null) return "neznano kdaj";
+  const text = m.listings.cache;
+  if (syncedAt === null) return text.unknownTime;
   const minutes = Math.floor((now - syncedAt) / 60_000);
-  if (minutes < 1) return "pravkar";
-  if (minutes < 60) return `pred ${minutes} min`;
-  return syncFormatter.format(new Date(syncedAt));
+  if (minutes < 1) return text.justNow;
+  if (minutes < 60) return format(text.minutesAgo, { minutes });
+  return formatters.dateTime(syncedAt);
 }
 
 /** Banner copy for a cached view; `null` when showing fresh data. */
 export function cacheNotice(
   view: ListingsView,
+  i18n: CacheNoticeI18n,
   now: number = Date.now(),
 ): string | null {
   if (view.source !== "cache") return null;
-  const when = formatSyncedAt(view.syncedAt, now);
-  return view.offline
-    ? `Brez povezave. Prikazujemo shranjene oglase (zadnja posodobitev: ${when}).`
-    : `Oglasov trenutno ni mogoče osvežiti. Prikazujemo shranjene oglase (zadnja posodobitev: ${when}).`;
+  const when = formatSyncedAt(view.syncedAt, i18n, now);
+  const text = i18n.m.listings.cache;
+  return i18n.format(view.offline ? text.offline : text.stale, { when });
 }

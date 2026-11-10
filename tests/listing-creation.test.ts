@@ -5,7 +5,6 @@ import {
   DISTRICTS,
   emptyListingDraft,
   isValidIsoDate,
-  listingSaveErrorMessages,
   ListingSaveError,
   ROOM_TYPES,
   validateListingDraft,
@@ -51,8 +50,8 @@ describe("Android option lists", () => {
 describe("validateListingDraft", () => {
   it("requires location and price like Android", () => {
     expect(errorsFor({ ...emptyListingDraft })).toEqual({
-      location: "Vnesi lokacijo.",
-      price: "Vnesi ceno.",
+      location: { code: "locationRequired" },
+      price: { code: "priceRequired" },
     });
     expect(errorsFor(draft({ location: "   " }))).toHaveProperty("location");
   });
@@ -152,10 +151,42 @@ describe("validateListingDraft", () => {
     ).toBe(true);
   });
 
-  it("uses the Android date message", () => {
-    expect(errorsFor(draft({ availableFrom: "jutri" })).availableFrom).toBe(
-      "Datum vselitve vpiši v obliki LLLL-MM-DD.",
-    );
+  it("returns a code per field, with the limit where one applies", () => {
+    expect(
+      errorsFor(
+        draft({
+          location: "x".repeat(121),
+          price: "100001",
+          title: "x".repeat(121),
+          description: "x".repeat(2001),
+          roomType: "vila",
+          district: "Maribor",
+          availableFrom: "jutri",
+          sizeSqm: "1001",
+          deposit: "abc",
+          flatmates: "21",
+        }),
+      ),
+    ).toEqual({
+      location: { code: "locationTooLong", max: 120 },
+      price: { code: "priceTooLarge", max: 100_000 },
+      title: { code: "titleTooLong", max: 120 },
+      description: { code: "descriptionTooLong", max: 2000 },
+      roomType: { code: "roomTypeInvalid" },
+      district: { code: "districtInvalid" },
+      availableFrom: { code: "availableFromInvalid" },
+      sizeSqm: { code: "sizeSqmTooLarge", max: 1000 },
+      deposit: { code: "depositNotInteger" },
+      flatmates: { code: "flatmatesTooLarge", max: 20 },
+    });
+    expect(errorsFor(draft({ price: "12.5", sizeSqm: "1,5" }))).toEqual({
+      price: { code: "priceNotInteger" },
+      sizeSqm: { code: "sizeSqmNotInteger" },
+    });
+    expect(errorsFor(draft({ deposit: "100001", flatmates: "x" }))).toEqual({
+      deposit: { code: "depositTooLarge", max: 100_000 },
+      flatmates: { code: "flatmatesNotInteger" },
+    });
   });
 });
 
@@ -243,11 +274,7 @@ describe("createListing", () => {
     const { client } = makeClient({ result: { data: null, error } });
     const failure = await createListing(client, values).catch((e) => e);
     expect(failure).toBeInstanceOf(ListingSaveError);
-    expect(failure).toMatchObject({
-      kind,
-      message:
-        listingSaveErrorMessages[kind as keyof typeof listingSaveErrorMessages],
-    });
+    expect(failure).toMatchObject({ kind });
     expect(failure.message).not.toContain(error.message);
   });
 

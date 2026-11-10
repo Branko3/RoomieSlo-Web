@@ -7,6 +7,7 @@ import {
   ListingGridSkeleton,
 } from "../../../components/data-states";
 import { ChevronLeftIcon, PlusIcon } from "../../../components/icons";
+import { useI18n } from "../../../lib/i18n/provider";
 import { OwnListingCard } from "../../../components/own-listing-card";
 import { myListingsSummary } from "../../../lib/listings/my-listings";
 import { useMyListings } from "../../../lib/listings/use-my-listings";
@@ -16,6 +17,8 @@ import { useMyListings } from "../../../lib/listings/use-my-listings";
  * the owner's actions. The browsing feeds (/listings, /search) leave these out.
  */
 export default function MyListingsPage() {
+  const i18n = useI18n();
+  const text = i18n.m.listings.mine;
   const {
     data: listings,
     isPending,
@@ -28,35 +31,35 @@ export default function MyListingsPage() {
     <div className="content-wrap">
       <Link className="back-link" href="/listings">
         <ChevronLeftIcon size={18} />
-        Nazaj na oglase
+        {text.back}
       </Link>
       <header className="topbar">
         <div>
-          <h1>Moji oglasi</h1>
+          <h1>{text.title}</h1>
           {listings && listings.length > 0 && (
             <p className="muted" aria-live="polite">
-              {myListingsSummary(listings)}
+              {myListingsSummary(listings, i18n)}
             </p>
           )}
         </div>
         <Link className="button" href="/listings/new">
           <PlusIcon size={18} />
-          Objavi oglas
+          {text.post}
         </Link>
       </header>
       {isPending ? (
-        <ListingGridSkeleton label="Nalaganje tvojih oglasov ..." />
+        <ListingGridSkeleton label={text.loading} />
       ) : error ? (
         <DataState error={error} onRetry={() => void refetch()}>
           <span />
         </DataState>
       ) : !listings || listings.length === 0 ? (
         <EmptyState
-          title="Še nimaš oglasov"
-          description="Ko objaviš oglas, ga najdeš tukaj, tudi ko je že zapolnjen."
+          title={text.emptyTitle}
+          description={text.emptyBody}
           action={
             <Link className="button" href="/listings/new">
-              Objavi oglas
+              {text.post}
             </Link>
           }
         />

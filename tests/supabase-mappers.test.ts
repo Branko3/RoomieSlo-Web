@@ -51,11 +51,19 @@ describe("Supabase contract mappers", () => {
       id: "listing-1",
       ownerId: "owner-1",
       price: 320,
-      available: "po dogovoru",
       availableFrom: null,
       isFilled: false,
       createdAt: row.created_at,
     });
+  });
+
+  it("keeps stored values raw and builds no display text", () => {
+    const mapped = mapListing({ ...row, room_type: "" });
+    expect(mapped.roomType).toBe("");
+    expect(mapListing(row).roomType).toBe("soba");
+    // "po dogovoru", room-type labels and the fact line are localized in components.
+    expect(mapped).not.toHaveProperty("available");
+    expect(mapped).not.toHaveProperty("details");
   });
 
   it("keeps the owner's description and listing facts, with unknowns as null", () => {

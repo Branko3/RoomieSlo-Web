@@ -27,11 +27,19 @@ export function safePhotoUrl(value: string | null | undefined): string | null {
   }
 }
 
-/** Accessible description for a listing photo. */
-export function photoAlt(listing: { title: string; district: string }): string {
-  const place =
-    listing.district && listing.district !== listing.title
-      ? `, ${listing.district}`
-      : "";
-  return `Fotografija oglasa: ${listing.title}${place}`;
+/**
+ * Accessible description for a listing photo, from the catalog's
+ * `photoAlt` ("{title}") and `photoAltWithPlace` ("{title}, {district}")
+ * templates. The district is left out when it is empty or repeats the title.
+ */
+export function photoAlt(
+  listing: { title: string; district: string },
+  templates: { photoAlt: string; photoAltWithPlace: string },
+  format: (template: string, vars: Record<string, string>) => string,
+): string {
+  const withPlace = listing.district && listing.district !== listing.title;
+  return format(withPlace ? templates.photoAltWithPlace : templates.photoAlt, {
+    title: listing.title,
+    district: listing.district,
+  });
 }
