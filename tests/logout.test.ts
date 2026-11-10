@@ -78,7 +78,7 @@ describe("performLogout", () => {
     );
     const result = await performLogout(deps);
 
-    expect(result).toEqual({ ok: false, message: LOGOUT_ERROR });
+    expect(result).toEqual({ ok: false, error: LOGOUT_ERROR });
     expect(deps.clearServerState).not.toHaveBeenCalled();
     expect(deps.resetUserState).not.toHaveBeenCalled();
     expect(storage.data.has("roomieslo:favorites")).toBe(true);

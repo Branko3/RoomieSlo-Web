@@ -7,6 +7,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { createSupabaseBrowserClient } from "../lib/supabase/browser";
 import { performLogout, type LogoutResult } from "../lib/auth/logout";
 import { useFavorites } from "./providers";
+import { useI18n } from "../lib/i18n/provider";
 import {
   createLoginRedirect,
   getRouteAccess,
@@ -14,12 +15,18 @@ import {
   requiresSession,
 } from "../lib/auth/routes";
 
+/**
+ * Why sign-in is unavailable; the UI shows `m.auth.session.errors[code]`
+ * (the raw Supabase message is never shown).
+ */
+export type AuthErrorCode = "session" | "configuration";
+
 type AuthContextValue = {
   /** False when the public Supabase variables are missing. */
   configured: boolean;
   session: Session | null;
   pending: boolean;
-  error: string | null;
+  error: AuthErrorCode | null;
   signIn: (
     email: string,
     password: string,
@@ -34,11 +41,9 @@ type AuthClient = ReturnType<typeof createSupabaseBrowserClient>;
 type SessionCallbacks = {
   setSession: (session: Session | null) => void;
   setLoading: (loading: boolean) => void;
-  setError: (error: string | null) => void;
+  setError: (error: AuthErrorCode | null) => void;
   onSignedOut?: () => void;
 };
-
-const SESSION_ERROR = "Seje ni mogoče preveriti. Poskusite znova.";
 
 export function initializeAuthSession(
   client: AuthClient,
@@ -53,12 +58,12 @@ export function initializeAuthSession(
     .then(({ data, error: sessionError }) => {
       if (!active || receivedEvent) return;
       callbacks.setSession(data.session);
-      if (sessionError) callbacks.setError(SESSION_ERROR);
+      if (sessionError) callbacks.setError("session");
       callbacks.setLoading(false);
     })
     .catch(() => {
       if (!active || receivedEvent) return;
-      callbacks.setError(SESSION_ERROR);
+      callbacks.setError("session");
       callbacks.setLoading(false);
     });
 
@@ -95,7 +100,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [session, setSession] = useState<Session | null>(null);
   const [pending, setPending] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<AuthErrorCode | null>(null);
+  const { m } = useI18n();
   const queryClient = useQueryClient();
   const { resetFavorites } = useFavorites();
   const client = useMemo(() => {
@@ -108,7 +114,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!client) {
-      setError("Supabase configuration failed. Prijava trenutno ni na voljo.");
+      setError("configuration");
       setPending(false);
       return;
     }
@@ -160,15 +166,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   if (error && requiresSession(access)) {
     return (
       <div className="page-state" role="alert">
-        <h1>Prijava ni na voljo</h1>
-        <p>{error}</p>
+        <h1>{m.auth.session.unavailableTitle}</h1>
+        <p>{m.auth.session.errors[error]}</p>
       </div>
     );
   }
   if (requiresSession(access) && (pending || !session)) {
     return (
       <div className="page-state" aria-live="polite">
-        <p>Preverjanje prijave ...</p>
+        <p>{m.auth.session.checking}</p>
       </div>
     );
   }

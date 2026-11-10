@@ -1,7 +1,7 @@
 export const LOGIN_ROUTE = "/login";
 export const LOCAL_DATA_PREFIX = "roomieslo:";
-export const LOGOUT_ERROR =
-  "Odjava ni uspela. Preveri povezavo in poskusi znova.";
+/** Error code of a failed sign-out; the UI shows `m.auth.logout.failed`. */
+export const LOGOUT_ERROR = "logout_failed";
 
 /** The subset of the Supabase auth client used for logout. */
 export type LogoutAuthClient = {
@@ -22,7 +22,7 @@ export type LogoutDependencies = {
 };
 
 export type LogoutResult =
-  { ok: true; redirectTo: string } | { ok: false; message: string };
+  { ok: true; redirectTo: string } | { ok: false; error: typeof LOGOUT_ERROR };
 
 /** Removes every app-owned `roomieslo:` key so the next user of the browser starts clean. */
 export function clearLocalUserData(
@@ -55,7 +55,7 @@ export async function performLogout({
     try {
       await client.auth.signOut({ scope: "local" });
     } catch {
-      return { ok: false, message: LOGOUT_ERROR };
+      return { ok: false, error: LOGOUT_ERROR };
     }
   }
 

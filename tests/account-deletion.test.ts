@@ -2,9 +2,10 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import {
+  canonicalConfirmation,
+  CONFIRMATION_PHRASES,
   DELETION_PHRASE,
   deleteOwnAccount,
-  deletionCopy,
   resultFromResponse,
   type DeleteAccountClient,
 } from "../lib/account/deletion";
@@ -136,7 +137,6 @@ describe("deleteOwnAccount", () => {
     ).resolves.toEqual({
       ok: false,
       kind: "invalid-confirmation",
-      message: deletionCopy["invalid-confirmation"],
     });
     await expect(
       deleteOwnAccount(client, { password: "", confirm: DELETION_PHRASE }),
@@ -158,6 +158,39 @@ describe("deleteOwnAccount", () => {
       ],
     ]);
     expect(JSON.stringify(calls[1])).not.toContain(UID);
+  });
+
+  it("asks for DELETE in English and sends the canonical phrase", async () => {
+    const { client, calls } = makeClient();
+    await expect(
+      deleteOwnAccount(client, {
+        password: "geslo1234",
+        confirm: " delete ",
+        locale: "en",
+      }),
+    ).resolves.toEqual({ ok: true });
+    expect(calls[1]).toEqual([
+      "invoke",
+      { name: "delete-account", options: { body: { confirm: "IZBRIŠI" } } },
+    ]);
+    expect(isConfirmationValid(DELETION_PHRASE)).toBe(true);
+  });
+
+  it("accepts only the phrase of the interface language", async () => {
+    expect(CONFIRMATION_PHRASES).toEqual({ sl: DELETION_PHRASE, en: "DELETE" });
+    expect(canonicalConfirmation("Delete", "en")).toBe(DELETION_PHRASE);
+    expect(canonicalConfirmation(DELETION_PHRASE, "en")).toBeNull();
+    expect(canonicalConfirmation("DELETE", "sl")).toBeNull();
+    expect(canonicalConfirmation(" izbriši ", "sl")).toBe("izbriši");
+    const { client, calls } = makeClient();
+    await expect(
+      deleteOwnAccount(client, {
+        password: "geslo1234",
+        confirm: "IZBRISI",
+        locale: "en",
+      }),
+    ).resolves.toEqual({ ok: false, kind: "invalid-confirmation" });
+    expect(calls).toEqual([]);
   });
 
   it("stops on a wrong password", async () => {
@@ -206,7 +239,6 @@ describe("deleteOwnAccount", () => {
     });
     await expect(run(500, "partial_failure")).resolves.toMatchObject({
       kind: "partial",
-      message: deletionCopy.partial,
     });
   });
 

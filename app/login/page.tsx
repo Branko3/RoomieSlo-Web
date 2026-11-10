@@ -6,18 +6,22 @@ import { FormEvent, useRef, useState } from "react";
 import { useAuth } from "../../components/auth-provider";
 import { LanguageSwitcher } from "../../components/language-switcher";
 import {
-  authMessage,
+  loginErrorCode,
   safeDestination,
   validateLogin,
+  type LoginError,
 } from "../../lib/auth/login";
+import { useI18n } from "../../lib/i18n/provider";
 
 export default function LoginPage() {
   const router = useRouter();
   const params = useSearchParams();
   const { pending: authLoading, error: authError, signIn } = useAuth();
+  const { m } = useI18n();
+  const t = m.auth.login;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<LoginError | null>(null);
   const [pending, setPending] = useState(false);
   const emailRef = useRef<HTMLInputElement>(null);
   const errorRef = useRef<HTMLParagraphElement>(null);
@@ -28,7 +32,7 @@ export default function LoginPage() {
     const validation = validateLogin(email, password);
     if (validation.error) {
       setError(validation.error);
-      if (validation.error === "Vnesite geslo.") {
+      if (validation.error === "missing_password") {
         document.getElementById("password")?.focus();
       } else {
         emailRef.current?.focus();
@@ -41,13 +45,13 @@ export default function LoginPage() {
     try {
       const result = await signIn(validation.email, password);
       if (result.error) {
-        setError(authMessage(result.error.message));
+        setError(loginErrorCode(result.error.message));
         errorRef.current?.focus();
       } else {
         router.replace(safeDestination(params.get("returnTo")));
       }
     } catch {
-      setError("Prijava ni uspela. Preverite povezavo in poskusite znova.");
+      setError("unreachable");
       errorRef.current?.focus();
     } finally {
       setPending(false);
@@ -63,25 +67,25 @@ export default function LoginPage() {
         </b>
       </div>
       <form className="auth-card" onSubmit={submit} noValidate>
-        <h1>Prijavi se v svoj račun</h1>
+        <h1>{t.title}</h1>
         {params.get("deleted") === "1" && (
           <p className="success-message" role="status">
-            Račun je izbrisan.
+            {t.deleted}
           </p>
         )}
-        <p className="muted">Nadaljuj z iskanjem svojega idealnega doma.</p>
-        <label htmlFor="email">E-naslov</label>
+        <p className="muted">{t.subtitle}</p>
+        <label htmlFor="email">{t.email}</label>
         <input
           ref={emailRef}
           id="email"
           name="email"
           type="email"
           autoComplete="email"
-          placeholder="ime@primer.si"
+          placeholder={t.emailPlaceholder}
           value={email}
           onChange={(event) => setEmail(event.target.value)}
         />
-        <label htmlFor="password">Geslo</label>
+        <label htmlFor="password">{t.password}</label>
         <input
           id="password"
           name="password"
@@ -98,7 +102,9 @@ export default function LoginPage() {
             role="alert"
             tabIndex={-1}
           >
-            {error || authError}
+            {error
+              ? t.errors[error]
+              : authError && m.auth.session.errors[authError]}
           </p>
         )}
         <button
@@ -106,10 +112,10 @@ export default function LoginPage() {
           type="submit"
           disabled={pending || authLoading}
         >
-          {pending ? "Prijavljanje ..." : "Prijava"}
+          {pending ? t.submitting : t.submit}
         </button>
         <p className="auth-footer">
-          Še nimaš računa? <Link href="/register">Registriraj se</Link>
+          {t.noAccount} <Link href="/register">{t.register}</Link>
         </p>
       </form>
       <LanguageSwitcher className="page-language" />

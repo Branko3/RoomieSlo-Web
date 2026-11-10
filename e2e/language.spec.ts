@@ -41,9 +41,7 @@ test.describe("language", () => {
     }
   });
 
-  // Enable when the auth area moves the /login and /register copy into the
-  // `auth` namespace (delivery plan, step 2).
-  test.fixme("/login and /register text is English", async ({
+  test("/login and /register text is English", async ({
     page,
     context,
     baseURL,

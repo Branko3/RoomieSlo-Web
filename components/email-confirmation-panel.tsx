@@ -4,21 +4,19 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
-  confirmationErrorMessages,
+  isConfirmationError,
   RESEND_COOLDOWN_SECONDS,
   resendConfirmation,
-  type ConfirmationError,
   type ResendResult,
 } from "../lib/auth/confirmation";
+import { useI18n } from "../lib/i18n/provider";
 import { getSupabaseConfig } from "../lib/config";
 import { createSupabaseBrowserClient } from "../lib/supabase/browser";
 
-function isConfirmationError(value: string | null): value is ConfirmationError {
-  return value !== null && value in confirmationErrorMessages;
-}
-
 export function EmailConfirmationPanel() {
   const searchParams = useSearchParams();
+  const { m, format } = useI18n();
+  const t = m.auth.confirmation;
   const errorParam = searchParams.get("error");
   const error = isConfirmationError(errorParam) ? errorParam : null;
   const [email, setEmail] = useState(searchParams.get("email") ?? "");
@@ -57,25 +55,22 @@ export function EmailConfirmationPanel() {
 
   return (
     <div className="auth-card">
-      <h1>{error ? "Potrditev ni uspela" : "Preveri svojo e-pošto"}</h1>
+      <h1>{error ? t.failedTitle : t.title}</h1>
       {error ? (
         <p className="error-message" role="alert">
-          {confirmationErrorMessages[error]}
+          {t.errors[error]}
         </p>
       ) : (
-        <p className="muted">
-          Poslali smo ti povezavo za potrditev računa. Odpri jo na tej napravi,
-          nato se lahko prijaviš.
-        </p>
+        <p className="muted">{t.sent}</p>
       )}
       <form onSubmit={onSubmit} noValidate>
         <label>
-          E-naslov
+          {t.email}
           <input
             type="email"
             name="email"
             autoComplete="email"
-            placeholder="ime@student.uni-lj.si"
+            placeholder={t.emailPlaceholder}
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             aria-invalid={fieldError || undefined}
@@ -88,10 +83,10 @@ export function EmailConfirmationPanel() {
           disabled={pending || cooldown > 0}
         >
           {pending
-            ? "Pošiljanje …"
+            ? t.sending
             : cooldown > 0
-              ? `Ponovno pošlji čez ${cooldown} s`
-              : "Pošlji potrditveno e-sporočilo znova"}
+              ? format(t.cooldown, { seconds: cooldown })
+              : t.resend}
         </button>
       </form>
       {result && (
@@ -100,11 +95,13 @@ export function EmailConfirmationPanel() {
           className={result.ok ? "success-message" : "error-message"}
           role={result.ok ? "status" : "alert"}
         >
-          {result.message}
+          {result.ok
+            ? format(t.resendResult.sent, { email: result.email })
+            : t.resendResult[result.error]}
         </p>
       )}
       <p className="auth-footer">
-        Si že potrdil e-naslov? <Link href="/login">Prijava</Link>
+        {t.alreadyConfirmed} <Link href="/login">{t.signIn}</Link>
       </p>
     </div>
   );

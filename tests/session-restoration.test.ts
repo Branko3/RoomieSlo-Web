@@ -115,6 +115,30 @@ describe("session restoration after refresh", () => {
     expect(last()?.user?.displayName).toBe("ana.novak");
   });
 
+  it("leaves the name empty without metadata or e-mail so the UI names the user", async () => {
+    const { client, deferred } = makeClient();
+    const { last } = track(client);
+    deferred.resolve({
+      data: {
+        session: makeSession({ user_metadata: {}, email: undefined }),
+      },
+      error: null,
+    });
+    await flush();
+
+    expect(last()?.user?.displayName).toBe("");
+    expect(profileSummary(last()!, "Uporabnik")).toEqual({
+      kind: "signed-in",
+      name: "Uporabnik",
+      initials: "U",
+    });
+    expect(profileSummary(last()!)).toMatchObject({ name: "", initials: "?" });
+  });
+
+  it("uses a restore error code, not text", () => {
+    expect(SESSION_RESTORE_ERROR).toBe("restore_failed");
+  });
+
   it("reports an unauthenticated visitor when no session is stored", async () => {
     const { client, deferred } = makeClient();
     const { last } = track(client);

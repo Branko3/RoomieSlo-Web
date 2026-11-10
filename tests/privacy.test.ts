@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
+import { catalogs } from "../lib/i18n/messages";
 import {
-  exportCopy,
   exportFileName,
   exportMyData,
   OWNED_TABLES,
@@ -12,6 +12,8 @@ import {
 
 const ME = "11111111-2222-4333-8444-555555555555";
 const NOW = new Date("2026-10-12T09:00:00Z");
+const { notes: NOTES_COPY } = catalogs.sl.privacy.export;
+const NOTES = [NOTES_COPY.messages, NOTES_COPY.documents, NOTES_COPY.ratings];
 
 type Outcome = { data: unknown; error: unknown } | Error;
 
@@ -73,7 +75,7 @@ function makeClient({
 describe("exportMyData", () => {
   it("reads only the signed-in user's rows from every owned table", async () => {
     const { client, calls } = makeClient();
-    const result = await exportMyData(client, NOW);
+    const result = await exportMyData(client, NOTES, NOW);
     expect(calls).toEqual([
       ...OWNED_TABLES.map(({ table, column }) => `${table}.* ${column}=${ME}`),
       `matches.* or user_id_a.eq.${ME},user_id_b.eq.${ME}`,
@@ -128,12 +130,13 @@ describe("exportMyData", () => {
       tables: { roommate_ratings: { data: [given], error: null } },
       received: { data: shown, error: null },
     });
-    const result = await exportMyData(client, NOW);
+    const result = await exportMyData(client, NOTES, NOW);
     expect(calls).toContain(`roommate_ratings.* rater_id=${ME}`);
     expect(result.data.roommate_ratings).toEqual([given]);
     expect(result.receivedRatings).toEqual(shown);
     // Received ratings come only as the aggregate: no rows, so no rater ids.
     expect(JSON.stringify(result.receivedRatings)).not.toMatch(/rater|_id/);
+    expect(result.notes).toEqual(NOTES);
     expect(result.notes.join(" ")).toContain("kdo je dal katero oceno");
   });
 
@@ -142,11 +145,13 @@ describe("exportMyData", () => {
       exportMyData(
         makeClient({ received: { data: null, error: { code: "XX000" } } })
           .client,
+        NOTES,
         NOW,
       ),
     ).rejects.toMatchObject({ kind: "failed" });
     const empty = await exportMyData(
       makeClient({ received: { data: null, error: null } }).client,
+      NOTES,
       NOW,
     );
     expect(empty.receivedRatings).toBeNull();
@@ -157,16 +162,15 @@ describe("exportMyData", () => {
       tables: { profiles: { data: null, error: null } },
       files: { data: null, error: null },
     });
-    const result = await exportMyData(client, NOW);
+    const result = await exportMyData(client, NOTES, NOW);
     expect(result.data.profiles).toEqual([]);
     expect(result.academicDocuments).toEqual([]);
   });
 
   it("requires a signed-in user and makes no queries otherwise", async () => {
     const { client, calls } = makeClient({ user: null });
-    await expect(exportMyData(client, NOW)).rejects.toMatchObject({
+    await expect(exportMyData(client, NOTES, NOW)).rejects.toMatchObject({
       kind: "signed-out",
-      message: exportCopy.signedOut,
     });
     expect(calls).toEqual([]);
   });
@@ -176,6 +180,7 @@ describe("exportMyData", () => {
       exportMyData(
         makeClient({ tables: { listings: new TypeError("Failed to fetch") } })
           .client,
+        NOTES,
         NOW,
       ),
     ).rejects.toMatchObject({ kind: "offline" });
@@ -183,26 +188,36 @@ describe("exportMyData", () => {
       exportMyData(
         makeClient({ files: { data: null, error: { message: "denied" } } })
           .client,
+        NOTES,
         NOW,
       ),
-    ).rejects.toMatchObject({ kind: "failed", message: exportCopy.failed });
+    ).rejects.toMatchObject({ kind: "failed" });
   });
 });
 
 describe("helpers", () => {
   it("names the export file without the full id", () => {
-    expect(exportFileName(ME, NOW)).toBe(
+    expect(exportFileName(ME, "podatki", NOW)).toBe(
       "roomieslo-podatki-11111111-2026-10-12.json",
+    );
+    expect(exportFileName(ME, catalogs.en.privacy.export.fileLabel, NOW)).toBe(
+      "roomieslo-data-11111111-2026-10-12.json",
     );
   });
 
   it("builds request emails with an encoded subject and optional id", () => {
-    expect(privacyRequestHref("zasebnost@roomieslo.si", "deletion")).toBe(
+    const requests = catalogs.sl.privacy.requests;
+    const copy = (kind: "deletion" | "correction") => ({
+      subject: requests.subjects[kind],
+      accountId: requests.accountId,
+      description: requests.description,
+    });
+    expect(privacyRequestHref("zasebnost@roomieslo.si", copy("deletion"))).toBe(
       "mailto:zasebnost@roomieslo.si?subject=Zahteva%20za%20izbris%20ra%C4%8Duna&body=Opis%20zahteve%3A%0A",
     );
     expect(
       decodeURIComponent(
-        privacyRequestHref("p@x.si", "correction", ME).split("body=")[1],
+        privacyRequestHref("p@x.si", copy("correction"), ME).split("body=")[1],
       ),
     ).toContain(`ID računa: ${ME}`);
   });
@@ -253,6 +268,11 @@ describe("data controller and the ratings notice", () => {
     join(process.cwd(), "app/privacy/page.tsx"),
     "utf8",
   );
+  // The notice text lives in the catalogs; the Slovenian one is authoritative.
+  const notice = readFileSync(
+    join(process.cwd(), "lib/i18n/messages/sl/privacy.ts"),
+    "utf8",
+  );
 
   it("names Branko and reads the contact from one setting", async () => {
     const { DATA_CONTROLLER, privacyContact } =
@@ -264,8 +284,11 @@ describe("data controller and the ratings notice", () => {
     expect(privacyContact()).toBe("");
     vi.unstubAllEnvs();
     expect(page).toContain("DATA_CONTROLLER");
-    expect(page).toContain("Kontakt za zasebnost še ni nastavljen.");
+    expect(catalogs.sl.privacy.controller.contactMissing).toBe(
+      "Kontakt za zasebnost še ni nastavljen.",
+    );
     expect(page).not.toMatch(/thesis|diplom|magistr/i);
+    expect(notice).not.toMatch(/thesis|diplom|magistr/i);
   });
 
   it("explains roommate ratings: basis, opt-in, what is shown, threshold, 36 months, deletion, unfair ratings", () => {
@@ -282,6 +305,16 @@ describe("data controller and the ratings notice", () => {
       "nepoštena",
       "kdo je dal katero oceno",
     ])
-      expect(page.replace(/\s+/g, " ")).toContain(phrase);
+      expect(notice.replace(/\s+/g, " ")).toContain(phrase);
+  });
+
+  it("mentions the language cookie and, in English, that the Slovenian text prevails", () => {
+    expect(catalogs.sl.privacy.data.cookie).toContain("roomieslo-locale");
+    expect(catalogs.en.privacy.data.cookie).toContain("roomieslo-locale");
+    expect(catalogs.en.privacy.data.cookie).toMatch(/no personal data/);
+    expect(catalogs.en.privacy.translationNotice).toMatch(
+      /Slovenian text prevails/,
+    );
+    expect(page).toContain('locale !== "sl" &&');
   });
 });

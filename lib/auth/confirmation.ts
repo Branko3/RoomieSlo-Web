@@ -14,16 +14,19 @@ export type ConfirmationRequest =
   | { kind: "code"; code: string; next: string }
   | { kind: "error"; error: ConfirmationError; next: string };
 
-export const confirmationErrorMessages: Record<ConfirmationError, string> = {
-  missing:
-    "Potrditvena povezava ni popolna. Odpri povezavo iz zadnjega e-sporočila ali pošlji novo.",
-  expired:
-    "Potrditvena povezava je potekla. Pošlji novo potrditveno e-sporočilo.",
-  invalid:
-    "Potrditvena povezava ni veljavna ali je bila že uporabljena. Poskusi se prijaviti ali pošlji novo.",
-  unknown:
-    "E-naslova trenutno ni bilo mogoče potrditi. Poskusi znova čez nekaj minut.",
-};
+/** Every confirmation error; the page shows `m.auth.confirmation.errors[error]`. */
+export const CONFIRMATION_ERRORS: readonly ConfirmationError[] = [
+  "missing",
+  "expired",
+  "invalid",
+  "unknown",
+];
+
+export function isConfirmationError(
+  value: string | null | undefined,
+): value is ConfirmationError {
+  return CONFIRMATION_ERRORS.includes(value as ConfirmationError);
+}
 
 /** Accepts only same-origin relative paths so the link cannot redirect off-site. */
 export function safeNextPath(next: string | null | undefined): string {
@@ -140,9 +143,14 @@ export type ResendAuthClient = {
   };
 };
 
+/** Resend failures; the panel shows `m.auth.confirmation.resendResult[error]`. */
+export type ResendError =
+  "invalid_email" | "unavailable" | "rate_limited" | "failed" | "offline";
+
+/** On success the panel shows `resendResult.sent` with the normalized e-mail. */
 export type ResendResult =
-  | { ok: true; message: string }
-  | { ok: false; field?: "email"; message: string };
+  | { ok: true; email: string }
+  | { ok: false; field?: "email"; error: ResendError };
 
 export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
@@ -159,13 +167,10 @@ export async function resendConfirmation(
 ): Promise<ResendResult> {
   const email = normalizeEmail(rawEmail);
   if (!isValidEmail(email)) {
-    return { ok: false, field: "email", message: "Vnesi veljaven e-naslov." };
+    return { ok: false, field: "email", error: "invalid_email" };
   }
   if (!client) {
-    return {
-      ok: false,
-      message: "Prijava trenutno ni na voljo. Poskusi znova kasneje.",
-    };
+    return { ok: false, error: "unavailable" };
   }
 
   try {
@@ -176,28 +181,14 @@ export async function resendConfirmation(
     });
     if (error) {
       if (error.status === 429 || error.code === "over_email_send_rate_limit") {
-        return {
-          ok: false,
-          message:
-            "Poslali smo že več e-sporočil. Počakaj nekaj minut in poskusi znova.",
-        };
+        return { ok: false, error: "rate_limited" };
       }
-      return {
-        ok: false,
-        message: "E-sporočila ni bilo mogoče poslati. Poskusi znova kasneje.",
-      };
+      return { ok: false, error: "failed" };
     }
   } catch {
-    return {
-      ok: false,
-      message:
-        "E-sporočila ni bilo mogoče poslati. Preveri povezavo in poskusi znova.",
-    };
+    return { ok: false, error: "offline" };
   }
 
   // Same message whether or not the account exists, to avoid account enumeration.
-  return {
-    ok: true,
-    message: `Če račun za ${email} čaka na potrditev, smo poslali novo povezavo.`,
-  };
+  return { ok: true, email };
 }

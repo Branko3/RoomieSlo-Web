@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  CONFIRMATION_ERRORS,
   completeConfirmation,
-  confirmationErrorMessages,
+  isConfirmationError,
   emailRedirectUrl,
   parseConfirmationParams,
   resendConfirmation,
@@ -9,6 +10,7 @@ import {
   type ConfirmationAuthClient,
   type ResendAuthClient,
 } from "../lib/auth/confirmation";
+import { catalogs } from "../lib/i18n/messages";
 
 const params = (query: string) => new URLSearchParams(query);
 
@@ -194,11 +196,26 @@ describe("completeConfirmation", () => {
 });
 
 describe("confirmation error copy", () => {
-  it("has a Slovenian message for every error without technical details", () => {
-    for (const message of Object.values(confirmationErrorMessages)) {
-      expect(message).toMatch(/povezav|potrdit/i);
-      expect(message).not.toMatch(/token|otp|supabase/i);
+  it("has a message in every language for every error without technical details", () => {
+    for (const error of CONFIRMATION_ERRORS) {
+      expect(catalogs.sl.auth.confirmation.errors[error]).toMatch(
+        /povezav|potrdit/i,
+      );
+      expect(catalogs.en.auth.confirmation.errors[error]).toMatch(
+        /link|confirm/i,
+      );
+      for (const locale of ["sl", "en"] as const) {
+        expect(catalogs[locale].auth.confirmation.errors[error]).not.toMatch(
+          /token|otp|supabase/i,
+        );
+      }
     }
+  });
+
+  it("recognises only known error codes from the query string", () => {
+    expect(isConfirmationError("expired")).toBe(true);
+    expect(isConfirmationError("toString")).toBe(false);
+    expect(isConfirmationError(null)).toBe(false);
   });
 });
 
@@ -221,7 +238,7 @@ describe("resendConfirmation", () => {
     expect(await resendConfirmation(client, "not-an-email", origin)).toEqual({
       ok: false,
       field: "email",
-      message: "Vnesi veljaven e-naslov.",
+      error: "invalid_email",
     });
     expect(client.auth.resend).not.toHaveBeenCalled();
   });
@@ -241,11 +258,7 @@ describe("resendConfirmation", () => {
         emailRedirectTo: "https://roomieslo.si/auth/confirm?next=%2Flistings",
       },
     });
-    expect(result).toEqual({
-      ok: true,
-      message:
-        "Če račun za ana.novak@student.uni-lj.si čaka na potrditev, smo poslali novo povezavo.",
-    });
+    expect(result).toEqual({ ok: true, email: "ana.novak@student.uni-lj.si" });
   });
 
   it("explains the rate limit", async () => {
@@ -254,8 +267,7 @@ describe("resendConfirmation", () => {
       "ana@student.uni-lj.si",
       origin,
     );
-    expect(result).toMatchObject({ ok: false });
-    expect(result.message).toMatch(/Počakaj nekaj minut/);
+    expect(result).toEqual({ ok: false, error: "rate_limited" });
   });
 
   it("shows a safe message for other errors and network failures", async () => {
@@ -264,21 +276,19 @@ describe("resendConfirmation", () => {
       "ana@student.uni-lj.si",
       origin,
     );
-    expect(failed).toMatchObject({ ok: false });
-    expect(failed.message).not.toContain("SMTP");
+    expect(failed).toEqual({ ok: false, error: "failed" });
 
     const offline = await resendConfirmation(
       resendClient(new TypeError("Failed to fetch")),
       "ana@student.uni-lj.si",
       origin,
     );
-    expect(offline).toMatchObject({ ok: false });
-    expect(offline.message).toMatch(/povezavo/);
+    expect(offline).toEqual({ ok: false, error: "offline" });
   });
 
   it("reports unavailability when Supabase is not configured", async () => {
     expect(
       await resendConfirmation(null, "ana@student.uni-lj.si", origin),
-    ).toMatchObject({ ok: false });
+    ).toEqual({ ok: false, error: "unavailable" });
   });
 });

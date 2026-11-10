@@ -66,28 +66,22 @@ export type DataExport = {
   notes: string[];
 };
 
+export type ExportErrorKind = "signed-out" | "offline" | "failed";
+
+/** The page shows `m.privacy.export.errors[kind]`. */
 export class ExportError extends Error {
-  constructor(
-    public readonly kind: "signed-out" | "offline" | "failed",
-    message: string,
-  ) {
-    super(message);
+  constructor(public readonly kind: ExportErrorKind) {
+    super(`Data export failed: ${kind}`);
     this.name = "ExportError";
   }
 }
-
-export const exportCopy = {
-  signedOut: "Za prenos podatkov se moraš prijaviti.",
-  offline: "Ni povezave. Poskusi znova.",
-  failed: "Podatkov ni bilo mogoče pripraviti. Poskusi znova.",
-} as const;
 
 function toExportError(error: unknown): ExportError {
   if (error instanceof ExportError) return error;
   const message = (error as { message?: string } | null)?.message ?? "";
   return error instanceof TypeError || /fetch|network/i.test(message)
-    ? new ExportError("offline", exportCopy.offline)
-    : new ExportError("failed", exportCopy.failed);
+    ? new ExportError("offline")
+    : new ExportError("failed");
 }
 
 async function rows(result: Result): Promise<unknown[]> {
@@ -96,14 +90,19 @@ async function rows(result: Result): Promise<unknown[]> {
   return Array.isArray(data) ? data : [];
 }
 
+/**
+ * `notes` are the explanatory notes written into the file, in the interface
+ * language (`m.privacy.export.notes`); the file's structure never changes.
+ */
 export async function exportMyData(
   client: ExportClient,
+  notes: readonly string[],
   now: Date = new Date(),
 ): Promise<DataExport> {
   try {
     const { data: auth } = await client.auth.getUser();
     const user = auth.user;
-    if (!user) throw new ExportError("signed-out", exportCopy.signedOut);
+    if (!user) throw new ExportError("signed-out");
 
     const data: Record<string, unknown[]> = {};
     for (const { table, column } of OWNED_TABLES) {
@@ -142,34 +141,37 @@ export async function exportMyData(
       cohabitations,
       receivedRatings: received.data ?? null,
       academicDocuments: (documents.data ?? []).map((file) => file.name),
-      notes: [
-        "Sporočila druge osebe v tvojih klepetih niso vključena; vključena so tvoja poslana sporočila.",
-        "Akademski dokumenti so navedeni po imenu; datoteke lahko zahtevaš pri skrbniku.",
-        "Ocene, ki si jih prejel(a), so vključene le kot povzetek; kdo je dal katero oceno, ni vključeno, ker bi to razkrilo podatke drugih oseb.",
-      ],
+      notes: [...notes],
     };
   } catch (error) {
     throw toExportError(error);
   }
 }
 
-export function exportFileName(userId: string, now: Date = new Date()): string {
-  return `roomieslo-podatki-${userId.slice(0, 8)}-${now.toISOString().slice(0, 10)}.json`;
+/** `label` is `m.privacy.export.fileLabel` ("podatki" / "data"). */
+export function exportFileName(
+  userId: string,
+  label: string,
+  now: Date = new Date(),
+): string {
+  return `roomieslo-${label}-${userId.slice(0, 8)}-${now.toISOString().slice(0, 10)}.json`;
 }
+
+/** Texts of a request e-mail, from `m.privacy.requests`. */
+export type PrivacyRequestCopy = {
+  subject: string;
+  accountId: string;
+  description: string;
+};
 
 /** mailto link for requests the app can't perform itself (deletion, correction). */
 export function privacyRequestHref(
   contact: string,
-  kind: "deletion" | "correction" | "other",
+  copy: PrivacyRequestCopy,
   userId?: string,
 ): string {
-  const subjects = {
-    deletion: "Zahteva za izbris računa",
-    correction: "Zahteva za popravek podatkov",
-    other: "Vprašanje o zasebnosti",
-  } as const;
   const body = userId
-    ? `ID računa: ${userId}\n\nOpis zahteve:\n`
-    : "Opis zahteve:\n";
-  return `mailto:${contact}?subject=${encodeURIComponent(subjects[kind])}&body=${encodeURIComponent(body)}`;
+    ? `${copy.accountId}: ${userId}\n\n${copy.description}:\n`
+    : `${copy.description}:\n`;
+  return `mailto:${contact}?subject=${encodeURIComponent(copy.subject)}&body=${encodeURIComponent(body)}`;
 }

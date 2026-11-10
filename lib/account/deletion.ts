@@ -1,3 +1,4 @@
+import type { Locale } from "../i18n/config";
 import {
   DELETION_PHRASE,
   isConfirmationValid,
@@ -41,23 +42,36 @@ export type DeleteAccountFailure =
   | "offline"
   | "failed";
 
+/** The page shows `m.account.deletion.errors[kind]`. */
 export type DeleteAccountResult =
-  { ok: true } | { ok: false; kind: DeleteAccountFailure; message: string };
+  { ok: true } | { ok: false; kind: DeleteAccountFailure };
 
-export const deletionCopy: Record<DeleteAccountFailure, string> = {
-  "invalid-confirmation": `Za potrditev vpiši »${DELETION_PHRASE}«.`,
-  "missing-password": "Vnesi geslo.",
-  "wrong-password": "Geslo ni pravilno.",
-  "signed-out": "Seja je potekla. Prijavi se znova in poskusi še enkrat.",
-  reauth: "Za izbris se moraš znova prijaviti. Vnesi geslo in poskusi znova.",
-  partial:
-    "Izbris ni bil dokončan. Tvoji podatki niso bili izbrisani v celoti; piši nam, da ga dokončamo.",
-  offline: "Ni povezave. Poskusi znova.",
-  failed: "Računa ni bilo mogoče izbrisati. Poskusi znova.",
+/**
+ * The phrase the user types to confirm, per interface language. The
+ * `delete-account` function only accepts the canonical Slovenian
+ * DELETION_PHRASE, so English input is checked here and replaced with it.
+ */
+export const CONFIRMATION_PHRASES: Record<Locale, string> = {
+  sl: DELETION_PHRASE,
+  en: "DELETE",
 };
 
+/** The value to send to the function, or null when `input` is not the locale's phrase. */
+export function canonicalConfirmation(
+  input: string,
+  locale: Locale,
+): string | null {
+  if (locale === "sl") {
+    // Unchanged Slovenian behaviour: the function re-checks the typed text.
+    return isConfirmationValid(input) ? input.trim() : null;
+  }
+  return input.trim().toUpperCase() === CONFIRMATION_PHRASES[locale]
+    ? DELETION_PHRASE
+    : null;
+}
+
 function fail(kind: DeleteAccountFailure): DeleteAccountResult {
-  return { ok: false, kind, message: deletionCopy[kind] };
+  return { ok: false, kind };
 }
 
 function isNetworkError(error: unknown): boolean {
@@ -100,16 +114,18 @@ async function fromInvokeError(error: unknown): Promise<DeleteAccountResult> {
 }
 
 /**
- * Deletes the signed-in user's account. A wrong confirmation phrase or an empty
- * password sends nothing. The password sign-in refreshes `last_sign_in_at`,
+ * Deletes the signed-in user's account. A wrong confirmation phrase (see
+ * CONFIRMATION_PHRASES) or an empty password sends nothing; English "DELETE"
+ * is sent as the canonical phrase. The password sign-in refreshes `last_sign_in_at`,
  * which the function requires to be under 10 minutes old; the function itself
  * takes the user only from the session token.
  */
 export async function deleteOwnAccount(
   client: DeleteAccountClient,
-  input: { password: string; confirm: string },
+  input: { password: string; confirm: string; locale?: Locale },
 ): Promise<DeleteAccountResult> {
-  if (!isConfirmationValid(input.confirm)) return fail("invalid-confirmation");
+  const confirm = canonicalConfirmation(input.confirm, input.locale ?? "sl");
+  if (confirm === null) return fail("invalid-confirmation");
   if (!input.password) return fail("missing-password");
   try {
     const { data } = await client.auth.getUser();
@@ -127,7 +143,7 @@ export async function deleteOwnAccount(
     }
 
     const { error } = await client.functions.invoke("delete-account", {
-      body: { confirm: input.confirm.trim() },
+      body: { confirm },
     });
     if (error) return await fromInvokeError(error);
     return { ok: true };

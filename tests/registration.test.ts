@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildSignUpInput,
-  getRegistrationErrorMessage,
+  getRegistrationError,
   normalizeRegistrationValues,
   validateRegistration,
 } from "../lib/auth/registration";
@@ -32,11 +32,10 @@ describe("registration validation", () => {
         adultStudent: false,
       }),
     ).toEqual({
-      displayName: "Vnesi ime in priimek.",
-      email: "Vnesi veljaven e-naslov.",
-      password: "Geslo mora vsebovati najmanj 8 znakov.",
-      adultStudent:
-        "RoomieSlo je namenjen študentom, starim vsaj 18 let. Potrdi to za nadaljevanje.",
+      displayName: "display_name_required",
+      email: "email_invalid",
+      password: "password_too_short",
+      adultStudent: "adult_student_required",
     });
     expect(
       validateRegistration({
@@ -46,6 +45,14 @@ describe("registration validation", () => {
         adultStudent: true,
       }),
     ).toEqual({});
+    expect(
+      validateRegistration({
+        displayName: "Ana",
+        email: "  ",
+        password: "password",
+        adultStudent: true,
+      }),
+    ).toEqual({ email: "email_required" });
   });
 
   it("builds the exact public Auth sign-up payload", () => {
@@ -85,13 +92,16 @@ describe("registration validation", () => {
 
   it("maps duplicate and unexpected auth errors without exposing details", () => {
     expect(
-      getRegistrationErrorMessage({
+      getRegistrationError({
         code: "user_already_exists",
         message: "secret",
       }),
-    ).toContain("že obstaja");
-    expect(
-      getRegistrationErrorMessage({ message: "internal token detail" }),
-    ).toBe("Registracije trenutno ni mogoče dokončati. Poskusi znova.");
+    ).toBe("exists");
+    expect(getRegistrationError({ message: "User already registered" })).toBe(
+      "exists",
+    );
+    expect(getRegistrationError({ message: "internal token detail" })).toBe(
+      "failed",
+    );
   });
 });

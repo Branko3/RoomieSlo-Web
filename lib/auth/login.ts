@@ -1,30 +1,44 @@
 import { getSafeReturnPath } from "./routes";
 
+/** Sign-in failures; the page shows `m.auth.login.errors[code]`. */
+export type LoginError =
+  | "invalid_email"
+  | "missing_password"
+  | "invalid_credentials"
+  | "email_not_confirmed"
+  | "network"
+  | "failed"
+  | "unreachable";
+
 // Same-origin check shared with the middleware and AuthProvider redirects.
 export function safeDestination(value: string | null) {
   return getSafeReturnPath(value);
 }
 
-export function authMessage(message: string) {
+/** Maps a Supabase sign-in error message to a code, never exposing the raw text. */
+export function loginErrorCode(message: string): LoginError {
   const normalized = message.toLowerCase();
   if (normalized.includes("invalid login credentials")) {
-    return "E-naslov ali geslo nista pravilna.";
+    return "invalid_credentials";
   }
   if (normalized.includes("email not confirmed")) {
-    return "E-naslov še ni potrjen. Preverite potrditveno sporočilo.";
+    return "email_not_confirmed";
   }
   if (normalized.includes("network") || normalized.includes("fetch")) {
-    return "Povezava ni uspela. Preverite internetno povezavo in poskusite znova.";
+    return "network";
   }
-  return "Prijava ni uspela. Preverite podatke in poskusite znova.";
+  return "failed";
 }
 
-export function validateLogin(email: string, password: string) {
+export function validateLogin(
+  email: string,
+  password: string,
+): { email: string; error: LoginError | null } {
   const normalizedEmail = email.trim();
   if (!normalizedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
-    return { email: normalizedEmail, error: "Vnesite veljaven e-naslov." };
+    return { email: normalizedEmail, error: "invalid_email" };
   }
-  if (!password) return { email: normalizedEmail, error: "Vnesite geslo." };
+  if (!password) return { email: normalizedEmail, error: "missing_password" };
   return { email: normalizedEmail, error: null };
 }
 
@@ -45,7 +59,7 @@ export async function submitLogin({
     email: string,
     password: string,
   ) => Promise<{ error: { message: string } | null }>;
-  onError: (message: string) => void;
+  onError: (error: LoginError) => void;
   onSuccess: (destination: string) => void;
 }) {
   if (pending) return false;
@@ -57,12 +71,12 @@ export async function submitLogin({
   try {
     const result = await signIn(validation.email, password);
     if (result.error) {
-      onError(authMessage(result.error.message));
+      onError(loginErrorCode(result.error.message));
     } else {
       onSuccess(safeDestination(destination));
     }
   } catch {
-    onError("Prijava ni uspela. Preverite povezavo in poskusite znova.");
+    onError("unreachable");
   }
   return true;
 }
