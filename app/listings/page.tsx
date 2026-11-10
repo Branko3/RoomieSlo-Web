@@ -17,30 +17,19 @@ import {
 import { ListingCard } from "../../components/listing-card";
 import { MyListingsShortcut } from "../../components/my-listings-links";
 import { useOfflineListings } from "../../lib/listings/use-offline-listings";
+import { useI18n } from "../../lib/i18n/provider";
 import Link from "next/link";
 
+/** Text comes from `m.listings.feed.quick[key]`. */
 const QUICK_ACTIONS = [
-  {
-    href: "/search",
-    Icon: SearchIcon,
-    title: "Iskanje sobe",
-    hint: "Nastavi svoje filtre",
-  },
-  {
-    href: "/profile",
-    Icon: ClipboardIcon,
-    title: "Izpolni vprašalnik",
-    hint: "Izboljšaj ujemanja",
-  },
-  {
-    href: "/recommendations",
-    Icon: UsersIcon,
-    title: "Priporočeni sostanovalci",
-    hint: "Razvrščeni po združljivosti",
-  },
+  { href: "/search", Icon: SearchIcon, key: "search" },
+  { href: "/profile", Icon: ClipboardIcon, key: "questionnaire" },
+  { href: "/recommendations", Icon: UsersIcon, key: "recommendations" },
 ] as const;
 
 export default function ListingsPage() {
+  const { m } = useI18n();
+  const text = m.listings.feed;
   const {
     data: listings,
     isLoading,
@@ -52,38 +41,34 @@ export default function ListingsPage() {
     <div className="content-wrap">
       <header className="topbar">
         <div>
-          <h1>Oglasi za sobe</h1>
+          <h1>{text.title}</h1>
         </div>
-        <Link
-          className="icon-button"
-          aria-label="Odpri klepete in obvestila"
-          href="/chats"
-        >
+        <Link className="icon-button" aria-label={text.openChats} href="/chats">
           <BellIcon />
         </Link>
       </header>
       <section className="hero-banner" aria-labelledby="hero-title">
         <div>
-          <h2 id="hero-title">Najdi prostor, kjer se boš počutil doma.</h2>
-          <p>Sobe in sostanovalci za študente. Boljši začetek.</p>
+          <h2 id="hero-title">{text.heroTitle}</h2>
+          <p>{text.heroBody}</p>
           <Link className="button button-light" href="/search">
-            Razišči oglase
+            {text.explore}
           </Link>
         </div>
       </section>
       <MyListingsShortcut />
       <div className="section-heading">
         <div>
-          <h2>Priporočeni oglasi</h2>
-          <p className="muted">Izbrano glede na tvoje preference</p>
+          <h2>{text.recommendedTitle}</h2>
+          <p className="muted">{text.recommendedHint}</p>
         </div>
         <div className="section-actions">
           <Link className="button button-outline" href="/listings/new">
             <PlusIcon size={18} />
-            Objavi oglas
+            {text.post}
           </Link>
           <Link className="text-link link-chevron" href="/search">
-            Poglej vse
+            {text.seeAll}
             <ChevronRightIcon size={16} />
           </Link>
         </div>
@@ -97,11 +82,11 @@ export default function ListingsPage() {
       )}
       {!isLoading && !error && listings?.length === 0 && (
         <EmptyState
-          title="Trenutno ni oglasov"
-          description="Ko bodo oglasi na voljo, se bodo prikazali tukaj."
+          title={text.emptyTitle}
+          description={text.emptyBody}
           action={
             <Link className="button" href="/search">
-              Razišči oglase
+              {text.explore}
             </Link>
           }
         />
@@ -113,20 +98,20 @@ export default function ListingsPage() {
       </div>
       <div className="section-heading section-heading-spaced">
         <div>
-          <h2>Hitra dejanja</h2>
-          <p className="muted">Kaj želiš narediti danes?</p>
+          <h2>{text.quickTitle}</h2>
+          <p className="muted">{text.quickHint}</p>
         </div>
       </div>
       <ul className="row-list">
-        {QUICK_ACTIONS.map(({ href, Icon, title, hint }) => (
+        {QUICK_ACTIONS.map(({ href, Icon, key }) => (
           <li key={href}>
             <Link href={href} className="row-link">
               <span className="row-icon">
                 <Icon />
               </span>
               <span className="row-text">
-                <b>{title}</b>
-                <small>{hint}</small>
+                <b>{text.quick[key].title}</b>
+                <small>{text.quick[key].hint}</small>
               </span>
               <ChevronRightIcon className="row-chevron" />
             </Link>

@@ -5,12 +5,11 @@ import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 import {
   chatCohabitationView,
-  cohabitationCopy,
   CohabitationError,
-  cohabitationMessages,
+  COOLDOWN_DAYS,
   declareCohabitation,
   endCohabitation,
-  loadFailureMessage,
+  loadFailure,
   loadMatchCohabitations,
   respondCohabitation,
   type Cohabitation,
@@ -20,6 +19,7 @@ import {
   monthLabel,
   startedMonthOptions,
 } from "../lib/cohabitation/months";
+import { useI18n } from "../lib/i18n/provider";
 import {
   cohabitationClient,
   COHABITATIONS_KEY,
@@ -33,12 +33,7 @@ type Action =
   | { type: "respond"; id: string; confirm: boolean }
   | { type: "end"; cohabitation: Cohabitation; month: string };
 
-const announcements = {
-  declare: "Poslano v potrditev.",
-  confirm: "Potrjeno.",
-  decline: "Označeno, da ne drži.",
-  end: "Sobivanje je zaključeno.",
-} as const;
+type Announcement = "declare" | "confirm" | "decline" | "end";
 
 /** A month picker with a submit and a cancel button. Escape cancels. */
 function MonthForm({
@@ -60,6 +55,7 @@ function MonthForm({
   onSubmit: (month: string) => void;
   onCancel: () => void;
 }) {
+  const { locale, m } = useI18n();
   const id = useId();
   const [month, setMonth] = useState(options[0] ?? "");
   const select = useRef<HTMLSelectElement>(null);
@@ -90,7 +86,7 @@ function MonthForm({
       >
         {options.map((option) => (
           <option key={option} value={option}>
-            {monthLabel(option)}
+            {monthLabel(option, locale)}
           </option>
         ))}
       </select>
@@ -100,7 +96,7 @@ function MonthForm({
           className="button button-outline"
           onClick={onCancel}
         >
-          {cohabitationCopy.cancel}
+          {m.cohabitation.cancel}
         </button>
         <button
           type="submit"
@@ -132,10 +128,12 @@ export function ChatCohabitation({
   /** False while I block the other person or their account is deleted. */
   canDeclare: boolean;
 }) {
+  const { locale, m, format, formatters } = useI18n();
+  const t = m.cohabitation;
   const queryClient = useQueryClient();
   const key = matchCohabitationsKey(matchId);
   const [panel, setPanel] = useState<"declare" | "end" | null>(null);
-  const [announcement, setAnnouncement] = useState("");
+  const [announcement, setAnnouncement] = useState<Announcement | null>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const query = useQuery({
     queryKey: key,
@@ -171,9 +169,9 @@ export function ChatCohabitation({
       setAnnouncement(
         action.type === "respond"
           ? action.confirm
-            ? announcements.confirm
-            : announcements.decline
-          : announcements[action.type],
+            ? "confirm"
+            : "decline"
+          : action.type,
       );
     },
     // After success and after a conflict, so every view shows the real state.
@@ -190,7 +188,7 @@ export function ChatCohabitation({
   if (query.isPending)
     return (
       <p className="muted cohabitation-status" role="status">
-        {cohabitationCopy.loading}
+        {t.loading}
       </p>
     );
 
@@ -200,10 +198,10 @@ export function ChatCohabitation({
       error instanceof CohabitationError && error.kind === "signed-out";
     return (
       <div className="cohabitation" role="alert">
-        <p className="error-message">{loadFailureMessage(error)}</p>
+        <p className="error-message">{t.loadErrors[loadFailure(error)]}</p>
         {signedOut ? (
           <Link className="text-link" href="/login">
-            Prijava
+            {t.signIn}
           </Link>
         ) : (
           <button
@@ -211,7 +209,7 @@ export function ChatCohabitation({
             className="text-link"
             onClick={() => query.refetch()}
           >
-            Poskusi znova
+            {t.retry}
           </button>
         )}
       </div>
@@ -231,7 +229,10 @@ export function ChatCohabitation({
         aria-labelledby={`cohabitation-banner-${cohabitation.id}`}
       >
         <p id={`cohabitation-banner-${cohabitation.id}`}>
-          {cohabitationCopy.banner(peerName, cohabitation.startedMonth)}
+          {format(t.banner, {
+            name: peerName,
+            month: monthLabel(cohabitation.startedMonth, locale),
+          })}
         </p>
         <div className="confirm-actions">
           <button
@@ -246,7 +247,7 @@ export function ChatCohabitation({
               })
             }
           >
-            {cohabitationCopy.decline}
+            {t.decline}
           </button>
           <button
             type="button"
@@ -261,7 +262,7 @@ export function ChatCohabitation({
               })
             }
           >
-            {cohabitationCopy.confirm}
+            {t.confirm}
           </button>
         </div>
       </section>
@@ -269,10 +270,10 @@ export function ChatCohabitation({
   } else if (view.kind === "awaiting-peer") {
     content = (
       <p className="muted cohabitation-status">
-        {cohabitationCopy.awaitingPeer(
-          peerName,
-          view.cohabitation.startedMonth,
-        )}
+        {format(t.awaitingPeer, {
+          name: peerName,
+          month: monthLabel(view.cohabitation.startedMonth, locale),
+        })}
       </p>
     );
   } else if (view.kind === "active") {
@@ -281,7 +282,9 @@ export function ChatCohabitation({
       <>
         <div className="chat-safety-actions cohabitation-actions">
           <span className="chip chip-green cohabitation-chip">
-            {cohabitationCopy.active(cohabitation.startedMonth)}
+            {format(t.active, {
+              month: monthLabel(cohabitation.startedMonth, locale),
+            })}
           </span>
           <button
             ref={trigger}
@@ -290,15 +293,15 @@ export function ChatCohabitation({
             aria-expanded={panel === "end"}
             onClick={() => setPanel(panel === "end" ? null : "end")}
           >
-            {cohabitationCopy.endAction}
+            {t.endAction}
           </button>
         </div>
         {panel === "end" && (
           <MonthForm
-            title={cohabitationCopy.endTitle}
-            label={cohabitationCopy.endedMonthLabel}
+            title={t.endTitle}
+            label={t.endedMonthLabel}
             options={endedMonthOptions(cohabitation.startedMonth)}
-            submitLabel={cohabitationCopy.submitEnd}
+            submitLabel={t.submitEnd}
             busy={busy}
             onCancel={closePanel}
             onSubmit={(month) =>
@@ -314,7 +317,7 @@ export function ChatCohabitation({
         <div className="chat-safety-actions cohabitation-actions">
           {view.notConfirmed && (
             <span className="cohabitation-status muted">
-              {cohabitationCopy.notConfirmed}
+              {t.status.declined}
             </span>
           )}
           {canDeclare && !view.cooldownUntil && (
@@ -325,22 +328,24 @@ export function ChatCohabitation({
               aria-expanded={panel === "declare"}
               onClick={() => setPanel(panel === "declare" ? null : "declare")}
             >
-              {cohabitationCopy.declareAction}
+              {t.declareAction}
             </button>
           )}
         </div>
         {canDeclare && view.cooldownUntil && (
           <p className="muted cohabitation-status">
-            {cohabitationCopy.cooldown(view.cooldownUntil)}
+            {format(t.cooldown, {
+              date: formatters.date(view.cooldownUntil),
+            })}
           </p>
         )}
         {canDeclare && panel === "declare" && (
           <MonthForm
-            title={cohabitationCopy.declareTitle}
-            hint={cohabitationCopy.declareHint}
-            label={cohabitationCopy.startedMonthLabel}
+            title={t.declareTitle}
+            hint={t.declareHint}
+            label={t.startedMonthLabel}
             options={startedMonthOptions(matchCreatedAt)}
-            submitLabel={cohabitationCopy.submitDeclare}
+            submitLabel={t.submitDeclare}
             busy={busy}
             onCancel={closePanel}
             onSubmit={(month) => mutation.mutate({ type: "declare", month })}
@@ -355,13 +360,18 @@ export function ChatCohabitation({
       {content}
       {mutation.isError && (
         <p className="error-message" role="alert">
-          {mutation.error instanceof CohabitationError
-            ? mutation.error.message
-            : cohabitationMessages.unknown}
+          {format(
+            t.errors[
+              mutation.error instanceof CohabitationError
+                ? mutation.error.kind
+                : "unknown"
+            ],
+            { days: COOLDOWN_DAYS },
+          )}
         </p>
       )}
       <p className="sr-only" role="status">
-        {announcement}
+        {announcement && t.announcements[announcement]}
       </p>
     </div>
   );

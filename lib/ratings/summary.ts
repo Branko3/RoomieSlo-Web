@@ -1,10 +1,9 @@
+import type { I18n } from "../i18n/i18n";
 import { SUMMARY_THRESHOLD } from "./rules";
 import {
-  improvementLabels,
   isImprovementTag,
   isStrengthTag,
   MAX_TAGS,
-  strengthLabels,
   type ImprovementTag,
   type StrengthTag,
 } from "./tags";
@@ -104,68 +103,70 @@ export function parseMyRatingSummary(value: unknown): MyRatingSummary | null {
     : null;
 }
 
-/**
- * Slovenian noun form for a rating count ("1 ocena", "2 oceni", "3 ocene",
- * "5 ocen"), following the last two digits like `listingCountLabel`.
- */
-export function ratingNoun(n: number): string {
-  const lastTwo = Math.abs(Math.trunc(n)) % 100;
-  if (lastTwo === 1) return "ocena";
-  if (lastTwo === 2) return "oceni";
-  if (lastTwo === 3 || lastTwo === 4) return "ocene";
-  return "ocen";
-}
+/** The catalog access the summary lines need: `useI18n()` or `getI18n()`. */
+export type RatingText = Pick<I18n, "m" | "format" | "plural">;
 
-export function ratingCountLabel(n: number): string {
-  return `${n} ${ratingNoun(n)}`;
+/** "1 ocena", "2 oceni", "3 ocene", "5 ocen" / "1 rating", "5 ratings". */
+export function ratingCountLabel(n: number, { m, plural }: RatingText): string {
+  return plural(m.ratings.count, n);
 }
-
-export const ratingCopy = {
-  insufficient: "Še ni dovolj ocen",
-  none: "Še nimaš ocen.",
-  improvementsTitle: "Področja za izboljšanje",
-  anonymity:
-    "Ocena je anonimna in vidna šele, ko oceni tudi druga oseba ali po 14 dneh.",
-} as const;
 
 /** "3 od 4 sostanovalcev bi spet živeli s to osebo" */
-export function shownHeadline(summary: {
-  total: number;
-  wouldLiveAgain: number;
-}): string {
-  return `${summary.wouldLiveAgain} od ${summary.total} sostanovalcev bi spet živeli s to osebo`;
+export function shownHeadline(
+  summary: { total: number; wouldLiveAgain: number },
+  { m, format }: RatingText,
+): string {
+  return format(m.ratings.shownHeadline, {
+    wouldLiveAgain: summary.wouldLiveAgain,
+    total: summary.total,
+  });
 }
 
 /**
  * The one line other people see; null when the person hasn't turned ratings
  * on (the default), so nothing about ratings is shown for them.
  */
-export function summaryHeadline(summary: RatingSummary): string | null {
+export function summaryHeadline(
+  summary: RatingSummary,
+  text: RatingText,
+): string | null {
   switch (summary.state) {
     case "hidden":
       return null;
     case "insufficient":
-      return ratingCopy.insufficient;
+      return text.m.ratings.insufficient;
     case "shown":
-      return shownHeadline(summary);
+      return shownHeadline(summary, text);
   }
 }
 
 /** My own count below the threshold: "2 oceni, prikazane bodo od 3 dalje". */
-export function belowThresholdLabel(n: number): string {
+export function belowThresholdLabel(n: number, text: RatingText): string {
   return n === 0
-    ? ratingCopy.none
-    : `${ratingCountLabel(n)}, prikazane bodo od ${SUMMARY_THRESHOLD} dalje`;
+    ? text.m.ratings.none
+    : text.format(text.m.ratings.belowThreshold, {
+        ratings: ratingCountLabel(n, text),
+        threshold: SUMMARY_THRESHOLD,
+      });
 }
 
 /** "Čist(a) in urejen(a) · 3" */
-export function strengthCountLabel({ tag, count: n }: TagCount<StrengthTag>) {
-  return `${strengthLabels[tag]} · ${n}`;
+export function strengthCountLabel(
+  { tag, count: n }: TagCount<StrengthTag>,
+  { m, format }: RatingText,
+) {
+  return format(m.ratings.tagCount, {
+    label: m.ratings.strengths[tag],
+    count: n,
+  });
 }
 
-export function improvementCountLabel({
-  tag,
-  count: n,
-}: TagCount<ImprovementTag>) {
-  return `${improvementLabels[tag]} · ${n}`;
+export function improvementCountLabel(
+  { tag, count: n }: TagCount<ImprovementTag>,
+  { m, format }: RatingText,
+) {
+  return format(m.ratings.tagCount, {
+    label: m.ratings.improvements[tag],
+    count: n,
+  });
 }

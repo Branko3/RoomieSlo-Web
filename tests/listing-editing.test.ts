@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from "vitest";
 import {
   draftFromListing,
   EDITABLE_COLUMNS,
-  LISTING_CONFLICT_MESSAGE,
   ListingConflictError,
   loadListingForEdit,
   updateListing,
@@ -11,7 +10,6 @@ import {
 } from "../lib/listings/listing-edit";
 import {
   emptyListingDraft,
-  listingSaveErrorMessages,
   validateListingDraft,
   type ListingValues,
 } from "../lib/listings/listing-form";
@@ -195,7 +193,7 @@ describe("loadListingForEdit", () => {
   it("maps load failures to safe messages", async () => {
     const { client } = makeClient({ load: new TypeError("Failed to fetch") });
     await expect(loadListingForEdit(client, "listing-1")).rejects.toMatchObject(
-      { kind: "offline", message: listingSaveErrorMessages.offline },
+      { kind: "offline" },
     );
   });
 });
@@ -229,7 +227,7 @@ describe("updateListing", () => {
       (e: unknown) => e,
     );
     expect(error).toBeInstanceOf(ListingConflictError);
-    expect((error as Error).message).toBe(LISTING_CONFLICT_MESSAGE);
+    expect(error).toBeInstanceOf(ListingConflictError);
   });
 
   it.each([

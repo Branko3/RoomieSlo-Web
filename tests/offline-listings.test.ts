@@ -1,4 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
+import { createI18n } from "../lib/i18n/i18n";
+import { catalogs } from "../lib/i18n/messages";
 import {
   cacheListingsPage,
   createMemoryListingStore,
@@ -11,6 +13,8 @@ import {
 } from "../lib/listings/offline-listings";
 import type { Listing } from "../lib/supabase/mappers";
 
+const sl = createI18n("sl", catalogs.sl);
+const en = createI18n("en", catalogs.en);
 const USER = "user-1";
 const NOW = Date.UTC(2026, 9, 11, 12, 0);
 
@@ -22,10 +26,8 @@ function listing(id: string, overrides: Partial<Listing> = {}): Listing {
     district: "Center",
     location: "Ljubljana",
     price: 400,
-    available: "po dogovoru",
     availableFrom: null,
     roomType: "soba",
-    details: "",
     image: "🏠",
     isFilled: false,
     createdAt: "2026-10-01T00:00:00Z",
@@ -201,26 +203,40 @@ describe("loadListingsWithFallback", () => {
 
 describe("cache notice copy", () => {
   it("formats the last sync time", () => {
-    expect(formatSyncedAt(null, NOW)).toBe("neznano kdaj");
-    expect(formatSyncedAt(NOW - 30_000, NOW)).toBe("pravkar");
-    expect(formatSyncedAt(NOW - 5 * 60_000, NOW)).toBe("pred 5 min");
-    expect(formatSyncedAt(Date.UTC(2026, 9, 10, 8, 5), NOW)).toMatch(
+    expect(formatSyncedAt(null, sl, NOW)).toBe("neznano kdaj");
+    expect(formatSyncedAt(NOW - 30_000, sl, NOW)).toBe("pravkar");
+    expect(formatSyncedAt(NOW - 5 * 60_000, sl, NOW)).toBe("pred 5 min");
+    expect(formatSyncedAt(Date.UTC(2026, 9, 10, 8, 5), sl, NOW)).toMatch(
       /10\. ?10\. ?2026.*10:05/,
+    );
+    expect(formatSyncedAt(NOW - 5 * 60_000, en, NOW)).toBe("5 min ago");
+    expect(formatSyncedAt(Date.UTC(2026, 9, 10, 8, 5), en, NOW)).toBe(
+      "10/10/2026, 10:05",
     );
   });
 
   it("explains offline and refresh-failure cache views, and nothing for fresh data", () => {
     const base = { listings: [], syncedAt: NOW - 5 * 60_000 };
-    expect(cacheNotice({ source: "cache", offline: true, ...base }, NOW)).toBe(
+    expect(
+      cacheNotice({ source: "cache", offline: true, ...base }, sl, NOW),
+    ).toBe(
       "Brez povezave. Prikazujemo shranjene oglase (zadnja posodobitev: pred 5 min).",
     );
-    expect(cacheNotice({ source: "cache", offline: false, ...base }, NOW)).toBe(
+    expect(
+      cacheNotice({ source: "cache", offline: false, ...base }, sl, NOW),
+    ).toBe(
       "Oglasov trenutno ni mogoče osvežiti. Prikazujemo shranjene oglase (zadnja posodobitev: pred 5 min).",
     );
-    expect(cacheNotice({ source: "network", listings: [] }, NOW)).toBeNull();
+    expect(
+      cacheNotice({ source: "cache", offline: true, ...base }, en, NOW),
+    ).toBe("You're offline. Showing saved listings (last updated: 5 min ago).");
+    expect(
+      cacheNotice({ source: "network", listings: [] }, sl, NOW),
+    ).toBeNull();
     expect(
       cacheNotice(
         { source: "error", error: new Error("x"), offline: true },
+        sl,
         NOW,
       ),
     ).toBeNull();

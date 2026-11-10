@@ -3,6 +3,8 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { addMonths, currentMonth } from "../../lib/cohabitation/months";
+import { catalogs } from "../../lib/i18n/messages";
+import { I18nProvider } from "../../lib/i18n/provider";
 
 const ME = "11111111-1111-4111-8111-111111111111";
 const PEER = "22222222-2222-4222-8222-222222222222";
@@ -76,14 +78,23 @@ function rating(overrides: Row = {}): Row {
   };
 }
 
-function renderRating() {
+function renderRating({ english = false } = {}) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return render(
+  const rating = (
     <QueryClientProvider client={client}>
       <ChatRating matchId={MATCH} peerName="Ana" />
-    </QueryClientProvider>,
+    </QueryClientProvider>
+  );
+  return render(
+    english ? (
+      <I18nProvider locale="en" messages={catalogs.en}>
+        {rating}
+      </I18nProvider>
+    ) : (
+      rating
+    ),
   );
 }
 
@@ -220,6 +231,32 @@ describe("ChatRating", () => {
     ];
     renderRating();
     expect(await screen.findByText(/Ocenjevanje se zapre/)).toBeInTheDocument();
+  });
+
+  it("speaks English: my rating, the edit form and its tags", async () => {
+    const user = userEvent.setup();
+    fake.rating = rating();
+    renderRating({ english: true });
+    expect(
+      await screen.findByText(
+        "Your rating: Yes · Clean and tidy, Noise (private)",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Your rating isn't visible yet/),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Edit rating" }));
+    const form = screen.getByRole("form", { name: "Rate living with Ana" });
+    expect(within(form).getByRole("radio", { name: "Yes" })).toBeChecked();
+    expect(
+      within(form).getByText(
+        "Strengths (at most 3, shown to others in the summary)",
+      ),
+    ).toBeInTheDocument();
+    expect(within(form).getByRole("checkbox", { name: "Noise" })).toBeChecked();
+    expect(
+      within(form).getByRole("button", { name: "Save rating" }),
+    ).toBeInTheDocument();
   });
 
   it("shows a server refusal", async () => {

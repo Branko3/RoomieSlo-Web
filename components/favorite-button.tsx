@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "../lib/i18n/provider";
 import { HeartIcon } from "./icons";
 import { useFavorites } from "./providers";
 
@@ -24,19 +25,21 @@ export function FavoriteIconButton({
   listingId: string;
   subject?: string;
 }) {
+  const { m, format } = useI18n();
   const { saved, toggle } = useFavoriteToggle(listingId);
-  const what = subject ? ` ${subject}` : "";
+  const text = m.favorites;
+  const label = subject
+    ? format(saved ? text.removeNamed : text.addNamed, { subject })
+    : saved
+      ? text.remove
+      : text.add;
   return (
     <button
       type="button"
       className={`heart-button ${saved ? "liked" : ""}`}
       onClick={toggle}
       aria-pressed={saved}
-      aria-label={
-        saved
-          ? `Odstrani${what} iz priljubljenih`
-          : `Dodaj${what} med priljubljene`
-      }
+      aria-label={label}
     >
       <HeartIcon filled={saved} />
     </button>
@@ -45,6 +48,7 @@ export function FavoriteIconButton({
 
 /** Full-width labelled save button for the listing detail page. */
 export function FavoriteTextButton({ listingId }: { listingId: string }) {
+  const { m } = useI18n();
   const { saved, toggle } = useFavoriteToggle(listingId);
   return (
     <button
@@ -54,7 +58,7 @@ export function FavoriteTextButton({ listingId }: { listingId: string }) {
       aria-pressed={saved}
     >
       <HeartIcon filled={saved} />
-      {saved ? "Odstrani iz priljubljenih" : "Shrani oglas"}
+      {saved ? m.favorites.remove : m.favorites.save}
     </button>
   );
 }

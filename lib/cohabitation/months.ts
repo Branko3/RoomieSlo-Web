@@ -1,3 +1,6 @@
+import type { Locale } from "../i18n/config";
+import type { I18n } from "../i18n/i18n";
+
 /**
  * Months for cohabitation declarations. A month is the ISO date of its first
  * day ("2026-10-01"), the same value Postgres stores in `started_month` and
@@ -105,24 +108,31 @@ export function monthStart(month: string): Date {
   return new Date(guess - zoneOffset(new Date(guess)));
 }
 
-/** "okt. 2026" */
-export function monthLabel(month: string): string {
+const englishMonth = new Intl.DateTimeFormat("en-GB", {
+  timeZone: "UTC",
+  month: "short",
+  year: "numeric",
+});
+
+/** "okt. 2026" / "Oct 2026"; anything that is not a month is returned unchanged. */
+export function monthLabel(month: string, locale: Locale): string {
   const [, year, number] = MONTH.exec(month) ?? [];
   if (!year) return month;
+  if (locale === "en")
+    return englishMonth.format(Date.UTC(Number(year), Number(number) - 1, 1));
   return `${MONTH_ABBREVIATIONS[Number(number) - 1]} ${year}`;
 }
 
 /** "okt. 2026 – jan. 2027", or "od okt. 2026" while it lasts. */
-export function monthSpanLabel(started: string, ended: string | null): string {
+export function monthSpanLabel(
+  started: string,
+  ended: string | null,
+  { locale, m, format }: Pick<I18n, "locale" | "m" | "format">,
+): string {
+  const from = monthLabel(started, locale);
   return ended
-    ? `${monthLabel(started)} – ${monthLabel(ended)}`
-    : `od ${monthLabel(started)}`;
-}
-
-/** "15. 11. 2026", in Slovenian time. */
-export function dateLabel(date: Date): string {
-  const { year, month, day } = zonedParts(date);
-  return `${day}. ${month}. ${year}`;
+    ? format(m.cohabitation.monthSpan, { from, to: monthLabel(ended, locale) })
+    : format(m.cohabitation.monthSince, { from });
 }
 
 export type MonthProblem =

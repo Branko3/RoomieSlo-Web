@@ -2,6 +2,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { catalogs } from "../../lib/i18n/messages";
+import { I18nProvider } from "../../lib/i18n/provider";
 
 const fake = vi.hoisted(() => ({
   user: { id: "me" } as { id: string } | null,
@@ -63,6 +65,41 @@ beforeEach(() => {
 });
 
 describe("MyRatingsSection", () => {
+  it("speaks English", async () => {
+    fake.summary = {
+      state: "shown",
+      total: 4,
+      would_live_again: 3,
+      strengths: [{ tag: "clean_tidy", count: 3 }],
+      improvements: [{ tag: "noise", count: 2 }],
+      visible: false,
+    };
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    render(
+      <I18nProvider locale="en" messages={catalogs.en}>
+        <QueryClientProvider client={client}>
+          <MyRatingsSection />
+        </QueryClientProvider>
+      </I18nProvider>,
+    );
+    expect(
+      screen.getByRole("heading", { name: "Roommate ratings" }),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        "3 of 4 roommates would live with this person again",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Areas to improve")).toBeInTheDocument();
+    expect(screen.getByText("Noise · 2")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Show roommate ratings" }),
+    ).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByText(/^Off: ratings are collected/)).toBeInTheDocument();
+  });
+
   it("shows my count below the threshold, without content", async () => {
     renderSection();
     expect(

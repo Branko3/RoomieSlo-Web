@@ -14,11 +14,13 @@ import {
   type LocalMessage,
 } from "../lib/chat/local-messages";
 import {
+  MAX_MESSAGE_LENGTH,
   sendMessage,
-  sendMessageCopy,
   SendMessageError,
   type SendMessageClient,
+  type SendMessageErrorKind,
 } from "../lib/chat/send-message";
+import { useI18n } from "../lib/i18n/provider";
 import { createSupabaseBrowserClient } from "../lib/supabase/browser";
 import { messagesQueryKey } from "./message-history";
 
@@ -31,7 +33,9 @@ import { messagesQueryKey } from "./message-history";
 export function useChatSender(matchId: string) {
   const queryClient = useQueryClient();
   const key = messagesQueryKey(matchId);
-  const [error, setError] = useState<string | null>(null);
+  const { m, format } = useI18n();
+  // The kind, not the text, so the message follows a language switch.
+  const [error, setError] = useState<SendMessageErrorKind | null>(null);
 
   const update = useCallback(
     (change: (history: ChatHistory | undefined) => ChatHistory | undefined) =>
@@ -69,11 +73,7 @@ export function useChatSender(matchId: string) {
           return;
         }
         update((history) => failLocal(history, local.localId));
-        setError(
-          failure instanceof SendMessageError
-            ? failure.message
-            : sendMessageCopy.failed,
-        );
+        setError(failure instanceof SendMessageError ? failure.kind : "failed");
       }
     },
     [matchId, queryClient, key, update],
@@ -114,5 +114,13 @@ export function useChatSender(matchId: string) {
     [update],
   );
 
-  return { send, retry, discard, error, clearError: () => setError(null) };
+  return {
+    send,
+    retry,
+    discard,
+    error: error
+      ? format(m.chat.composer.errors[error], { max: MAX_MESSAGE_LENGTH })
+      : null,
+    clearError: () => setError(null),
+  };
 }

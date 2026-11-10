@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   addMonths,
   currentMonth,
-  dateLabel,
   endedMonthOptions,
   endedMonthProblem,
   isMonth,
@@ -13,6 +12,11 @@ import {
   startedMonthOptions,
   startedMonthProblem,
 } from "../lib/cohabitation/months";
+import { createI18n } from "../lib/i18n/i18n";
+import { catalogs } from "../lib/i18n/messages";
+
+const sl = createI18n("sl", catalogs.sl);
+const en = createI18n("en", catalogs.en);
 
 const NOW = new Date("2026-10-16T10:00:00Z");
 
@@ -52,15 +56,28 @@ describe("months", () => {
   });
 
   it("labels months the Slovenian way", () => {
-    expect(monthLabel("2026-10-01")).toBe("okt. 2026");
-    expect(monthLabel("2027-05-01")).toBe("maj 2027");
-    expect(monthLabel("2027-01-01")).toBe("jan. 2027");
-    expect(monthLabel("oops")).toBe("oops");
-    expect(monthSpanLabel("2026-10-01", null)).toBe("od okt. 2026");
-    expect(monthSpanLabel("2026-10-01", "2027-01-01")).toBe(
+    expect(monthLabel("2026-10-01", "sl")).toBe("okt. 2026");
+    expect(monthLabel("2027-05-01", "sl")).toBe("maj 2027");
+    expect(monthLabel("2027-01-01", "sl")).toBe("jan. 2027");
+    expect(monthLabel("oops", "sl")).toBe("oops");
+    expect(monthSpanLabel("2026-10-01", null, sl)).toBe("od okt. 2026");
+    expect(monthSpanLabel("2026-10-01", "2027-01-01", sl)).toBe(
       "okt. 2026 – jan. 2027",
     );
-    expect(dateLabel(new Date("2026-11-15T12:00:00Z"))).toBe("15. 11. 2026");
+    // Display dates use the shared formatters (formerly `dateLabel`).
+    expect(sl.formatters.date(new Date("2026-11-15T12:00:00Z"))).toBe(
+      "15. 11. 2026",
+    );
+  });
+
+  it("labels months in English", () => {
+    expect(monthLabel("2026-10-01", "en")).toBe("Oct 2026");
+    expect(monthLabel("2027-01-01", "en")).toBe("Jan 2027");
+    expect(monthLabel("oops", "en")).toBe("oops");
+    expect(monthSpanLabel("2026-10-01", null, en)).toBe("since Oct 2026");
+    expect(monthSpanLabel("2026-10-01", "2027-01-01", en)).toBe(
+      "Oct 2026 – Jan 2027",
+    );
   });
 });
 

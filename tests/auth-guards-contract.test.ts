@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { en } from "../lib/i18n/messages/en";
+import { sl } from "../lib/i18n/messages/sl";
 
 const root = process.cwd();
 const read = (file: string) => readFileSync(join(root, file), "utf8");
@@ -37,7 +39,8 @@ describe("route guard implementation contract", () => {
     expect(provider).toContain("setLoading: setPending");
     expect(provider).toContain("if (pending || error) return");
     expect(provider).toContain('if (event === "SIGNED_OUT")');
-    expect(provider).toContain("Preverjanje prijave ...");
+    expect(provider).toContain("{m.auth.session.checking}");
+    expect(sl.auth.session.checking).toBe("Preverjanje prijave ...");
   });
 
   it("redirects authenticated auth-entry users and signs out to login", () => {
@@ -54,18 +57,27 @@ describe("route guard implementation contract", () => {
   });
 
   it("surfaces configuration, session, sign-in, and sign-up failures", () => {
-    expect(read("components/auth-provider.tsx")).toContain(
+    const provider = read("components/auth-provider.tsx");
+    expect(provider).toContain('setError("configuration")');
+    expect(sl.auth.session.errors.configuration).toContain(
       "Supabase configuration failed.",
     );
-    // Raw Supabase messages are not shown; a fixed Slovenian message is.
-    expect(read("components/auth-provider.tsx")).toContain(
+    // Raw Supabase messages are not shown; a fixed message in the catalog is.
+    expect(provider).toContain('callbacks.setError("session")');
+    expect(provider).toContain("{m.auth.session.errors[error]}");
+    expect(sl.auth.session.errors.session).toContain(
       "Seje ni mogoče preveriti.",
     );
     expect(read("app/login/page.tsx")).toContain('role="alert"');
     expect(read("app/register/page.tsx")).toContain('role="alert"');
     expect(read("app/auth-error/page.tsx")).toContain(
-      "NEXT_PUBLIC_SUPABASE_URL",
+      'searchParams.reason === "configuration"',
     );
+    for (const catalog of [sl, en]) {
+      expect(catalog.auth.authError.configuration).toContain(
+        "NEXT_PUBLIC_SUPABASE_URL",
+      );
+    }
   });
 });
 

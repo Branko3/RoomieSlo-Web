@@ -1,3 +1,5 @@
+import type { Locale } from "../i18n/config";
+
 export const ACADEMIC_BUCKET = "vpisnice";
 export const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024;
 
@@ -15,9 +17,15 @@ export type DocumentExtension =
 export const DOCUMENT_ACCEPT =
   ".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg";
 
+/** Validation failures; the UI shows `m.account.academic.validation[error]`. */
+export type DocumentValidationError =
+  "unsupported_type" | "extension_mismatch" | "empty" | "too_large";
+
 export type DocumentValidation =
   | { ok: true; contentType: AllowedDocumentType; extension: DocumentExtension }
-  | { ok: false; message: string };
+  | { ok: false; error: Exclude<DocumentValidationError, "too_large"> }
+  /** `size` is the file's size in bytes; the limit is MAX_DOCUMENT_BYTES. */
+  | { ok: false; error: "too_large"; size: number };
 
 const EXTENSION_TYPES: Record<string, AllowedDocumentType> = {
   pdf: "application/pdf",
@@ -26,9 +34,11 @@ const EXTENSION_TYPES: Record<string, AllowedDocumentType> = {
   jpeg: "image/jpeg",
 };
 
-export function formatFileSize(bytes: number): string {
+/** "512 KB", "2,5 MB" (Slovenian) / "2.5 MB" (English). */
+export function formatFileSize(bytes: number, locale: Locale = "sl"): string {
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1).replace(".", ",")} MB`;
+  const megabytes = (bytes / (1024 * 1024)).toFixed(1);
+  return `${locale === "sl" ? megabytes.replace(".", ",") : megabytes} MB`;
 }
 
 /**
@@ -44,26 +54,20 @@ export function validateDocument(
     AllowedDocumentType | undefined;
 
   if (!contentType || !(contentType in ALLOWED_DOCUMENT_TYPES)) {
-    return { ok: false, message: "Izberi datoteko PDF, JPG ali PNG." };
+    return { ok: false, error: "unsupported_type" };
   }
   if (
     declared &&
     EXTENSION_TYPES[extension] &&
     EXTENSION_TYPES[extension] !== declared
   ) {
-    return {
-      ok: false,
-      message: "Končnica datoteke se ne ujema z njeno vrsto.",
-    };
+    return { ok: false, error: "extension_mismatch" };
   }
   if (file.size === 0) {
-    return { ok: false, message: "Datoteka je prazna. Izberi drugo datoteko." };
+    return { ok: false, error: "empty" };
   }
   if (file.size > MAX_DOCUMENT_BYTES) {
-    return {
-      ok: false,
-      message: `Datoteka je prevelika (${formatFileSize(file.size)}). Največja velikost je ${formatFileSize(MAX_DOCUMENT_BYTES)}.`,
-    };
+    return { ok: false, error: "too_large", size: file.size };
   }
   return {
     ok: true,
@@ -90,17 +94,10 @@ export function storageObjectUrl(supabaseUrl: string, path: string): string {
 export type UploadErrorKind =
   "permission" | "too-large" | "offline" | "aborted" | "unknown";
 
-export const uploadErrorMessages: Record<UploadErrorKind, string> = {
-  permission: "Za nalaganje se moraš znova prijaviti.",
-  "too-large": "Datoteka je prevelika za nalaganje.",
-  offline: "Ni povezave. Preveri internet in poskusi znova.",
-  aborted: "Nalaganje je bilo preklicano.",
-  unknown: "Nalaganje ni uspelo. Poskusi znova.",
-};
-
+/** Upload failures; the UI shows `m.account.academic.uploadErrors[kind]`. */
 export class DocumentUploadError extends Error {
   constructor(public readonly kind: UploadErrorKind) {
-    super(uploadErrorMessages[kind]);
+    super(`Document upload failed: ${kind}`);
     this.name = "DocumentUploadError";
   }
 }

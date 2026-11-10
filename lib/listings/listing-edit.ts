@@ -127,12 +127,10 @@ export async function loadListingForEdit(
   }
 }
 
-export const LISTING_CONFLICT_MESSAGE =
-  "Oglas je bil medtem spremenjen ali odstranjen. Osveži stran in poskusi znova.";
-
+/** Another edit won or the listing is gone; the UI shows `m.listings.edit.conflict`. */
 export class ListingConflictError extends Error {
   constructor() {
-    super(LISTING_CONFLICT_MESSAGE);
+    super("Listing was changed or removed meanwhile");
     this.name = "ListingConflictError";
   }
 }

@@ -8,7 +8,6 @@ import {
   storageObjectUrl,
   uploadDocument,
   uploadErrorKindForStatus,
-  uploadErrorMessages,
   validateDocument,
   type DocumentListClient,
   type UploadRequest,
@@ -89,21 +88,22 @@ describe("validateDocument", () => {
   ])("rejects unsupported type %o", (input) => {
     expect(validateDocument(input)).toEqual({
       ok: false,
-      message: "Izberi datoteko PDF, JPG ali PNG.",
+      error: "unsupported_type",
     });
   });
 
   it("rejects a file whose extension contradicts its type", () => {
     expect(validateDocument(file("vpisnica.pdf", "image/png"))).toMatchObject({
       ok: false,
-      message: "Končnica datoteke se ne ujema z njeno vrsto.",
+      error: "extension_mismatch",
     });
   });
 
   it("rejects empty files", () => {
-    expect(validateDocument(file("a.pdf", "application/pdf", 0))).toMatchObject(
-      { ok: false },
-    );
+    expect(validateDocument(file("a.pdf", "application/pdf", 0))).toEqual({
+      ok: false,
+      error: "empty",
+    });
   });
 
   it("accepts exactly 10 MB and rejects anything larger", () => {
@@ -116,7 +116,8 @@ describe("validateDocument", () => {
       ),
     ).toEqual({
       ok: false,
-      message: "Datoteka je prevelika (10,0 MB). Največja velikost je 10,0 MB.",
+      error: "too_large",
+      size: MAX_DOCUMENT_BYTES + 1,
     });
   });
 });
@@ -126,6 +127,11 @@ describe("formatFileSize", () => {
     expect(formatFileSize(200)).toBe("1 KB");
     expect(formatFileSize(2048)).toBe("2 KB");
     expect(formatFileSize(3.5 * 1024 * 1024)).toBe("3,5 MB");
+  });
+
+  it("uses a decimal point in English", () => {
+    expect(formatFileSize(3.5 * 1024 * 1024, "en")).toBe("3.5 MB");
+    expect(formatFileSize(2048, "en")).toBe("2 KB");
   });
 });
 
@@ -191,10 +197,7 @@ describe("uploadDocument", () => {
   ])("maps HTTP %i to %s", async (status, kind) => {
     const { request, promise } = startUpload();
     request.finish(status);
-    await expect(promise).rejects.toMatchObject({
-      kind,
-      message: uploadErrorMessages[kind as keyof typeof uploadErrorMessages],
-    });
+    await expect(promise).rejects.toMatchObject({ kind });
   });
 
   it("maps network failures to the offline message", async () => {
@@ -264,7 +267,6 @@ describe("findExistingDocument", () => {
     });
     await expect(findExistingDocument(client, USER_ID)).rejects.toMatchObject({
       kind: "unknown",
-      message: uploadErrorMessages.unknown,
     });
   });
 });

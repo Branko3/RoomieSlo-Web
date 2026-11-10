@@ -7,7 +7,7 @@ import { ListingPhoto } from "../../components/listing-photo";
 import { useFavorites } from "../../components/providers";
 import { FavoriteIconButton } from "../../components/favorite-button";
 import { SparkleIcon } from "../../components/icons";
-import { formatPrice } from "../../lib/listings/format";
+import { useI18n } from "../../lib/i18n/provider";
 import {
   fetchFavoriteListings,
   type FavoritesClient,
@@ -20,6 +20,8 @@ import {
 } from "../../components/data-states";
 
 export default function FavoritesPage() {
+  const { m, format, formatters } = useI18n();
+  const text = m.favorites;
   const { favorites, userId } = useFavorites();
   // Signed in: the user's favorites come straight from Supabase (one nested query).
   const remote = useQuery({
@@ -46,11 +48,11 @@ export default function FavoritesPage() {
     <div className="content-wrap">
       <header className="topbar">
         <div>
-          <h1>Priljubljeni oglasi</h1>
+          <h1>{text.title}</h1>
         </div>
       </header>
       {isLoading ? (
-        <LoadingState label="Nalaganje priljubljenih oglasov ..." />
+        <LoadingState label={text.loading} />
       ) : error ? (
         <DataState error={error} onRetry={retry}>
           <span />
@@ -69,7 +71,10 @@ export default function FavoritesPage() {
                 <span>
                   <b>{listing.title}</b>
                   <small>
-                    {listing.district}, {formatPrice(listing.price)} / mesec
+                    {format(text.rowMeta, {
+                      district: listing.district,
+                      price: formatters.currency(listing.price),
+                    })}
                   </small>
                 </span>
               </Link>
@@ -82,11 +87,11 @@ export default function FavoritesPage() {
         </div>
       ) : (
         <EmptyState
-          title="Še nimaš shranjenih oglasov"
-          description="Ko najdeš zanimiv oglas, ga shrani za pozneje."
+          title={text.emptyTitle}
+          description={text.emptyBody}
           action={
             <Link className="button" href="/search">
-              Razišči oglase
+              {text.explore}
             </Link>
           }
         />
@@ -94,8 +99,8 @@ export default function FavoritesPage() {
       <div className="tip-card">
         <SparkleIcon />
         <div>
-          <b>Majhen nasvet</b>
-          <p>Shranite oglase, ki so vam všeč, in jih primerjajte pozneje.</p>
+          <b>{text.tipTitle}</b>
+          <p>{text.tipBody}</p>
         </div>
       </div>
     </div>

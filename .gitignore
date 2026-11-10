@@ -20,3 +20,12 @@ e2e/.auth/
 
 # Non-technical docs are kept locally only
 docs/nontechnical/
+
+# Editor settings, Supabase CLI link state and Playwright MCP snapshots
+.vscode/
+supabase/.temp/
+.playwright-mcp/
+
+# Personal files kept locally only
+*.pdf
+docs/research/

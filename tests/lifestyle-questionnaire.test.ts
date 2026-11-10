@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { catalogs } from "../lib/i18n/messages";
 import {
   answersFromStored,
   expressedCount,
@@ -15,7 +16,6 @@ import {
   destinationAfterSave,
   loadMyAnswers,
   QuestionnaireError,
-  questionnaireErrorMessages,
   saveMyAnswers,
   type QuestionnaireClient,
 } from "../lib/questionnaire/persistence";
@@ -50,9 +50,34 @@ describe("questionnaire statements (Android Vprasalnik parity)", () => {
   });
 });
 
+describe("questionnaire texts", () => {
+  it("has a statement text in both languages for every stored id", () => {
+    for (const messages of [catalogs.sl, catalogs.en]) {
+      expect(Object.keys(messages.questionnaire.statements)).toEqual(
+        STATEMENTS.map((s) => s.id),
+      );
+      expect(Object.keys(messages.questionnaire.likert)).toEqual(
+        LIKERT.map((l) => l.key),
+      );
+    }
+    expect(catalogs.en.questionnaire.likert.no_answer).toBe(
+      "Prefer not to say",
+    );
+    // English statements are gender neutral (no Slovenian "(a)" forms).
+    for (const text of Object.values(catalogs.en.questionnaire.statements))
+      expect(text).not.toMatch(/\(a\)|\(ka\)/);
+  });
+});
+
 describe("Likert levels (Android LikertOdgovor parity)", () => {
   it("maps labels to normalized values and multipliers", () => {
-    expect(LIKERT.map((l) => [l.label, l.value, l.multiplier])).toEqual([
+    expect(
+      LIKERT.map((l) => [
+        catalogs.sl.questionnaire.likert[l.key],
+        l.value,
+        l.multiplier,
+      ]),
+    ).toEqual([
       ["Sploh se ne strinjam", 0, 1],
       ["Se ne strinjam", 0.25, 1],
       ["Niti da niti ne", 0.5, 1],
@@ -263,7 +288,8 @@ describe("loadMyAnswers", () => {
     });
     const error = await loadMyAnswers(client).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(QuestionnaireError);
-    expect((error as Error).message).toBe(questionnaireErrorMessages.unknown);
+    expect((error as QuestionnaireError).kind).toBe("unknown");
+    expect((error as Error).message).not.toContain("internal detail");
   });
 });
 

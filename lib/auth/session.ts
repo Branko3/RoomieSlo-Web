@@ -6,13 +6,21 @@ export type SessionStatus =
 export type SessionUser = {
   id: string;
   email: string | null;
+  /**
+   * Metadata name, else the e-mail's local part; empty when neither exists
+   * (the UI then shows `m.auth.session.fallbackName`).
+   */
   displayName: string;
 };
+
+/** Error code of a failed restore; the UI shows `m.auth.session.restoreFailed`. */
+export const SESSION_RESTORE_ERROR = "restore_failed";
+export type SessionError = typeof SESSION_RESTORE_ERROR;
 
 export type SessionState = {
   status: SessionStatus;
   user: SessionUser | null;
-  error: string | null;
+  error: SessionError | null;
 };
 
 type Subscription = { unsubscribe: () => void };
@@ -30,9 +38,6 @@ export type SessionAuthClient = {
   };
 };
 
-export const SESSION_RESTORE_ERROR =
-  "Seje ni bilo mogoče obnoviti. Prijavi se znova.";
-
 export const initialSessionState: SessionState = {
   status: "loading",
   user: null,
@@ -46,7 +51,7 @@ export function toSessionUser(session: Session): SessionUser {
   const displayName =
     typeof metadataName === "string" && metadataName.trim()
       ? metadataName.trim()
-      : (user.email?.split("@")[0] ?? "Uporabnik");
+      : (user.email?.split("@")[0] ?? "");
 
   return { id: user.id, email: user.email ?? null, displayName };
 }
@@ -121,7 +126,7 @@ export function startSessionRestoration(
 export type ProfileSummary =
   | { kind: "loading" }
   | { kind: "signed-in"; name: string; initials: string }
-  | { kind: "signed-out"; error: string | null }
+  | { kind: "signed-out"; error: SessionError | null }
   | { kind: "preview" };
 
 export function initialsFor(name: string): string {
@@ -133,19 +138,25 @@ export function initialsFor(name: string): string {
   return letters.join("") || "?";
 }
 
-/** Maps the session state to what the navigation profile area should show. */
-export function profileSummary(state: SessionState): ProfileSummary {
+/**
+ * Maps the session state to what the navigation profile area should show.
+ * `fallbackName` (`m.auth.session.fallbackName`) names a user without a
+ * display name or e-mail.
+ */
+export function profileSummary(
+  state: SessionState,
+  fallbackName = "",
+): ProfileSummary {
   switch (state.status) {
     case "loading":
       return { kind: "loading" };
     case "authenticated":
-      return state.user
-        ? {
-            kind: "signed-in",
-            name: state.user.displayName,
-            initials: initialsFor(state.user.displayName),
-          }
-        : { kind: "signed-out", error: null };
+      if (!state.user) return { kind: "signed-out", error: null };
+      return {
+        kind: "signed-in",
+        name: state.user.displayName || fallbackName,
+        initials: initialsFor(state.user.displayName || fallbackName),
+      };
     case "unauthenticated":
       return { kind: "signed-out", error: state.error };
     case "unconfigured":

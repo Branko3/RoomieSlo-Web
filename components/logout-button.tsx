@@ -3,32 +3,34 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "./auth-provider";
+import { useI18n } from "../lib/i18n/provider";
 
 export function LogoutButton() {
   const router = useRouter();
   const { signOut } = useAuth();
+  const { m } = useI18n();
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
 
   async function logout() {
     if (pending) return;
     setPending(true);
-    setError(null);
+    setFailed(false);
     const result = await signOut();
     if (result.ok) {
       router.replace(result.redirectTo);
       router.refresh();
       return;
     }
-    setError(result.message);
+    setFailed(true);
     setPending(false);
   }
 
   return (
     <>
-      {error && (
+      {failed && (
         <p className="error-message" role="alert">
-          {error}
+          {m.auth.logout.failed}
         </p>
       )}
       <button
@@ -38,7 +40,7 @@ export function LogoutButton() {
         disabled={pending}
         aria-busy={pending || undefined}
       >
-        {pending ? "Odjavljanje …" : "Odjava"}
+        {pending ? m.auth.logout.pending : m.auth.logout.submit}
       </button>
     </>
   );

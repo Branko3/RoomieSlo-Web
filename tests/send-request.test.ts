@@ -1,10 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  existingRequestMessage,
+  existingRequestKey,
   loadRequestState,
   pairFilter,
   sendMatchRequest,
-  sendRequestMessages,
   SendRequestError,
   type SendRequestClient,
 } from "../lib/matching/send-request";
@@ -172,7 +171,7 @@ describe("sendMatchRequest", () => {
     const table = fakeTable();
     await expect(sendMatchRequest(table.client, ME)).rejects.toMatchObject({
       kind: "self",
-      message: sendRequestMessages.self,
+      message: "self",
     });
     expect(table.inserts).toEqual([]);
 
@@ -202,7 +201,7 @@ describe("sendMatchRequest", () => {
     expect(error).toBeInstanceOf(SendRequestError);
     expect(error).toMatchObject({
       kind: "failed",
-      message: "Zahteve ni bilo mogoče poslati.",
+      message: "failed",
     });
 
     const offline = fakeTable([], {
@@ -250,26 +249,14 @@ describe("loadRequestState", () => {
   });
 });
 
-describe("existingRequestMessage", () => {
+describe("existingRequestKey", () => {
   it.each([
-    [
-      { status: "pending", sentByMe: true },
-      "Zahtevo si že poslal(a). Čaka na odgovor.",
-    ],
-    [
-      { status: "pending", sentByMe: false },
-      "Ta oseba ti je že poslala zahtevo. Odgovori nanjo med klepeti.",
-    ],
-    [
-      { status: "accepted", sentByMe: true },
-      "Že sta povezana. Klepet najdeš med klepeti.",
-    ],
-    [
-      { status: "rejected", sentByMe: true },
-      "Ta oseba je tvojo zahtevo zavrnila.",
-    ],
-    [{ status: "rejected", sentByMe: false }, "To zahtevo si že zavrnil(a)."],
-  ] as const)("%o → %s", (request, message) => {
-    expect(existingRequestMessage({ id: "m1", ...request })).toBe(message);
+    [{ status: "pending", sentByMe: true }, "pendingMine"],
+    [{ status: "pending", sentByMe: false }, "pendingTheirs"],
+    [{ status: "accepted", sentByMe: true }, "accepted"],
+    [{ status: "rejected", sentByMe: true }, "rejectedByPeer"],
+    [{ status: "rejected", sentByMe: false }, "rejectedByMe"],
+  ] as const)("%o → %s", (request, key) => {
+    expect(existingRequestKey({ id: "m1", ...request })).toBe(key);
   });
 });

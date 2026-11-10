@@ -17,12 +17,13 @@ export function chatLinkFor(
   request: Pick<ExistingRequest, "id" | "status"> | null,
 ): {
   href: string;
-  label: string;
+  /** "chat": one conversation (`matching.send.openChat`); "chats": the list. */
+  target: "chat" | "chats";
 } {
   if (request?.status === "accepted") {
-    return { href: chatHref(request.id), label: "Odpri klepet" };
+    return { href: chatHref(request.id), target: "chat" };
   }
-  return { href: "/chats", label: "Odpri klepete" };
+  return { href: "/chats", target: "chats" };
 }
 
 /**

@@ -17,8 +17,12 @@ import {
 } from "../../lib/matching/recommendations";
 import { createSupabaseBrowserClient } from "../../lib/supabase/browser";
 import { VerifiedIcon } from "../../components/icons";
+import { useI18n } from "../../lib/i18n/provider";
 
 export default function RecommendationsPage() {
+  const i18n = useI18n();
+  const { m, format } = i18n;
+  const copy = m.matching.recommendations;
   const configured = getSupabaseConfig().configured;
   const query = useQuery({
     queryKey: ["recommendations"],
@@ -33,28 +37,26 @@ export default function RecommendationsPage() {
   if (!configured) {
     body = (
       <p className="error-message" role="alert">
-        Priporočila trenutno niso na voljo.
+        {copy.unavailable}
       </p>
     );
   } else if (query.isPending) {
-    body = <p role="status">Nalaganje priporočil …</p>;
+    body = <p role="status">{copy.loading}</p>;
   } else if (query.isError) {
     const signedOut =
       query.error instanceof RecommendationsError &&
       query.error.kind === "signed-out";
     body = (
       <div className="page-state" role="alert">
-        <h2>
-          {signedOut ? "Nisi prijavljen" : "Priporočil ni mogoče naložiti"}
-        </h2>
+        <h2>{signedOut ? copy.signedOutTitle : copy.failedTitle}</h2>
         <p>
           {query.error instanceof RecommendationsError
-            ? query.error.message
-            : "Napaka pri nalaganju priporočil."}
+            ? copy.errors[query.error.kind]
+            : copy.errors.unknown}
         </p>
         {signedOut ? (
           <Link className="button" href="/login">
-            Prijava
+            {copy.signIn}
           </Link>
         ) : (
           <button
@@ -63,14 +65,17 @@ export default function RecommendationsPage() {
             onClick={() => query.refetch()}
             disabled={query.isFetching}
           >
-            Poskusi znova
+            {m.common.actions.retry}
           </button>
         )}
       </div>
     );
-  } else if (readinessMessage(recommendationReadiness(query.data.myAnswers))) {
+  } else if (
+    readinessMessage(recommendationReadiness(query.data.myAnswers), i18n)
+  ) {
     const message = readinessMessage(
       recommendationReadiness(query.data.myAnswers),
+      i18n,
     )!;
     body = (
       <div className="empty-state questionnaire-needed">
@@ -78,17 +83,15 @@ export default function RecommendationsPage() {
         <h2>{message.title}</h2>
         <p>{message.body}</p>
         <Link className="button" href={QUESTIONNAIRE_ROUTE}>
-          Izpolni vprašalnik
+          {copy.fillQuestionnaire}
         </Link>
       </div>
     );
   } else if (query.data.recommendations.length === 0) {
     body = (
       <div className="empty-state">
-        <h2>Ni razpoložljivih profilov za priporočilo.</h2>
-        <p>
-          Ko bodo drugi študenti iskali sostanovalca, se bodo prikazali tukaj.
-        </p>
+        <h2>{copy.emptyTitle}</h2>
+        <p>{copy.emptyBody}</p>
       </div>
     );
   } else {
@@ -107,15 +110,17 @@ export default function RecommendationsPage() {
                 {sharedStatements > 0 ? (
                   <span
                     className="compatibility-badge"
-                    aria-label={`Združljivost ${compatibility} %`}
+                    aria-label={format(copy.compatibility, {
+                      percent: compatibility,
+                    })}
                   >
                     {compatibility}%
                   </span>
                 ) : (
                   <span
                     className="compatibility-badge compatibility-unknown"
-                    aria-label="Združljivosti ni mogoče izračunati: ni skupnih odgovorov"
-                    title="Ni skupnih odgovorov na vprašalnik"
+                    aria-label={copy.noSharedAnswers}
+                    title={copy.noSharedAnswersHint}
                   >
                     —
                   </span>
@@ -125,11 +130,11 @@ export default function RecommendationsPage() {
                 {profile.verified && (
                   <span className="chip chip-green chip-icon">
                     <VerifiedIcon size={14} />
-                    Preverjen študent
+                    {copy.verified}
                   </span>
                 )}
                 {profile.available && (
-                  <span className="chip">Išče sostanovalca</span>
+                  <span className="chip">{copy.lookingForRoommate}</span>
                 )}
               </div>
               {ratings && <RatingSummaryView summary={ratings} />}
@@ -147,11 +152,8 @@ export default function RecommendationsPage() {
     <div className="content-wrap narrow-content">
       <header className="topbar">
         <div>
-          <h1>Priporočeni profili</h1>
-          <p className="muted">
-            Razvrščeni po združljivosti glede na vprašalnik o življenjskem
-            slogu.
-          </p>
+          <h1>{copy.title}</h1>
+          <p className="muted">{copy.subtitle}</p>
         </div>
       </header>
       {body}

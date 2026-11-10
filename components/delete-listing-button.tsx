@@ -3,10 +3,11 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { getSupabaseConfig } from "../lib/config";
+import { useI18n } from "../lib/i18n/provider";
 import {
-  deleteErrorMessages,
   deleteListing,
   ListingDeleteError,
+  type DeleteErrorKind,
   type ListingDeleteClient,
 } from "../lib/listings/listing-delete";
 import { createSupabaseBrowserClient } from "../lib/supabase/browser";
@@ -24,11 +25,14 @@ export function DeleteListingButton({
   ownerId: string;
 }) {
   const router = useRouter();
+  const { m } = useI18n();
+  const text = m.listings.delete;
   const { isFavorite, toggleFavorite } = useFavorites();
   const [isOwner, setIsOwner] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // The kind, not the text, so the message follows a language switch.
+  const [error, setError] = useState<DeleteErrorKind | null>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
   const openRef = useRef<HTMLButtonElement>(null);
 
@@ -71,9 +75,7 @@ export function DeleteListingButton({
       router.refresh();
     } catch (failure) {
       setError(
-        failure instanceof ListingDeleteError
-          ? failure.message
-          : deleteErrorMessages.unknown,
+        failure instanceof ListingDeleteError ? failure.kind : "unknown",
       );
       setDeleting(false);
       setConfirming(false);
@@ -84,7 +86,7 @@ export function DeleteListingButton({
     <div className="delete-listing">
       {error && (
         <p className="error-message" role="alert">
-          {error}
+          {text.errors[error]}
         </p>
       )}
       {confirming ? (
@@ -98,8 +100,8 @@ export function DeleteListingButton({
             if (event.key === "Escape" && !deleting) close();
           }}
         >
-          <b id="delete-listing-title">Izbriši oglas?</b>
-          <p id="delete-listing-text">Oglasa ne bo več mogoče obnoviti.</p>
+          <b id="delete-listing-title">{text.confirmTitle}</b>
+          <p id="delete-listing-text">{text.confirmBody}</p>
           <div className="confirm-actions">
             <button
               ref={cancelRef}
@@ -108,7 +110,7 @@ export function DeleteListingButton({
               onClick={close}
               disabled={deleting}
             >
-              Prekliči
+              {text.cancel}
             </button>
             <button
               className="button button-danger"
@@ -116,7 +118,7 @@ export function DeleteListingButton({
               onClick={confirmDelete}
               disabled={deleting}
             >
-              {deleting ? "Brisanje …" : "Izbriši"}
+              {deleting ? text.deleting : text.confirm}
             </button>
           </div>
         </div>
@@ -130,7 +132,7 @@ export function DeleteListingButton({
             setConfirming(true);
           }}
         >
-          Izbriši oglas
+          {text.open}
         </button>
       )}
     </div>

@@ -1,11 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
+import { catalogs } from "../lib/i18n/messages";
 import {
   canRequestMatch,
-  filledToggleLabel,
   ListingStatusError,
-  listingStatusLabel,
   setListingFilled,
-  statusErrorMessages,
   toggleFilledOptimistically,
   type ListingStatusClient,
 } from "../lib/listings/listing-status";
@@ -58,10 +56,11 @@ function makeClient({
 
 describe("Android labels", () => {
   it("shows the status chip and toggle copy from the Android detail screen", () => {
-    expect(listingStatusLabel(true)).toBe("Zapolnjeno");
-    expect(listingStatusLabel(false)).toBe("Na voljo");
-    expect(filledToggleLabel(false)).toBe("Označi kot zapolnjeno");
-    expect(filledToggleLabel(true)).toBe("Označi kot na voljo");
+    const { status } = catalogs.sl.listings;
+    expect(status.filled).toBe("Zapolnjeno");
+    expect(status.available).toBe("Na voljo");
+    expect(status.markFilled).toBe("Označi kot zapolnjeno");
+    expect(status.markAvailable).toBe("Označi kot na voljo");
   });
 
   it("allows match requests only for available listings", () => {
@@ -100,7 +99,6 @@ describe("setListingFilled", () => {
       setListingFilled(client, "listing-1", true),
     ).rejects.toMatchObject({
       kind: "gone",
-      message: statusErrorMessages.gone,
     });
   });
 

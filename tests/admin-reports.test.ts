@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  adminCopy,
   countByStatus,
   filterReports,
   isAdmin,
@@ -10,7 +9,6 @@ import {
   REPORT_COLUMNS,
   REPORT_LIMIT,
   replaceStatus,
-  reportedLabel,
   setReportStatus,
   type AdminClient,
   type AdminReport,
@@ -111,7 +109,7 @@ describe("isAdmin", () => {
     ).catch((e: Error) => e);
     expect(error).toMatchObject({
       kind: "load-failed",
-      message: adminCopy.loadFailed,
+      code: "loadFailed",
     });
     expect(String((error as Error).message)).not.toContain("secret");
   });
@@ -155,7 +153,7 @@ describe("listReports", () => {
         makeClient({ reports: { data: null, error: { code: "42501" } } })
           .client,
       ),
-    ).rejects.toMatchObject({ kind: "not-admin", message: adminCopy.notAdmin });
+    ).rejects.toMatchObject({ kind: "not-admin", code: "notAdmin" });
   });
 });
 
@@ -176,8 +174,6 @@ describe("deleted reported accounts", () => {
     const [row] = await listReports(client);
     expect(row).toMatchObject({ match_id: "m1", reported_deleted: true });
     expect(row).not.toHaveProperty("reported");
-    expect(reportedLabel(row)).toMatch(/^Izbrisan uporabnik/);
-    expect(reportedLabel(row)).not.toContain("u1");
   });
 
   it("embeds only deleted_at from the reported profile, never the reporter", () => {
@@ -185,7 +181,6 @@ describe("deleted reported accounts", () => {
       "reported:profiles!reported_id(deleted_at)",
     );
     expect(REPORT_COLUMNS).not.toContain("reporter");
-    expect(reportedLabel(report("r3", "open"))).toBe("uporabnik u1");
   });
 });
 
@@ -216,14 +211,12 @@ describe("loadReportConversation (audited admin read)", () => {
       {
         id: "m1",
         role: "reporter",
-        label: "Prijavitelj",
         body: "Pusti me.",
         sentAt: "2026-10-11T10:00:00Z",
       },
       {
         id: "m2",
         role: "reported",
-        label: "Prijavljeni",
         body: "Ne.",
         sentAt: "2026-10-11T10:01:00Z",
       },
@@ -261,7 +254,7 @@ describe("loadReportConversation (audited admin read)", () => {
     ).catch((e: Error) => e);
     expect(failed).toMatchObject({
       kind: "load-failed",
-      message: adminCopy.conversationFailed,
+      code: "conversationFailed",
     });
     expect((failed as Error).message).not.toContain("secret");
   });
@@ -290,7 +283,7 @@ describe("setReportStatus", () => {
       ),
     ).rejects.toMatchObject({
       kind: "not-admin",
-      message: adminCopy.updateFailed,
+      code: "updateFailed",
     });
   });
 
@@ -303,7 +296,7 @@ describe("setReportStatus", () => {
       ),
     ).rejects.toMatchObject({
       kind: "update-failed",
-      message: adminCopy.updateFailed,
+      code: "updateFailed",
     });
   });
 });

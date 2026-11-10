@@ -35,6 +35,10 @@ export default defineConfig({
     baseURL,
     trace: "retain-on-failure",
     ...devices["Desktop Chrome"],
+    // Playwright defaults to en-US, which the app now answers in English
+    // (Accept-Language, lib/i18n/config.ts). The suite asserts Slovenian text;
+    // e2e/language.spec.ts covers English.
+    locale: "sl-SI",
   },
   webServer: process.env.E2E_BASE_URL
     ? undefined

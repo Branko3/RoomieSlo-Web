@@ -23,7 +23,11 @@ export type SubmitReportArgs = {
   p_match: string | null;
 };
 
-/** Same reasons and default as Android's `ReportUserScreen`. */
+/**
+ * Same reasons and default as Android's `ReportUserScreen`. These Slovenian
+ * strings are the STORED values (shared with Android): the UI never shows them
+ * directly in another language, it maps them to `reports.reasons` labels.
+ */
 export const REPORT_REASONS = [
   "Neprimerna vsebina",
   "Lažen profil ali oglas",
@@ -33,19 +37,26 @@ export const REPORT_REASONS = [
 export type ReportReason = (typeof REPORT_REASONS)[number];
 export const DEFAULT_REASON: ReportReason = REPORT_REASONS[0];
 
-export const DESCRIPTION_MAX = 1000;
+export type ReportReasonKey = "inappropriate" | "fake" | "harassment" | "other";
 
-export const reportCopy = {
-  invalidUser: "Neveljaven uporabnik.",
-  invalidReason: "Izberi razlog prijave.",
-  tooLong: `Opis je lahko dolg največ ${DESCRIPTION_MAX} znakov.`,
-  self: "Sebe ne moreš prijaviti.",
-  signedOut: "Za prijavo se moraš prijaviti v svoj račun.",
-  missingUser: "Tega uporabnika ni več mogoče prijaviti.",
-  offline: "Ni povezave. Preveri internetno povezavo.",
-  failed: "Prijava ni bila poslana.",
-  sent: "Hvala. Prijava je poslana in jo bo pregledal administrator.",
-} as const;
+/** Label keys in the same order as `REPORT_REASONS`. */
+const REASON_KEYS: readonly ReportReasonKey[] = [
+  "inappropriate",
+  "fake",
+  "harassment",
+  "other",
+];
+
+/**
+ * The `reports.reasons` key of a stored reason; null for a value this version
+ * does not know (an older or newer client), which is then shown as stored.
+ */
+export function reasonKey(stored: string): ReportReasonKey | null {
+  const index = (REPORT_REASONS as readonly string[]).indexOf(stored);
+  return index < 0 ? null : REASON_KEYS[index];
+}
+
+export const DESCRIPTION_MAX = 1000;
 
 export type ReportErrorKind =
   | "invalid-user"
@@ -57,12 +68,10 @@ export type ReportErrorKind =
   | "offline"
   | "failed";
 
+/** The kind is also the key of its text in `reports.errors`. */
 export class ReportError extends Error {
-  constructor(
-    public readonly kind: ReportErrorKind,
-    message: string,
-  ) {
-    super(message);
+  constructor(public readonly kind: ReportErrorKind) {
+    super(kind);
     this.name = "ReportError";
   }
 }
@@ -94,13 +103,17 @@ export function parseReportContext(params: Params): ReportContext {
   return null;
 }
 
+/**
+ * Stored with the report for the admins; stays Slovenian whatever the
+ * interface language, like the reason (shared with Android and the dashboard).
+ */
 export function contextNote(context: ReportContext): string {
   return context?.kind === "listing"
     ? `[Prijava iz oglasa: ${context.listingId}]`
     : "";
 }
 
-/** Where "Nazaj" leads after (or instead of) reporting. */
+/** Where "Back" leads after (or instead of) reporting. */
 export function backHref(context: ReportContext): string {
   if (context?.kind === "chat")
     return `/chats/${encodeURIComponent(context.matchId)}`;
@@ -122,12 +135,11 @@ export type ReportDraft = {
 
 /** Client-side validation; returns the first problem or null. */
 export function validateReport(draft: ReportDraft): ReportError | null {
-  if (!isUserId(draft.reportedId))
-    return new ReportError("invalid-user", reportCopy.invalidUser);
+  if (!isUserId(draft.reportedId)) return new ReportError("invalid-user");
   if (!(REPORT_REASONS as readonly string[]).includes(draft.reason))
-    return new ReportError("invalid-reason", reportCopy.invalidReason);
+    return new ReportError("invalid-reason");
   if (draft.description.trim().length > DESCRIPTION_MAX)
-    return new ReportError("too-long", reportCopy.tooLong);
+    return new ReportError("too-long");
   return null;
 }
 
@@ -148,11 +160,10 @@ export function buildReport(draft: ReportDraft): SubmitReportArgs {
 function toReportError(error: unknown): ReportError {
   if (error instanceof ReportError) return error;
   const e = (error ?? {}) as { code?: string; message?: string };
-  if (e.code === "23503")
-    return new ReportError("missing-user", reportCopy.missingUser);
+  if (e.code === "23503") return new ReportError("missing-user");
   if (error instanceof TypeError || /fetch|network/i.test(e.message ?? ""))
-    return new ReportError("offline", reportCopy.offline);
-  return new ReportError("failed", reportCopy.failed);
+    return new ReportError("offline");
+  return new ReportError("failed");
 }
 
 /**
@@ -167,9 +178,8 @@ export async function submitReport(
   if (invalid) throw invalid;
   try {
     const { data } = await client.auth.getUser();
-    if (!data.user) throw new ReportError("signed-out", reportCopy.signedOut);
-    if (data.user.id === draft.reportedId)
-      throw new ReportError("self", reportCopy.self);
+    if (!data.user) throw new ReportError("signed-out");
+    if (data.user.id === draft.reportedId) throw new ReportError("self");
     const { error } = await client.rpc("submit_report", buildReport(draft));
     if (error) throw error;
   } catch (error) {

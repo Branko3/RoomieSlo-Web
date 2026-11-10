@@ -9,7 +9,20 @@ import {
   MessagesError,
   type MessagesClient,
 } from "../lib/chat/messages";
+import { getFormatters } from "../lib/i18n/formatters";
+import { catalogs } from "../lib/i18n/messages";
 import type { Row } from "../lib/supabase/types";
+
+const sl = {
+  today: catalogs.sl.chat.messages.today,
+  yesterday: catalogs.sl.chat.messages.yesterday,
+  formatters: getFormatters("sl"),
+};
+const en = {
+  today: catalogs.en.chat.messages.today,
+  yesterday: catalogs.en.chat.messages.yesterday,
+  formatters: getFormatters("en"),
+};
 
 const ME = "me";
 
@@ -137,7 +150,7 @@ describe("loadMessages (Android ChatRepository.getMessages)", () => {
     expect(error).toBeInstanceOf(MessagesError);
     expect(error).toMatchObject({
       kind: "failed",
-      message: "Napaka pri nalaganju sporočil.",
+      message: "failed",
     });
   });
 });
@@ -148,13 +161,20 @@ describe("day grouping and time formatting (Europe/Ljubljana)", () => {
   it("uses the Ljubljana calendar day, not UTC", () => {
     // 23:30 UTC on 10 Oct is 01:30 on 11 Oct in Ljubljana (CEST).
     expect(dayKey("2026-10-10T23:30:00Z")).toBe("2026-10-11");
-    expect(messageTime("2026-10-10T23:30:00Z")).toBe("01:30");
+    expect(messageTime("2026-10-10T23:30:00Z", sl.formatters)).toBe("01:30");
+    expect(messageTime("2026-10-10T23:30:00Z", en.formatters)).toBe("01:30");
   });
 
   it("labels today, yesterday, and older days in Slovenian", () => {
-    expect(dayLabel("2026-10-11", now)).toBe("Danes");
-    expect(dayLabel("2026-10-10", now)).toBe("Včeraj");
-    expect(dayLabel("2026-10-05", now).toLowerCase()).toContain("oktober");
+    expect(dayLabel("2026-10-11", sl, now)).toBe("Danes");
+    expect(dayLabel("2026-10-10", sl, now)).toBe("Včeraj");
+    expect(dayLabel("2026-10-05", sl, now)).toBe("ponedeljek, 5. oktober");
+  });
+
+  it("labels today, yesterday, and older days in English", () => {
+    expect(dayLabel("2026-10-11", en, now)).toBe("Today");
+    expect(dayLabel("2026-10-10", en, now)).toBe("Yesterday");
+    expect(dayLabel("2026-10-05", en, now)).toBe("Monday 5 October");
   });
 
   it("groups consecutive messages by day in order", () => {
@@ -165,19 +185,19 @@ describe("day grouping and time formatting (Europe/Ljubljana)", () => {
       row("d", "2026-10-11T08:00:00Z"),
     ];
     expect(
-      groupByDay(messages, now).map((day) => [
+      groupByDay(messages, sl, now).map((day) => [
         day.key,
         day.label,
         day.messages.map((m) => m.id),
       ]),
     ).toEqual([
-      ["2026-10-09", dayLabel("2026-10-09", now), ["a", "b"]],
+      ["2026-10-09", dayLabel("2026-10-09", sl, now), ["a", "b"]],
       ["2026-10-10", "Včeraj", ["c"]],
       ["2026-10-11", "Danes", ["d"]],
     ]);
   });
 
   it("handles an empty list", () => {
-    expect(groupByDay([], now)).toEqual([]);
+    expect(groupByDay([], sl, now)).toEqual([]);
   });
 });

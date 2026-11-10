@@ -7,14 +7,15 @@ import {
   DESCRIPTION_MAX,
   listingReportHref,
   parseReportContext,
+  reasonKey,
   REPORT_REASONS,
-  reportCopy,
   submitReport,
   validateReport,
   type ReportClient,
   type SubmitReportArgs,
   type ReportDraft,
 } from "../lib/reports/report";
+import { catalogs } from "../lib/i18n/messages";
 
 const ME = "11111111-1111-4111-8111-111111111111";
 const PEER = "22222222-2222-4222-8222-222222222222";
@@ -60,6 +61,25 @@ describe("report reasons", () => {
       "Drugo",
     ]);
     expect(DEFAULT_REASON).toBe("Neprimerna vsebina");
+  });
+
+  it("map each stored value to a label key; unknown values have none", () => {
+    expect(REPORT_REASONS.map(reasonKey)).toEqual([
+      "inappropriate",
+      "fake",
+      "harassment",
+      "other",
+    ]);
+    expect(reasonKey("Spam")).toBeNull();
+    expect(reasonKey("")).toBeNull();
+  });
+
+  it("have a label in both languages, Slovenian identical to the stored value", () => {
+    for (const reason of REPORT_REASONS) {
+      const key = reasonKey(reason)!;
+      expect(catalogs.sl.reports.reasons[key]).toBe(reason);
+      expect(catalogs.en.reports.reasons[key]).toMatch(/^[\x20-\x7e]+$/);
+    }
   });
 });
 
@@ -191,7 +211,7 @@ describe("submitReport", () => {
       submitReport(makeClient({ user: null }).client, draft()),
     ).rejects.toMatchObject({
       kind: "signed-out",
-      message: reportCopy.signedOut,
+      message: "signed-out",
     });
     const { client, inserted } = makeClient();
     await expect(
@@ -213,7 +233,7 @@ describe("submitReport", () => {
         makeClient({ insert: new TypeError("Failed to fetch") }).client,
         draft(),
       ),
-    ).rejects.toMatchObject({ kind: "offline", message: reportCopy.offline });
+    ).rejects.toMatchObject({ kind: "offline", message: "offline" });
     await expect(
       submitReport(
         makeClient({
@@ -221,6 +241,6 @@ describe("submitReport", () => {
         }).client,
         draft(),
       ),
-    ).rejects.toMatchObject({ kind: "failed", message: reportCopy.failed });
+    ).rejects.toMatchObject({ kind: "failed", message: "failed" });
   });
 });

@@ -1,3 +1,4 @@
+import type { I18n } from "../i18n/i18n";
 import { mapListing, type Listing } from "../supabase/mappers";
 import type { Row } from "../supabase/types";
 
@@ -53,32 +54,20 @@ export function groupMyListings(listings: readonly Listing[]): {
 }
 
 /**
- * Slovenian count of active listings: "1 aktiven oglas", "2 aktivna oglasa",
- * "3 aktivni oglasi", "5 aktivnih oglasov". The form follows the last two
- * digits, like `listingCountLabel`.
+ * Header line for "Moji oglasi" in the active language, e.g. "2 aktivna
+ * oglasa, 1 zapolnjen" / "2 active listings, 1 filled". Filled listings are
+ * mentioned only when there are any.
  */
-export function activeListingsLabel(count: number): string {
-  const lastTwo = Math.abs(Math.trunc(count)) % 100;
-  if (lastTwo === 1) return `${count} aktiven oglas`;
-  if (lastTwo === 2) return `${count} aktivna oglasa`;
-  if (lastTwo === 3 || lastTwo === 4) return `${count} aktivni oglasi`;
-  return `${count} aktivnih oglasov`;
-}
-
-/** "1 zapolnjen", "2 zapolnjena", "3 zapolnjeni", "5 zapolnjenih". */
-export function filledListingsLabel(count: number): string {
-  const lastTwo = Math.abs(Math.trunc(count)) % 100;
-  if (lastTwo === 1) return `${count} zapolnjen`;
-  if (lastTwo === 2) return `${count} zapolnjena`;
-  if (lastTwo === 3 || lastTwo === 4) return `${count} zapolnjeni`;
-  return `${count} zapolnjenih`;
-}
-
-/** Header line for "Moji oglasi", e.g. "2 aktivna oglasa, 1 zapolnjen". */
-export function myListingsSummary(listings: readonly Listing[]): string {
+export function myListingsSummary(
+  listings: readonly Listing[],
+  { m, format, plural }: Pick<I18n, "m" | "format" | "plural">,
+): string {
   const { available, filled } = groupMyListings(listings);
-  const active = activeListingsLabel(available.length);
+  const active = plural(m.listings.mine.active, available.length);
   return filled.length > 0
-    ? `${active}, ${filledListingsLabel(filled.length)}`
+    ? format(m.listings.mine.summary, {
+        active,
+        filled: plural(m.listings.mine.filled, filled.length),
+      })
     : active;
 }

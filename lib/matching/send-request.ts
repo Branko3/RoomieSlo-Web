@@ -49,35 +49,31 @@ export type SendRequestClient = {
 
 const PAIR_COLUMNS = "id,user_id_a,user_id_b,status";
 
+export type SendRequestErrorKind = "signed-out" | "self" | "offline" | "failed";
+
+/** The kind is also the key of its text in `matching.send.errors`. */
 export class SendRequestError extends Error {
-  constructor(
-    public readonly kind: "signed-out" | "self" | "offline" | "failed",
-    message: string,
-  ) {
-    super(message);
+  constructor(public readonly kind: SendRequestErrorKind) {
+    super(kind);
     this.name = "SendRequestError";
   }
 }
 
-export const sendRequestMessages = {
-  signedOut: "Za pošiljanje zahteve se moraš prijaviti.",
-  self: "Zahteve ne moreš poslati samemu sebi.",
-  offline: "Ni povezave. Zahteva ni bila poslana.",
-  failed: "Zahteve ni bilo mogoče poslati.",
-} as const;
+export type ExistingRequestKey =
+  | "accepted"
+  | "rejectedByPeer"
+  | "rejectedByMe"
+  | "pendingMine"
+  | "pendingTheirs";
 
-/** Copy for an already existing request between the two users. */
-export function existingRequestMessage(request: ExistingRequest): string {
-  if (request.status === "accepted")
-    return "Že sta povezana. Klepet najdeš med klepeti.";
-  if (request.status === "rejected") {
-    return request.sentByMe
-      ? "Ta oseba je tvojo zahtevo zavrnila."
-      : "To zahtevo si že zavrnil(a).";
-  }
-  return request.sentByMe
-    ? "Zahtevo si že poslal(a). Čaka na odgovor."
-    : "Ta oseba ti je že poslala zahtevo. Odgovori nanjo med klepeti.";
+/** Which `matching.send.existing` text describes an already existing request. */
+export function existingRequestKey(
+  request: ExistingRequest,
+): ExistingRequestKey {
+  if (request.status === "accepted") return "accepted";
+  if (request.status === "rejected")
+    return request.sentByMe ? "rejectedByPeer" : "rejectedByMe";
+  return request.sentByMe ? "pendingMine" : "pendingTheirs";
 }
 
 /** PostgREST `or` filter matching the pair in either direction (the unique index is direction-free). */
@@ -119,8 +115,8 @@ export async function loadRequestState(
     return existing ? { kind: "exists", request: existing } : { kind: "none" };
   } catch (error) {
     throw isNetworkError(error)
-      ? new SendRequestError("offline", sendRequestMessages.offline)
-      : new SendRequestError("failed", sendRequestMessages.failed);
+      ? new SendRequestError("offline")
+      : new SendRequestError("failed");
   }
 }
 
@@ -139,10 +135,8 @@ export async function sendMatchRequest(
   try {
     const { data } = await client.auth.getUser();
     const me = data.user?.id;
-    if (!me)
-      throw new SendRequestError("signed-out", sendRequestMessages.signedOut);
-    if (me === ownerId)
-      throw new SendRequestError("self", sendRequestMessages.self);
+    if (!me) throw new SendRequestError("signed-out");
+    if (me === ownerId) throw new SendRequestError("self");
 
     const existing = await findPair(client, me, ownerId);
     if (existing) return { created: false, request: existing };
@@ -157,16 +151,15 @@ export async function sendMatchRequest(
       if (winner) return { created: false, request: winner };
     }
     if (inserted.error?.code === "23514") {
-      throw new SendRequestError("self", sendRequestMessages.self);
+      throw new SendRequestError("self");
     }
     if (inserted.error) throw inserted.error;
-    if (!inserted.data)
-      throw new SendRequestError("failed", sendRequestMessages.failed);
+    if (!inserted.data) throw new SendRequestError("failed");
     return { created: true, request: toExisting(inserted.data, me) };
   } catch (error) {
     if (error instanceof SendRequestError) throw error;
     throw isNetworkError(error)
-      ? new SendRequestError("offline", sendRequestMessages.offline)
-      : new SendRequestError("failed", sendRequestMessages.failed);
+      ? new SendRequestError("offline")
+      : new SendRequestError("failed");
   }
 }

@@ -16,16 +16,12 @@ import {
   MapPinIcon,
 } from "../../../components/icons";
 import { listingReportHref } from "../../../lib/reports/report";
-import {
-  canRequestMatch,
-  listingStatusLabel,
-} from "../../../lib/listings/listing-status";
-import { formatMoveIn, formatPrice } from "../../../lib/listings/format";
+import { canRequestMatch } from "../../../lib/listings/listing-status";
+import { moveInLabel, roomTypeLabel } from "../../../lib/listings/format";
+import { useI18n } from "../../../lib/i18n/provider";
 import { useListing } from "../../../lib/supabase/hooks";
 import { DataState, LoadingState } from "../../../components/data-states";
 import { ListingAbout } from "../../../components/listing-about";
-
-const FILLED_NOTE = "Oglas je zapolnjen, zato zahteve za ujemanje niso mogoče.";
 
 /** Supabase-backed request: sending, sent and failed states live in the button. */
 function LiveMatchRequest({
@@ -35,6 +31,7 @@ function LiveMatchRequest({
   ownerId: string;
   isFilled: boolean;
 }) {
+  const { m } = useI18n();
   return (
     <>
       <MatchRequestButton
@@ -43,7 +40,7 @@ function LiveMatchRequest({
       />
       {isFilled && (
         <p className="field-hint" id="listing-filled-note">
-          {FILLED_NOTE}
+          {m.listings.detail.filledNote}
         </p>
       )}
     </>
@@ -52,14 +49,16 @@ function LiveMatchRequest({
 
 /** Preview build without Supabase: the form only simulates a sent request. */
 function PreviewMatchRequest({ isFilled }: { isFilled: boolean }) {
+  const { m } = useI18n();
+  const text = m.listings.detail;
   const [sent, setSent] = useState(false);
   const [message, setMessage] = useState("");
   if (sent) {
     return (
       <div className="success-message full-button" aria-live="polite">
-        Zahteva je poslana.{" "}
+        {text.requestSent}{" "}
         <Link className="link-chevron" href="/chats">
-          Odpri klepete
+          {text.openChats}
           <ChevronRightIcon size={16} />
         </Link>
       </div>
@@ -74,14 +73,14 @@ function PreviewMatchRequest({ isFilled }: { isFilled: boolean }) {
       }}
     >
       <label className="sr-only" htmlFor="request-message">
-        Sporočilo lastniku (neobvezno)
+        {text.messageLabel}
       </label>
       <textarea
         id="request-message"
         className="request-message"
         value={message}
         onChange={(event) => setMessage(event.target.value)}
-        placeholder="Dodaj kratko sporočilo (neobvezno)"
+        placeholder={text.messagePlaceholder}
         rows={3}
       />
       <button
@@ -90,11 +89,11 @@ function PreviewMatchRequest({ isFilled }: { isFilled: boolean }) {
         disabled={!canRequestMatch(isFilled)}
         aria-describedby={isFilled ? "listing-filled-note" : undefined}
       >
-        Pošlji zahtevo za ujemanje
+        {text.sendRequest}
       </button>
       {isFilled && (
         <p className="field-hint" id="listing-filled-note">
-          {FILLED_NOTE}
+          {text.filledNote}
         </p>
       )}
     </form>
@@ -103,10 +102,12 @@ function PreviewMatchRequest({ isFilled }: { isFilled: boolean }) {
 
 export default function ListingDetail({ params }: { params: { id: string } }) {
   const { id } = params;
+  const { m, formatters } = useI18n();
+  const text = m.listings.detail;
   const { data: listing, isLoading, error, retry } = useListing(id);
   const [filledOverride, setFilledOverride] = useState<boolean | null>(null);
 
-  if (isLoading) return <LoadingState label="Nalaganje oglasa ..." />;
+  if (isLoading) return <LoadingState label={text.loading} />;
   if (error)
     return (
       <DataState error={error} onRetry={retry}>
@@ -116,10 +117,10 @@ export default function ListingDetail({ params }: { params: { id: string } }) {
   if (!listing) {
     return (
       <div className="page-state">
-        <h1>Oglas ni več na voljo</h1>
-        <p>Ta oglas ne obstaja ali je bil odstranjen.</p>
+        <h1>{text.goneTitle}</h1>
+        <p>{text.goneBody}</p>
         <Link className="button" href="/listings">
-          Na oglase
+          {text.toListings}
         </Link>
       </div>
     );
@@ -130,7 +131,7 @@ export default function ListingDetail({ params }: { params: { id: string } }) {
     <div className="content-wrap">
       <Link className="back-link" href="/listings">
         <ChevronLeftIcon size={18} />
-        Nazaj na oglase
+        {text.backToListings}
       </Link>
       <div className="detail-layout">
         <div className="detail-image">
@@ -142,12 +143,16 @@ export default function ListingDetail({ params }: { params: { id: string } }) {
         </div>
         <div className="detail-copy">
           <div className="chips">
-            <span className="chip">{listing.roomType}</span>
+            <span className="chip">
+              {roomTypeLabel(listing.roomType, m.listings)}
+            </span>
             <span
               className={`chip ${isFilled ? "chip-filled" : "chip-available"}`}
               aria-live="polite"
             >
-              {listingStatusLabel(isFilled)}
+              {isFilled
+                ? m.listings.status.filled
+                : m.listings.status.available}
             </span>
           </div>
           <ListingStatusControl
@@ -163,14 +168,17 @@ export default function ListingDetail({ params }: { params: { id: string } }) {
           </p>
           <dl className="tear-strip tear-strip-large">
             <div>
-              <dt>Najemnina</dt>
+              <dt>{m.listings.card.rent}</dt>
               <dd className="tear-price">
-                {formatPrice(listing.price)} <span>/ mesec</span>
+                {formatters.currency(listing.price)}{" "}
+                <span>{m.listings.card.perMonth}</span>
               </dd>
             </div>
             <div>
-              <dt>Vselitev</dt>
-              <dd>{formatMoveIn(listing.available)}</dd>
+              <dt>{m.listings.card.moveIn}</dt>
+              <dd>
+                {moveInLabel(listing.availableFrom, m.listings, formatters)}
+              </dd>
             </div>
           </dl>
           <OwnerListingActions
@@ -191,17 +199,14 @@ export default function ListingDetail({ params }: { params: { id: string } }) {
         <div className="detail-sections">
           <ListingAbout listing={listing} />
           <section className="detail-section" aria-labelledby="safety-title">
-            <h2 id="safety-title">Varnost</h2>
-            <p className="muted">
-              Stanovanje si pred plačilom oglej v živo in varščine ne nakazuj
-              vnaprej.
-            </p>
+            <h2 id="safety-title">{text.safetyTitle}</h2>
+            <p className="muted">{text.safetyBody}</p>
             <Link
               className="text-link report-link"
               href={listingReportHref(listing.ownerId, listing.id)}
             >
               <FlagIcon size={16} />
-              Prijavi oglas
+              {text.report}
             </Link>
           </section>
         </div>

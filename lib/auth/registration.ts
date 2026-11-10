@@ -6,12 +6,20 @@ export type RegistrationValues = {
   adultStudent: boolean;
 };
 
-export const ADULT_STUDENT_LABEL =
-  "Potrjujem, da imam vsaj 18 let in sem študent(ka) univerze.";
+/** Field validation failures; the page shows `m.auth.register.errors[code]`. */
+export type RegistrationFieldError =
+  | "display_name_required"
+  | "email_required"
+  | "email_invalid"
+  | "password_too_short"
+  | "adult_student_required";
 
 export type RegistrationErrors = Partial<
-  Record<keyof RegistrationValues, string>
+  Record<keyof RegistrationValues, RegistrationFieldError>
 >;
+
+/** Sign-up failures reported by Supabase Auth. */
+export type RegistrationError = "exists" | "failed";
 
 export function normalizeRegistrationValues(
   values: RegistrationValues,
@@ -31,19 +39,18 @@ export function validateRegistration(
   const errors: RegistrationErrors = {};
 
   if (!normalized.displayName) {
-    errors.displayName = "Vnesi ime in priimek.";
+    errors.displayName = "display_name_required";
   }
   if (!normalized.email) {
-    errors.email = "Vnesi e-naslov.";
+    errors.email = "email_required";
   } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized.email)) {
-    errors.email = "Vnesi veljaven e-naslov.";
+    errors.email = "email_invalid";
   }
   if (normalized.password.length < 8) {
-    errors.password = "Geslo mora vsebovati najmanj 8 znakov.";
+    errors.password = "password_too_short";
   }
   if (!normalized.adultStudent) {
-    errors.adultStudent =
-      "RoomieSlo je namenjen študentom, starim vsaj 18 let. Potrdi to za nadaljevanje.";
+    errors.adultStudent = "adult_student_required";
   }
 
   return errors;
@@ -69,17 +76,18 @@ export function buildSignUpInput(
   };
 }
 
-export function getRegistrationErrorMessage(error: {
+/** Maps a Supabase sign-up error to a code, never exposing its details. */
+export function getRegistrationError(error: {
   message?: string;
   code?: string;
-}): string {
+}): RegistrationError {
   const details = `${error.code ?? ""} ${error.message ?? ""}`.toLowerCase();
   if (
     details.includes("user_already_exists") ||
     details.includes("already registered") ||
     details.includes("already exists")
   ) {
-    return "Račun s tem e-naslovom že obstaja. Poskusi s prijavo.";
+    return "exists";
   }
-  return "Registracije trenutno ni mogoče dokončati. Poskusi znova.";
+  return "failed";
 }

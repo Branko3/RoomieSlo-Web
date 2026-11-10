@@ -1,14 +1,9 @@
 import type { Database } from "../supabase/types";
+import { isRoomType } from "./room-types";
+
+export { ROOM_TYPES } from "./room-types";
 
 type ListingInsert = Database["public"]["Tables"]["listings"]["Insert"];
-
-/** Room types offered when publishing (Android `VRSTE_NASTANITVE`); stored as text. */
-export const ROOM_TYPES = [
-  "soba",
-  "garsonjera",
-  "deljeno stanovanje",
-  "celo stanovanje",
-] as const;
 
 /** Ljubljana districts offered when publishing (Android `CETRTI`). */
 export const DISTRICTS = [
@@ -85,9 +80,31 @@ export type ListingValues = Required<
   >
 >;
 
+/** Validation codes; the form shows `m.listings.form.errors[code]` with `{max}`. */
+export type ListingErrorCode =
+  | "locationRequired"
+  | "locationTooLong"
+  | "priceRequired"
+  | "priceNotInteger"
+  | "priceTooLarge"
+  | "titleTooLong"
+  | "descriptionTooLong"
+  | "roomTypeInvalid"
+  | "districtInvalid"
+  | "availableFromInvalid"
+  | "sizeSqmNotInteger"
+  | "sizeSqmTooLarge"
+  | "depositNotInteger"
+  | "depositTooLarge"
+  | "flatmatesNotInteger"
+  | "flatmatesTooLarge";
+
+export type ListingFieldError = { code: ListingErrorCode; max?: number };
+
+export type ListingErrors = Partial<Record<ListingField, ListingFieldError>>;
+
 export type ListingValidation =
-  | { ok: true; values: ListingValues }
-  | { ok: false; errors: Partial<Record<ListingField, string>> };
+  { ok: true; values: ListingValues } | { ok: false; errors: ListingErrors };
 
 /** Android numeric inputs keep digits only. */
 export function digitsOnly(value: string): string {
@@ -114,10 +131,10 @@ function optionalInt(value: string): number | null {
  * Validates and converts the form (Android `CreateListingViewModel.save` plus
  * `PodatkiOglasa.ocisceni`): location and price are required, text is
  * trimmed, empty optional numbers mean "no data", and the move-in date must be
- * a real `YYYY-MM-DD` date or empty ("po dogovoru").
+ * a real `YYYY-MM-DD` date or empty (by arrangement).
  */
 export function validateListingDraft(draft: ListingDraft): ListingValidation {
-  const errors: Partial<Record<ListingField, string>> = {};
+  const errors: ListingErrors = {};
   const location = draft.location.trim();
   const title = draft.title.trim();
   const description = draft.description.trim();
@@ -125,46 +142,51 @@ export function validateListingDraft(draft: ListingDraft): ListingValidation {
   const district = draft.district.trim();
   const availableFrom = draft.availableFrom.trim();
 
-  if (!location) errors.location = "Vnesi lokacijo.";
+  if (!location) errors.location = { code: "locationRequired" };
   else if (location.length > LISTING_LIMITS.locationMax) {
-    errors.location = `Lokacija je lahko dolga največ ${LISTING_LIMITS.locationMax} znakov.`;
+    errors.location = {
+      code: "locationTooLong",
+      max: LISTING_LIMITS.locationMax,
+    };
   }
 
   const priceText = draft.price.trim();
-  if (!priceText) errors.price = "Vnesi ceno.";
-  else if (!/^\d+$/.test(priceText))
-    errors.price = "Cena mora biti celo število evrov.";
+  if (!priceText) errors.price = { code: "priceRequired" };
+  else if (!/^\d+$/.test(priceText)) errors.price = { code: "priceNotInteger" };
   else if (Number(priceText) > LISTING_LIMITS.priceMax) {
-    errors.price = `Cena je lahko največ ${LISTING_LIMITS.priceMax} €.`;
+    errors.price = { code: "priceTooLarge", max: LISTING_LIMITS.priceMax };
   }
 
   if (title.length > LISTING_LIMITS.titleMax) {
-    errors.title = `Naslov je lahko dolg največ ${LISTING_LIMITS.titleMax} znakov.`;
+    errors.title = { code: "titleTooLong", max: LISTING_LIMITS.titleMax };
   }
   if (description.length > LISTING_LIMITS.descriptionMax) {
-    errors.description = `Opis je lahko dolg največ ${LISTING_LIMITS.descriptionMax} znakov.`;
+    errors.description = {
+      code: "descriptionTooLong",
+      max: LISTING_LIMITS.descriptionMax,
+    };
   }
-  if (roomType && !(ROOM_TYPES as readonly string[]).includes(roomType)) {
-    errors.roomType = "Izberi vrsto nastanitve s seznama.";
+  if (roomType && !isRoomType(roomType)) {
+    errors.roomType = { code: "roomTypeInvalid" };
   }
   if (district && !(DISTRICTS as readonly string[]).includes(district)) {
-    errors.district = "Izberi četrt s seznama.";
+    errors.district = { code: "districtInvalid" };
   }
   if (availableFrom && !isValidIsoDate(availableFrom)) {
-    errors.availableFrom = "Datum vselitve vpiši v obliki LLLL-MM-DD.";
+    errors.availableFrom = { code: "availableFromInvalid" };
   }
 
-  const numeric: Array<[ListingField, string, number]> = [
-    ["sizeSqm", "Velikost", LISTING_LIMITS.sizeMax],
-    ["deposit", "Varščina", LISTING_LIMITS.depositMax],
-    ["flatmates", "Število sostanovalcev", LISTING_LIMITS.flatmatesMax],
-  ];
-  for (const [field, label, max] of numeric) {
+  const numeric = [
+    ["sizeSqm", LISTING_LIMITS.sizeMax],
+    ["deposit", LISTING_LIMITS.depositMax],
+    ["flatmates", LISTING_LIMITS.flatmatesMax],
+  ] as const;
+  for (const [field, max] of numeric) {
     const text = String(draft[field]).trim();
     if (!text) continue;
-    if (!/^\d+$/.test(text)) errors[field] = `${label} mora biti celo število.`;
+    if (!/^\d+$/.test(text)) errors[field] = { code: `${field}NotInteger` };
     else if (Number(text) > max)
-      errors[field] = `${label} je lahko največ ${max}.`;
+      errors[field] = { code: `${field}TooLarge`, max };
   }
 
   if (Object.keys(errors).length > 0) return { ok: false, errors };
@@ -213,17 +235,13 @@ export type ListingCreateClient = {
 export type ListingSaveErrorKind =
   "signed-out" | "permission" | "invalid" | "offline" | "unknown";
 
-export const listingSaveErrorMessages: Record<ListingSaveErrorKind, string> = {
-  "signed-out": "Za objavo oglasa se moraš prijaviti.",
-  permission: "Nimaš dovoljenja za objavo tega oglasa. Prijavi se znova.",
-  invalid: "Nekateri podatki niso veljavni. Preveri obrazec in poskusi znova.",
-  offline: "Ni povezave. Preveri internet in poskusi znova.",
-  unknown: "Shranjevanje ni uspelo. Poskusi znova.",
-};
+/** Why saving the form failed: a save error, or an edit conflict (`ListingConflictError`). */
+export type ListingSubmitFailure = ListingSaveErrorKind | "conflict";
 
+/** Errors carry a kind; the UI shows `m.listings.form.saveErrors[kind]`. */
 export class ListingSaveError extends Error {
   constructor(public readonly kind: ListingSaveErrorKind) {
-    super(listingSaveErrorMessages[kind]);
+    super(`Listing save failed: ${kind}`);
     this.name = "ListingSaveError";
   }
 }

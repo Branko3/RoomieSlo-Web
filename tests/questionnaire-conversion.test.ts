@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { catalogs } from "../lib/i18n/messages";
 import {
   answersFromStored,
   expressedCount,
@@ -40,7 +41,13 @@ describe("statements (Android Vprasalnik parity)", () => {
 
 describe("Likert levels (Android LikertOdgovor parity)", () => {
   it("maps labels to normalized values and multipliers", () => {
-    expect(LIKERT.map((l) => [l.label, l.value, l.multiplier])).toEqual([
+    expect(
+      LIKERT.map((l) => [
+        catalogs.sl.questionnaire.likert[l.key],
+        l.value,
+        l.multiplier,
+      ]),
+    ).toEqual([
       ["Sploh se ne strinjam", 0, 1],
       ["Se ne strinjam", 0.25, 1],
       ["Niti da niti ne", 0.5, 1],

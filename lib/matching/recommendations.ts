@@ -45,15 +45,10 @@ export type RecommendationsClient = {
   };
 };
 
+/** The kind is also the key of its text in `matching.recommendations.errors`. */
 export class RecommendationsError extends Error {
   constructor(public readonly kind: "signed-out" | "offline" | "unknown") {
-    super(
-      kind === "signed-out"
-        ? "Za priporočila se moraš prijaviti."
-        : kind === "offline"
-          ? "Ni povezave. Priporočil ni bilo mogoče naložiti."
-          : "Napaka pri nalaganju priporočil.",
-    );
+    super(kind);
     this.name = "RecommendationsError";
   }
 }

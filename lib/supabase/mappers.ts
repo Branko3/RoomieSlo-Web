@@ -7,10 +7,13 @@ export type Listing = {
   district: string;
   location: string;
   price: number;
-  available: string;
+  /** `YYYY-MM-DD`, or null for "by arrangement"; shown with `moveInLabel`. */
   availableFrom: string | null;
+  /**
+   * The stored room type ("" when not given); shown with `roomTypeLabel`.
+   * Listings cached before this was raw hold "soba" instead of "".
+   */
   roomType: string;
-  details: string;
   image: string;
   isFilled: boolean;
   createdAt: string;
@@ -75,16 +78,8 @@ export function mapListing(row: Row<"listings">): Listing {
     district: row.district || location,
     location,
     price,
-    available: row.available_from ?? "po dogovoru",
     availableFrom: row.available_from,
-    roomType: row.room_type || "soba",
-    details: [
-      row.size_sqm === null ? null : `${row.size_sqm} m²`,
-      row.flatmates_count ? `${row.flatmates_count} sostanovalcev` : null,
-      row.bills_included ? "stroški vključeni" : null,
-    ]
-      .filter(Boolean)
-      .join(" · "),
+    roomType: row.room_type ?? "",
     image: row.photo_url || "🏠",
     isFilled: row.is_filled,
     createdAt,

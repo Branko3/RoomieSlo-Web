@@ -5,8 +5,8 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
   CohabitationError,
-  cohabitationStatusLabel,
-  loadFailureMessage,
+  cohabitationStatus,
+  loadFailure,
   loadMyCohabitations,
 } from "../lib/cohabitation/cohabitation";
 import { monthSpanLabel } from "../lib/cohabitation/months";
@@ -17,6 +17,7 @@ import {
   type ProfileClient,
   type ProfileRequestError,
 } from "../lib/profile/own-profile";
+import { useI18n } from "../lib/i18n/provider";
 import { createSupabaseBrowserClient } from "../lib/supabase/browser";
 import {
   cohabitationClient,
@@ -54,6 +55,8 @@ function rememberSuggested(ids: string[]) {
  * is on, it suggests switching that off once; it never does so by itself.
  */
 export function MyCohabitationsSection() {
+  const i18n = useI18n();
+  const t = i18n.m.cohabitation;
   const queryClient = useQueryClient();
   const profileClient = useMemo(
     () => createSupabaseBrowserClient() as unknown as ProfileClient,
@@ -99,17 +102,17 @@ export function MyCohabitationsSection() {
 
   let content: React.ReactNode;
   if (query.isPending) {
-    content = <p role="status">Nalaganje sobivanja …</p>;
+    content = <p role="status">{t.loading}</p>;
   } else if (query.isError) {
     const error = query.error;
     const signedOut =
       error instanceof CohabitationError && error.kind === "signed-out";
     content = (
       <div role="alert">
-        <p className="error-message">{loadFailureMessage(error)}</p>
+        <p className="error-message">{t.loadErrors[loadFailure(error)]}</p>
         {signedOut ? (
           <Link className="button" href="/login">
-            Prijava
+            {t.signIn}
           </Link>
         ) : (
           <button
@@ -117,7 +120,7 @@ export function MyCohabitationsSection() {
             type="button"
             onClick={() => query.refetch()}
           >
-            Poskusi znova
+            {t.retry}
           </button>
         )}
       </div>
@@ -138,17 +141,14 @@ export function MyCohabitationsSection() {
             role="region"
             aria-labelledby="cohabitation-suggestion-title"
           >
-            <p id="cohabitation-suggestion-title">
-              Živita skupaj. Ali želiš izklopiti »Iščem sostanovalca / sobo«, da
-              se tvoj profil ne prikazuje več med priporočenimi?
-            </p>
+            <p id="cohabitation-suggestion-title">{t.mine.suggestion}</p>
             <div className="confirm-actions">
               <button
                 type="button"
                 className="button button-outline"
                 onClick={() => dismiss(suggestFor.id)}
               >
-                Ne zdaj
+                {t.mine.notNow}
               </button>
               <button
                 type="button"
@@ -162,41 +162,43 @@ export function MyCohabitationsSection() {
                   })
                 }
               >
-                Izklopi
+                {t.mine.turnOff}
               </button>
             </div>
             {turnOff.isError && (
               <p className="error-message" role="alert">
-                {turnOff.error.message}
+                {i18n.m.profile.errors[turnOff.error.kind]}
               </p>
             )}
           </div>
         )}
         {shown.length === 0 ? (
-          <p className="muted">
-            Še nimaš zabeleženega sobivanja. V klepetu z osebo, s katero živiš,
-            izberi »Živiva skupaj«.
-          </p>
+          <p className="muted">{t.mine.empty}</p>
         ) : (
           <ul className="cohabitation-list">
-            {shown.map((c) => (
-              <li key={c.id} className="cohabitation-item">
-                <span className="match-request-text">
-                  <b>{c.peerName}</b>
-                  <small>
-                    {cohabitationStatusLabel(c, me)} ·{" "}
-                    {monthSpanLabel(c.startedMonth, c.endedMonth)}
-                  </small>
-                </span>
-                <Link
-                  className="text-link"
-                  href={`/chats/${encodeURIComponent(c.matchId)}`}
-                  aria-label={`Odpri klepet z osebo ${c.peerName}`}
-                >
-                  Odpri klepet
-                </Link>
-              </li>
-            ))}
+            {shown.map((c) => {
+              const peerName = c.peerName ?? t.mine.unknownPeer;
+              return (
+                <li key={c.id} className="cohabitation-item">
+                  <span className="match-request-text">
+                    <b>{peerName}</b>
+                    <small>
+                      {t.status[cohabitationStatus(c, me)]} ·{" "}
+                      {monthSpanLabel(c.startedMonth, c.endedMonth, i18n)}
+                    </small>
+                  </span>
+                  <Link
+                    className="text-link"
+                    href={`/chats/${encodeURIComponent(c.matchId)}`}
+                    aria-label={i18n.format(t.mine.openChatWith, {
+                      name: peerName,
+                    })}
+                  >
+                    {t.mine.openChat}
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         )}
       </>
@@ -208,8 +210,8 @@ export function MyCohabitationsSection() {
       className="profile-section cohabitation-section"
       aria-labelledby="my-cohabitations-title"
     >
-      <h2 id="my-cohabitations-title">Moje sobivanje</h2>
-      <p className="muted">Sobivanje vidita samo ti in druga oseba.</p>
+      <h2 id="my-cohabitations-title">{t.mine.title}</h2>
+      <p className="muted">{t.mine.intro}</p>
       {content}
     </section>
   );

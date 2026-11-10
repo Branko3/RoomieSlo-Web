@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  authMessage,
+  loginErrorCode,
   safeDestination,
   submitLogin,
   validateLogin,
@@ -11,13 +11,11 @@ import { initializeAuthSession } from "../components/auth-provider";
 
 describe("email/password login boundary", () => {
   it("validates email and password before an auth request", () => {
-    expect(validateLogin("", "secret").error).toBe(
-      "Vnesite veljaven e-naslov.",
+    expect(validateLogin("", "secret").error).toBe("invalid_email");
+    expect(validateLogin("not-an-email", "secret").error).toBe("invalid_email");
+    expect(validateLogin("user@example.com", "").error).toBe(
+      "missing_password",
     );
-    expect(validateLogin("not-an-email", "secret").error).toBe(
-      "Vnesite veljaven e-naslov.",
-    );
-    expect(validateLogin("user@example.com", "").error).toBe("Vnesite geslo.");
     expect(validateLogin(" user@example.com ", "secret")).toEqual({
       email: "user@example.com",
       error: null,
@@ -25,12 +23,12 @@ describe("email/password login boundary", () => {
   });
 
   it("maps auth and network failures without exposing raw messages", () => {
-    expect(authMessage("Invalid login credentials")).toBe(
-      "E-naslov ali geslo nista pravilna.",
+    expect(loginErrorCode("Invalid login credentials")).toBe(
+      "invalid_credentials",
     );
-    expect(authMessage("Email not confirmed")).toContain("še ni potrjen");
-    expect(authMessage("Failed to fetch")).toContain("Povezava ni uspela");
-    expect(authMessage("secret password leaked")).not.toContain("secret");
+    expect(loginErrorCode("Email not confirmed")).toBe("email_not_confirmed");
+    expect(loginErrorCode("Failed to fetch")).toBe("network");
+    expect(loginErrorCode("secret password leaked")).toBe("failed");
   });
 
   it("selects only same-origin paths for redirects", () => {
@@ -92,15 +90,13 @@ describe("email/password login boundary", () => {
         .fn()
         .mockResolvedValue({ error: { message: "Invalid login credentials" } }),
     });
-    expect(onError).toHaveBeenCalledWith("E-naslov ali geslo nista pravilna.");
+    expect(onError).toHaveBeenCalledWith("invalid_credentials");
 
     await submitLogin({
       ...options,
       signIn: vi.fn().mockRejectedValue(new Error("network password=secret")),
     });
-    expect(onError).toHaveBeenLastCalledWith(
-      "Prijava ni uspela. Preverite povezavo in poskusite znova.",
-    );
+    expect(onError).toHaveBeenLastCalledWith("unreachable");
   });
 });
 

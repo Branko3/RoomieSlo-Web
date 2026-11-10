@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import { useI18n } from "../lib/i18n/provider";
 import { photoAlt, safePhotoUrl } from "../lib/listings/listing-photo";
 import type { Listing } from "../lib/supabase/mappers";
 import { HomeIcon } from "./icons";
@@ -20,6 +21,7 @@ export function ListingPhoto({
   sizes: string;
   priority?: boolean;
 }) {
+  const { m, format } = useI18n();
   const url = safePhotoUrl(listing.image);
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
 
@@ -35,7 +37,7 @@ export function ListingPhoto({
     <Image
       className="listing-photo"
       src={url}
-      alt={photoAlt(listing)}
+      alt={photoAlt(listing, m.listings, format)}
       fill
       sizes={sizes}
       unoptimized

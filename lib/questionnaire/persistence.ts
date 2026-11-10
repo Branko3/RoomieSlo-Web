@@ -30,23 +30,14 @@ export type QuestionnaireClient = {
   };
 };
 
+/** Keys of `m.questionnaire.errors`. */
 export type QuestionnaireErrorKind =
   "signed-out" | "permission" | "offline" | "unknown";
 
-export const questionnaireErrorMessages: Record<
-  QuestionnaireErrorKind,
-  string
-> = {
-  "signed-out": "Za izpolnjevanje vprašalnika se moraš prijaviti.",
-  permission:
-    "Nimaš dovoljenja za shranjevanje teh odgovorov. Prijavi se znova.",
-  offline: "Ni povezave. Preveri internet in poskusi znova.",
-  unknown: "Shranjevanje ni uspelo. Poskusi znova.",
-};
-
 export class QuestionnaireError extends Error {
   constructor(public readonly kind: QuestionnaireErrorKind) {
-    super(questionnaireErrorMessages[kind]);
+    // The text shown is m.questionnaire.errors[kind]; the message is for logs.
+    super(`Questionnaire request failed: ${kind}`);
     this.name = "QuestionnaireError";
   }
 }

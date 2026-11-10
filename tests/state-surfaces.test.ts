@@ -24,7 +24,7 @@ describe("empty/error/offline state route wiring", () => {
     const page = source("app/listings/[id]/page.tsx");
     expect(page).toContain("<DataState error={error} onRetry={retry}>");
     expect(page).toContain("if (!listing)");
-    expect(page).toContain("Oglas ni več na voljo");
+    expect(page).toContain("{text.goneTitle}");
     expect(page).toContain('href="/listings"');
   });
 

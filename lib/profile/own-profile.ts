@@ -18,9 +18,17 @@ export type ProfileDraft = {
 
 export type ProfileField = keyof ProfileDraft;
 
+/** Keys of `m.profile.validation`; the limits come from `PROFILE_LIMITS`. */
+export type ProfileFieldError =
+  | "display-name-short"
+  | "display-name-long"
+  | "faculty-long"
+  | "bio-long"
+  | "age-range";
+
 export type ProfileValidation =
   | { ok: true; values: EditableProfile }
-  | { ok: false; errors: Partial<Record<ProfileField, string>> };
+  | { ok: false; errors: Partial<Record<ProfileField, ProfileFieldError>> };
 
 export const PROFILE_LIMITS = {
   displayNameMin: 2,
@@ -42,22 +50,22 @@ export function draftFromProfile(profile: Profile): ProfileDraft {
 }
 
 export function validateProfileDraft(draft: ProfileDraft): ProfileValidation {
-  const errors: Partial<Record<ProfileField, string>> = {};
+  const errors: Partial<Record<ProfileField, ProfileFieldError>> = {};
   const displayName = draft.displayName.trim().replace(/\s+/g, " ");
   const faculty = draft.faculty.trim();
   const bio = draft.bio.trim();
   const ageText = draft.age.trim();
 
   if (displayName.length < PROFILE_LIMITS.displayNameMin) {
-    errors.displayName = "Vnesi ime z vsaj 2 znakoma.";
+    errors.displayName = "display-name-short";
   } else if (displayName.length > PROFILE_LIMITS.displayNameMax) {
-    errors.displayName = `Ime je lahko dolgo največ ${PROFILE_LIMITS.displayNameMax} znakov.`;
+    errors.displayName = "display-name-long";
   }
   if (faculty.length > PROFILE_LIMITS.facultyMax) {
-    errors.faculty = `Fakulteta je lahko dolga največ ${PROFILE_LIMITS.facultyMax} znakov.`;
+    errors.faculty = "faculty-long";
   }
   if (bio.length > PROFILE_LIMITS.bioMax) {
-    errors.bio = `Opis je lahko dolg največ ${PROFILE_LIMITS.bioMax} znakov.`;
+    errors.bio = "bio-long";
   }
 
   let age: number | null = null;
@@ -68,7 +76,7 @@ export function validateProfileDraft(draft: ProfileDraft): ProfileValidation {
       age < PROFILE_LIMITS.ageMin ||
       age > PROFILE_LIMITS.ageMax
     ) {
-      errors.age = `Starost mora biti celo število med ${PROFILE_LIMITS.ageMin} in ${PROFILE_LIMITS.ageMax}.`;
+      errors.age = "age-range";
     }
   }
 
@@ -119,21 +127,16 @@ export type OwnProfileResult =
   | { status: "missing"; userId: string }
   | { status: "ready"; userId: string; profile: Profile };
 
+/** Keys of `m.profile.errors`. */
+export type ProfileErrorKind = "permission" | "offline" | "unknown";
+
 export class ProfileRequestError extends Error {
-  constructor(
-    public readonly kind: "permission" | "offline" | "unknown",
-    message: string,
-  ) {
-    super(message);
+  constructor(public readonly kind: ProfileErrorKind) {
+    // The text shown is m.profile.errors[kind]; the message is for logs.
+    super(`Profile request failed: ${kind}`);
     this.name = "ProfileRequestError";
   }
 }
-
-export const profileErrorMessages = {
-  permission: "Nimaš dovoljenja za ta profil. Odjavi se in se prijavi znova.",
-  offline: "Ni povezave. Preveri internet in poskusi znova.",
-  unknown: "Profila ni bilo mogoče naložiti ali shraniti. Poskusi znova.",
-} as const;
 
 export function toProfileRequestError(error: unknown): ProfileRequestError {
   if (error instanceof ProfileRequestError) return error;
@@ -148,18 +151,15 @@ export function toProfileRequestError(error: unknown): ProfileRequestError {
     details.status === 401 ||
     details.status === 403
   ) {
-    return new ProfileRequestError(
-      "permission",
-      profileErrorMessages.permission,
-    );
+    return new ProfileRequestError("permission");
   }
   if (
     error instanceof TypeError ||
     /fetch|network/i.test(details.message ?? "")
   ) {
-    return new ProfileRequestError("offline", profileErrorMessages.offline);
+    return new ProfileRequestError("offline");
   }
-  return new ProfileRequestError("unknown", profileErrorMessages.unknown);
+  return new ProfileRequestError("unknown");
 }
 
 export async function fetchOwnProfile(
@@ -208,11 +208,7 @@ export async function updateOwnProfile(
       .maybeSingle();
     if (error) throw error;
     // RLS hides rows the user may not update, which returns no row instead of an error.
-    if (!data)
-      throw new ProfileRequestError(
-        "permission",
-        profileErrorMessages.permission,
-      );
+    if (!data) throw new ProfileRequestError("permission");
     return mapProfile(data);
   } catch (error) {
     throw toProfileRequestError(error);
@@ -236,11 +232,7 @@ export async function updateAvailability(
       .select("*")
       .maybeSingle();
     if (error) throw error;
-    if (!data)
-      throw new ProfileRequestError(
-        "permission",
-        profileErrorMessages.permission,
-      );
+    if (!data) throw new ProfileRequestError("permission");
     return mapProfile(data);
   } catch (error) {
     throw toProfileRequestError(error);

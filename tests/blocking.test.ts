@@ -2,7 +2,6 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import {
-  blockCopy,
   BlockError,
   blockUser,
   hasBlocked,
@@ -130,7 +129,7 @@ describe("blockUser / unblockUser", () => {
           .client,
         PEER,
       ),
-    ).rejects.toMatchObject({ kind: "failed", message: blockCopy.failed });
+    ).rejects.toMatchObject({ kind: "failed", message: "failed" });
   });
 
   it("unblocks only my own block", async () => {

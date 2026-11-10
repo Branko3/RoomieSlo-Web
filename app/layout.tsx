@@ -4,6 +4,9 @@ import "./globals.css";
 import { AppShell } from "../components/app-shell";
 import { Providers } from "../components/providers";
 import { AuthProvider } from "../components/auth-provider";
+import { getMessages } from "../lib/i18n/messages";
+import { I18nProvider } from "../lib/i18n/provider";
+import { getI18n, getLocale } from "../lib/i18n/server";
 
 // Self-hosted by next/font at build time (no runtime request to Google).
 // latin-ext covers č, š, ž.
@@ -19,13 +22,16 @@ const body = Figtree({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: "RoomieSlo — najdi svoj dom",
-  description: "Poišči sostanovalca, ki mu res ustrezaš.",
-  // Private by default; only public pages opt in (see lib/seo.ts).
-  robots: { index: false, follow: false },
-  formatDetection: { telephone: false, email: false, address: false },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { m } = await getI18n();
+  return {
+    title: m.common.meta.title,
+    description: m.common.meta.description,
+    // Private by default; only public pages opt in (see lib/seo.ts).
+    robots: { index: false, follow: false },
+    formatDetection: { telephone: false, email: false, address: false },
+  };
+}
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -38,17 +44,22 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  // Cookie, then Accept-Language, then Slovenian (lib/i18n/config.ts). Only the
+  // active catalog is sent, as JSON in the RSC payload, not in client chunks.
+  const locale = await getLocale();
   return (
-    <html lang="sl" className={`${display.variable} ${body.variable}`}>
+    <html lang={locale} className={`${display.variable} ${body.variable}`}>
       <body>
-        <Providers>
-          <AuthProvider>
-            <AppShell>{children}</AppShell>
-          </AuthProvider>
-        </Providers>
+        <I18nProvider locale={locale} messages={getMessages(locale)}>
+          <Providers>
+            <AuthProvider>
+              <AppShell>{children}</AppShell>
+            </AuthProvider>
+          </Providers>
+        </I18nProvider>
       </body>
     </html>
   );

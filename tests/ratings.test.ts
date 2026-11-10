@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { parseCohabitation } from "../lib/cohabitation/cohabitation";
 import { monthStart } from "../lib/cohabitation/months";
+import { createI18n } from "../lib/i18n/i18n";
+import { catalogs } from "../lib/i18n/messages";
 import {
   answersProblem,
   loadMyRating,
@@ -10,8 +12,6 @@ import {
   RATING_COLUMNS,
   RatingError,
   ratingLoadFailure,
-  ratingLoadMessage,
-  ratingMessages,
   setRatingsVisible,
   submitRating,
   toRatingError,
@@ -31,20 +31,20 @@ import {
   parseMyRatingSummary,
   parseRatingSummary,
   ratingCountLabel,
-  ratingNoun,
   strengthCountLabel,
   summaryHeadline,
 } from "../lib/ratings/summary";
 import {
   IMPROVEMENT_TAGS,
-  improvementLabels,
   inTagOrder,
   isImprovementTag,
   isStrengthTag,
   STRENGTH_TAGS,
-  strengthLabels,
   tagProblem,
 } from "../lib/ratings/tags";
+
+const sl = createI18n("sl", catalogs.sl);
+const en = createI18n("en", catalogs.en);
 
 const ME = "11111111-1111-4111-8111-111111111111";
 const PEER = "22222222-2222-4222-8222-222222222222";
@@ -85,13 +85,22 @@ function ratingRow(overrides: Record<string, unknown> = {}) {
 }
 
 describe("tags", () => {
-  it("has the six fixed keys of each set with Slovenian labels", () => {
+  it("has the six fixed keys of each set with labels in both languages", () => {
     expect(STRENGTH_TAGS).toHaveLength(6);
     expect(IMPROVEMENT_TAGS).toHaveLength(6);
-    expect(Object.keys(strengthLabels)).toEqual([...STRENGTH_TAGS]);
-    expect(Object.keys(improvementLabels)).toEqual([...IMPROVEMENT_TAGS]);
-    expect(strengthLabels.clean_tidy).toBe("Čist(a) in urejen(a)");
-    expect(improvementLabels.noise).toBe("Hrup");
+    for (const messages of [catalogs.sl, catalogs.en]) {
+      expect(Object.keys(messages.ratings.strengths)).toEqual([
+        ...STRENGTH_TAGS,
+      ]);
+      expect(Object.keys(messages.ratings.improvements)).toEqual([
+        ...IMPROVEMENT_TAGS,
+      ]);
+    }
+    expect(catalogs.sl.ratings.strengths.clean_tidy).toBe(
+      "Čist(a) in urejen(a)",
+    );
+    expect(catalogs.sl.ratings.improvements.noise).toBe("Hrup");
+    expect(catalogs.en.ratings.strengths.clean_tidy).toBe("Clean and tidy");
   });
 
   it("validates tags like the server", () => {
@@ -422,7 +431,9 @@ describe("summaries", () => {
 
   it("uses Slovenian plural forms", () => {
     expect(
-      [1, 2, 3, 4, 5, 11, 21, 101, 102, 103, 0].map(ratingCountLabel),
+      [1, 2, 3, 4, 5, 11, 21, 101, 102, 103, 0].map((n) =>
+        ratingCountLabel(n, sl),
+      ),
     ).toEqual([
       "1 ocena",
       "2 oceni",
@@ -436,25 +447,51 @@ describe("summaries", () => {
       "103 ocene",
       "0 ocen",
     ]);
-    expect(ratingNoun(-2)).toBe("oceni");
+    expect([1, 2].map((n) => ratingCountLabel(n, en))).toEqual([
+      "1 rating",
+      "2 ratings",
+    ]);
   });
 
   it("formats what people see", () => {
-    expect(summaryHeadline(parseRatingSummary(shown)!)).toBe(
+    expect(summaryHeadline(parseRatingSummary(shown)!, sl)).toBe(
       "3 od 4 sostanovalcev bi spet živeli s to osebo",
     );
-    expect(summaryHeadline({ state: "insufficient" })).toBe(
+    expect(summaryHeadline({ state: "insufficient" }, sl)).toBe(
       "Še ni dovolj ocen",
     );
     // Not opted in: nothing is shown at all.
-    expect(summaryHeadline({ state: "hidden" })).toBeNull();
-    expect(belowThresholdLabel(2)).toBe("2 oceni, prikazane bodo od 3 dalje");
-    expect(belowThresholdLabel(1)).toBe("1 ocena, prikazane bodo od 3 dalje");
-    expect(belowThresholdLabel(0)).toBe("Še nimaš ocen.");
-    expect(strengthCountLabel({ tag: "clean_tidy", count: 3 })).toBe(
+    expect(summaryHeadline({ state: "hidden" }, sl)).toBeNull();
+    expect(belowThresholdLabel(2, sl)).toBe(
+      "2 oceni, prikazane bodo od 3 dalje",
+    );
+    expect(belowThresholdLabel(1, sl)).toBe(
+      "1 ocena, prikazane bodo od 3 dalje",
+    );
+    expect(belowThresholdLabel(0, sl)).toBe("Še nimaš ocen.");
+    expect(strengthCountLabel({ tag: "clean_tidy", count: 3 }, sl)).toBe(
       "Čist(a) in urejen(a) · 3",
     );
-    expect(improvementCountLabel({ tag: "noise", count: 2 })).toBe("Hrup · 2");
+    expect(improvementCountLabel({ tag: "noise", count: 2 }, sl)).toBe(
+      "Hrup · 2",
+    );
+  });
+
+  it("formats what people see in English", () => {
+    expect(summaryHeadline(parseRatingSummary(shown)!, en)).toBe(
+      "3 of 4 roommates would live with this person again",
+    );
+    expect(summaryHeadline({ state: "insufficient" }, en)).toBe(
+      "Not enough ratings yet",
+    );
+    expect(belowThresholdLabel(1, en)).toBe("1 rating, shown from 3 onwards");
+    expect(belowThresholdLabel(0, en)).toBe("You don't have any ratings yet.");
+    expect(strengthCountLabel({ tag: "clean_tidy", count: 3 }, en)).toBe(
+      "Clean and tidy · 3",
+    );
+    expect(improvementCountLabel({ tag: "noise", count: 2 }, en)).toBe(
+      "Noise · 2",
+    );
   });
 });
 
@@ -656,20 +693,15 @@ describe("rating client", () => {
   it("keeps a RatingError and picks load messages", () => {
     const error = new RatingError("locked");
     expect(toRatingError(error)).toBe(error);
-    expect(error.message).toBe(ratingMessages.locked);
-    expect(ratingLoadFailure(new RatingError("offline"))).toBe(
-      ratingMessages.offline,
+    expect(error.message).not.toMatch(/[čšž]/);
+    expect(ratingLoadFailure(new RatingError("offline"))).toBe("offline");
+    expect(ratingLoadFailure(new RatingError("signed-out"))).toBe("signed-out");
+    expect(ratingLoadFailure(new RatingError("permission"))).toBe("permission");
+    expect(ratingLoadFailure(new RatingError("unknown"))).toBe("unknown");
+    expect(ratingLoadFailure("x")).toBe("unknown");
+    expect(catalogs.sl.ratings.loadErrors.unknown).toBe(
+      "Ocen ni bilo mogoče naložiti.",
     );
-    expect(ratingLoadFailure(new RatingError("signed-out"))).toBe(
-      ratingMessages["signed-out"],
-    );
-    expect(ratingLoadFailure(new RatingError("permission"))).toBe(
-      ratingMessages.permission,
-    );
-    expect(ratingLoadFailure(new RatingError("unknown"))).toBe(
-      ratingLoadMessage,
-    );
-    expect(ratingLoadFailure("x")).toBe(ratingLoadMessage);
   });
 
   it("loads my summary and rejects malformed ones", async () => {

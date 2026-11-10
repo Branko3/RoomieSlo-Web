@@ -2,9 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 import {
   loadMyMatches,
   MATCH_COLUMNS,
-  matchMessages,
   MatchRequestError,
-  matchStatusLabel,
+  matchStatusKey,
   respondToMatch,
   toMatchRows,
   type MatchClient,
@@ -97,16 +96,16 @@ function makeClient({
   return { client: client as unknown as MatchClient, calls };
 }
 
-describe("matchStatusLabel (Android ChatScreens copy)", () => {
+describe("matchStatusKey (Android ChatScreens copy)", () => {
   it.each([
-    ["accepted", false, "Sprejeto — odpri klepet"],
-    ["pending", true, "Nova zahteva za ujemanje"],
-    ["pending", false, "Čaka na odgovor"],
-    ["rejected", false, "Zavrnjeno"],
-  ] as const)("%s (recipient: %s) → %s", (status, iAmRecipient, label) => {
+    ["accepted", false, "accepted"],
+    ["pending", true, "pendingIncoming"],
+    ["pending", false, "pendingOutgoing"],
+    ["rejected", false, "rejected"],
+  ] as const)("%s (recipient: %s) → %s", (status, iAmRecipient, key) => {
     expect(
-      matchStatusLabel({ match: match("m", ME, "x", status), iAmRecipient }),
-    ).toBe(label);
+      matchStatusKey({ match: match("m", ME, "x", status), iAmRecipient }),
+    ).toBe(key);
   });
 });
 
@@ -135,9 +134,9 @@ describe("toMatchRows", () => {
     ]);
   });
 
-  it("falls back to a neutral name", () => {
+  it("leaves an unknown name empty for the UI's neutral label", () => {
     expect(toMatchRows([match("m1", "ghost", ME)], ME, names)[0].peerName).toBe(
-      "Uporabnik",
+      "",
     );
   });
 });
@@ -162,10 +161,10 @@ describe("loadMyMatches", () => {
       },
     });
     const rows = await loadMyMatches(client);
-    expect(rows.map((r) => [r.peerName, matchStatusLabel(r)])).toEqual([
-      ["Ana K.", "Nova zahteva za ujemanje"],
-      ["Uporabnik", "Čaka na odgovor"],
-      ["Ana K.", "Zavrnjeno"],
+    expect(rows.map((r) => [r.peerName, matchStatusKey(r)])).toEqual([
+      ["Ana K.", "pendingIncoming"],
+      ["", "pendingOutgoing"],
+      ["Ana K.", "rejected"],
     ]);
     expect(calls).toContainEqual(["select", [MATCH_COLUMNS]]);
     expect(calls).toContainEqual([
@@ -202,7 +201,7 @@ describe("loadMyMatches", () => {
       ),
     ).rejects.toMatchObject({
       kind: "offline",
-      message: matchMessages.offline,
+      code: "offline",
     });
     await expect(
       loadMyMatches(
@@ -213,7 +212,7 @@ describe("loadMyMatches", () => {
           },
         }).client,
       ),
-    ).rejects.toMatchObject({ kind: "failed", message: matchMessages.load });
+    ).rejects.toMatchObject({ kind: "failed", code: "load" });
   });
 });
 
@@ -246,7 +245,7 @@ describe("respondToMatch", () => {
     expect(error).toBeInstanceOf(MatchRequestError);
     expect(error).toMatchObject({
       kind: "conflict",
-      message: "Ta zahteva je bila že obravnavana.",
+      code: "alreadyHandled",
     });
   });
 
@@ -258,12 +257,12 @@ describe("respondToMatch", () => {
     await expect(
       respondToMatch(makeClient({ update: failing }).client, "m1", "accepted"),
     ).rejects.toMatchObject({
-      message: "Zahteve ni bilo mogoče sprejeti.",
+      code: "accept",
     });
     await expect(
       respondToMatch(makeClient({ update: failing }).client, "m1", "rejected"),
     ).rejects.toMatchObject({
-      message: "Zahteve ni bilo mogoče zavrniti.",
+      code: "reject",
     });
   });
 

@@ -169,6 +169,73 @@ browsers (the Playwright suite has never run). See "Automated verification" belo
 | Monitoring, backups, rollback, and deployment runbook |   Yes   |   Partial   |  Partial   |     No     | Deferred: Yes — owner decisions (host, alerting, backup locations). Runbook and `/api/health` exist; host, alerting and backup locations are owner decisions; no restore drill. |
 | Account deletion and operational privacy procedures   | Partial |     Yes     |  Partial   |     No     | Self-service deletion on `/profile/delete-account` (#75); operator procedure, safety-record lookup, retention checks and restore re-application documented.                     |
 
+## Next features (post-prototype roadmap)
+
+Source: the "Further work" section of the original study, where 20 survey respondents ranked
+what would most increase their trust in the compatibility score. Planned 2026-10-19.
+
+### Already covered by existing work
+
+| Proposal                                                      | Covered by                                                                                                                                                       |
+| ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Verified opinions from previous roommates (13/20)             | Cohabitation declarations (#78) and double-blind roommate ratings (#79); summaries already appear on recommendation cards.                                       |
+| iOS version or web app (10/20)                                | This web app.                                                                                                                                                    |
+| Deleting your own profile                                     | Self-service deletion on `/profile/delete-account` with tombstones (#72–#76).                                                                                    |
+| Realtime row updates (sender sees delivery state immediately) | `lib/chat/realtime.ts` subscribes to `UPDATE` on `messages`; "Prebrano" appears live in an open conversation. Only the `/chats` list is not live (item 4 below). |
+
+### Planned
+
+| #   | Feature                                    | Backlog | Implemented | Autotested | Handtested | Plan                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| --- | ------------------------------------------ | :-----: | :---------: | :--------: | :--------: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Explainable compatibility (13/20)          |   Yes   |     No      |     No     |     No     | A pure `agreementBreakdown(a, b)` in `supabase/functions/_shared/compatibility.ts` sorts shared statements into agree / partly / differ by `simᵢ` (proposed: ≥ 0.75 / 0.4–0.75 / < 0.4), with the same `Math.fround` rounding so parity tests stay green. Before a match: the `recommendations` function returns only the counts and the top 2–3 statements by weight in "agree" and "differ", never answer values or weights. After an accepted match: a participant-only RPC returns the full per-statement list, shown in the chat. UI: "Zakaj X %?" disclosure on recommendation cards and a section in the conversation. Tests: bucketing, parity, and a contract test that the response never contains values or weights. |
+| 2   | Profiles in favorites                      |   Yes   |     No      |     No     |     No     | New `favorite_profiles (profile_id, target_id, created_at)` table, owner-only RLS, no self-favorites. Profiles are tombstoned, not deleted, so the deletion function must remove rows in both directions. Heart on recommendation cards (reuses the optimistic toggle from `lib/favorites/favorites-api.ts`); `/favorites` gets "Oglasi" / "Profili" tabs showing card data without a score. Included in the privacy export. The saved person is never told.                                                                                                                                                                                                                                                                    |
+| 3   | Admin user management                      |   Yes   |     No      |     No     |     No     | `/admin/users`: search, detail with reports about the user and verification state. Academic verification queue over the `vpisnice` documents (no in-app queue exists today). Suspend / reactivate via `profiles.suspended_at` checked by match, message and listing RLS, plus an Auth ban through a new `admin-users` Edge Function guarded by `is_admin()`. Admin-initiated deletion reuses the `delete-account` code. Every action goes to an audit table (actor, target, action, time).                                                                                                                                                                                                                                      |
+| 4   | Live chat list                             |   Yes   |     No      |     No     |     No     | Subscribe on `/chats` so the last message and its delivery state update without a reload; then the two-browser Realtime check.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| 5   | Listing photo upload                       |   Yes   |     No      |     No     |     No     | Not in the study; raised 2026-10-19. Public `listing-photos` bucket with owner-scoped Storage policies, a file input on create/edit, type and size limits, and either `listings.photo_url` or a `listing_photos` table for several photos. Removed on listing and account deletion.                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| 6   | Personalized weights (long-term, research) |   Yes   |     No      |     No     |     No     | Needs outcome data from many real cohabitations; the current sample is far too small. Ratings from #79 already collect the signal. Near-term deliverable only: an operator script correlating rating outcomes with compatibility at match time and reporting suggested weights. No change to the live formula.                                                                                                                                                                                                                                                                                                                                                                                                                  |
+
+Suggested order: 1 → 2 → 3 (verification queue first) → 4 → 5; 6 when there is enough data.
+Each item is one branch and PR with its own record in `docs/features/`.
+
+## Open questions
+
+### Blocking the prototype launch
+
+1. **Hosting:** which platform hosts the web app, and what are the prototype URL(s)? The CSP
+   header and the runbook both wait on this.
+2. **Supabase project:** is the prototype on the currently connected project, or on a new
+   production project with a separate staging one?
+3. **Migrations:** may all migrations up to `20261016000200_adult_profiles.sql` be applied to
+   the prototype project? The connected project is missing at least `cohabitations` and
+   `roommate_ratings` (#78/#79), and `blocks` and the admin boundary are not applied
+   anywhere. The `recommendations` function must be deployed before
+   `20261015000000_questionnaire_answers_private.sql`, otherwise ranking stops working.
+4. **Admin:** which account(s) go into `public.admins`?
+5. **Email confirmation:** it is off on the connected project. Should it be on for launch?
+6. **Test data:** may the two UI tester accounts and their fixtures (TEST listing, match,
+   messages) be deleted before launch?
+7. **Privacy contact:** which email address does `/privacy` show? Who keeps the request log
+   and the breach register?
+8. **Backups and alerting:** is PITR or a daily backup enough for the prototype, and where do
+   health-check alerts go? Or are these consciously deferred until after the prototype?
+9. **Audience:** is the prototype open to anyone, or a closed group (for example the survey
+   respondents)? This decides whether sign-up stays open and whether pages remain `noindex`.
+10. **Listing photos:** are they needed for launch (item 5), or can the prototype ship with
+    the placeholder?
+
+### For the planned features
+
+1. **Explainable compatibility:** knowing your own answer and "we agree" lets you infer the
+   other person's answer. Is the two-level split acceptable (counts and top statements before
+   a match, full list after an accepted match)? Are the proposed thresholds fine?
+2. **Profile favorites:** confirm that only available profiles can be saved, and that saved
+   profiles that become unavailable stay in the list marked as such.
+3. **Admin user management:** is suspension in scope, or only verification and deletion? On
+   approval, should the academic document be deleted right away (data minimisation) or kept
+   for a retention period?
+4. **Personalized weights:** may rating outcomes be used for weight research? This probably
+   needs a line in the privacy notice, or opt-in consent.
+
 ## Automated verification
 
 Available now and run in CI on every pull request:

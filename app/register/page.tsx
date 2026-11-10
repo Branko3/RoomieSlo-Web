@@ -3,16 +3,18 @@
 import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import { LanguageSwitcher } from "../../components/language-switcher";
 import { createSupabaseBrowserClient } from "../../lib/supabase/browser";
 import {
-  getRegistrationErrorMessage,
+  getRegistrationError,
   buildSignUpInput,
+  RegistrationError,
   RegistrationErrors,
   RegistrationValues,
   validateRegistration,
-  ADULT_STUDENT_LABEL,
 } from "../../lib/auth/registration";
 import { emailRedirectUrl } from "../../lib/auth/confirmation";
+import { useI18n } from "../../lib/i18n/provider";
 
 const initialValues: RegistrationValues = {
   displayName: "",
@@ -34,11 +36,19 @@ const FIELD_IDS = {
   adultStudent: "adult-student",
 } as const;
 
+/** Kept as data, not text, so it follows a language switch. */
+type Status =
+  | { kind: "created"; email: string }
+  | { kind: "error"; error: RegistrationError }
+  | null;
+
 export default function RegisterPage() {
   const router = useRouter();
+  const { m, format } = useI18n();
+  const t = m.auth.register;
   const [values, setValues] = useState(initialValues);
   const [errors, setErrors] = useState<RegistrationErrors>({});
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState<Status>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   function updateValue<K extends keyof RegistrationValues>(
@@ -47,14 +57,14 @@ export default function RegisterPage() {
   ) {
     setValues((current) => ({ ...current, [field]: value }));
     setErrors((current) => ({ ...current, [field]: undefined }));
-    setStatus("");
+    setStatus(null);
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const validationErrors = validateRegistration(values);
     setErrors(validationErrors);
-    setStatus("");
+    setStatus(null);
 
     // Focus from the fresh result: the error state is not rendered yet.
     const firstInvalid = FIELD_ORDER.find((field) => validationErrors[field]);
@@ -73,17 +83,15 @@ export default function RegisterPage() {
       const { data, error } = await supabase.auth.signUp(signUpInput);
 
       if (error) {
-        setStatus(getRegistrationErrorMessage(error));
+        setStatus({ kind: "error", error: getRegistrationError(error) });
       } else if (data.session) {
         // Email confirmation is disabled for this project: the user is already signed in.
         router.replace("/listings");
       } else {
-        setStatus(
-          `Račun je ustvarjen. Na ${signUpInput.email} smo poslali potrditveno povezavo. Preveri e-pošto in nato nadaljuj na prijavo.`,
-        );
+        setStatus({ kind: "created", email: signUpInput.email });
       }
     } catch {
-      setStatus("Registracije trenutno ni mogoče dokončati. Poskusi znova.");
+      setStatus({ kind: "error", error: "failed" });
     } finally {
       setIsSubmitting(false);
     }
@@ -98,10 +106,10 @@ export default function RegisterPage() {
         </b>
       </div>
       <div className="auth-card">
-        <h1>Ustvari svoj račun</h1>
-        <p className="muted">Poveži se s ljudmi, ki iščejo podoben dom.</p>
+        <h1>{t.title}</h1>
+        <p className="muted">{t.subtitle}</p>
         <form onSubmit={handleSubmit} noValidate>
-          <label htmlFor="display-name">Ime in priimek</label>
+          <label htmlFor="display-name">{t.displayName}</label>
           <input
             id="display-name"
             name="displayName"
@@ -115,11 +123,11 @@ export default function RegisterPage() {
           />
           {errors.displayName && (
             <p id="display-name-error" className="field-error" role="alert">
-              {errors.displayName}
+              {t.errors[errors.displayName]}
             </p>
           )}
 
-          <label htmlFor="email">E-naslov</label>
+          <label htmlFor="email">{t.email}</label>
           <input
             id="email"
             name="email"
@@ -132,11 +140,11 @@ export default function RegisterPage() {
           />
           {errors.email && (
             <p id="email-error" className="field-error" role="alert">
-              {errors.email}
+              {t.errors[errors.email]}
             </p>
           )}
 
-          <label htmlFor="password">Geslo</label>
+          <label htmlFor="password">{t.password}</label>
           <input
             id="password"
             name="password"
@@ -149,7 +157,7 @@ export default function RegisterPage() {
           />
           {errors.password && (
             <p id="password-error" className="field-error" role="alert">
-              {errors.password}
+              {t.errors[errors.password]}
             </p>
           )}
 
@@ -167,33 +175,36 @@ export default function RegisterPage() {
                 errors.adultStudent ? "adult-student-error" : undefined
               }
             />
-            {ADULT_STUDENT_LABEL}
+            {t.adultStudent}
           </label>
           {errors.adultStudent && (
             <p id="adult-student-error" className="field-error" role="alert">
-              {errors.adultStudent}
+              {t.errors[errors.adultStudent]}
             </p>
           )}
 
           <p
-            className={`form-status ${status.includes("Račun je ustvarjen") ? "success-message" : "error-message"}`}
+            className={`form-status ${status?.kind === "created" ? "success-message" : "error-message"}`}
             role="status"
             aria-live="polite"
           >
-            {status}
+            {status?.kind === "created"
+              ? format(t.created, { email: status.email })
+              : status && t.errors[status.error]}
           </p>
           <button
             className="button full-button"
             type="submit"
             disabled={isSubmitting}
           >
-            {isSubmitting ? "Ustvarjam račun…" : "Ustvari račun"}
+            {isSubmitting ? t.submitting : t.submit}
           </button>
         </form>
         <p className="auth-footer">
-          Že imaš račun? <Link href="/login">Prijava</Link>
+          {t.haveAccount} <Link href="/login">{t.signIn}</Link>
         </p>
       </div>
+      <LanguageSwitcher className="page-language" />
     </div>
   );
 }

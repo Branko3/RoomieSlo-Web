@@ -8,12 +8,15 @@ import {
   DocumentUploadError,
   findExistingDocument,
   formatFileSize,
+  MAX_DOCUMENT_BYTES,
   uploadDocument,
-  uploadErrorMessages,
   validateDocument,
   type DocumentListClient,
+  type DocumentValidation,
   type ExistingDocument,
+  type UploadErrorKind,
 } from "../lib/academic/document-upload";
+import { useI18n } from "../lib/i18n/provider";
 import { getSupabaseConfig } from "../lib/config";
 import { createSupabaseBrowserClient } from "../lib/supabase/browser";
 
@@ -33,9 +36,13 @@ type Upload =
   | { status: "idle" }
   | { status: "uploading"; percent: number }
   | { status: "done"; fileName: string }
-  | { status: "failed"; message: string };
+  | { status: "failed"; kind: UploadErrorKind };
+
+type FileError = Extract<DocumentValidation, { ok: false }>;
 
 export function AcademicDocumentUpload() {
+  const { locale, m, format } = useI18n();
+  const t = m.account.academic;
   const config = useMemo(() => getSupabaseConfig(), []);
   const client = useMemo(
     () => (config.configured ? createSupabaseBrowserClient() : null),
@@ -43,7 +50,7 @@ export function AcademicDocumentUpload() {
   );
   const [account, setAccount] = useState<Account>({ status: "loading" });
   const [file, setFile] = useState<File | null>(null);
-  const [fileError, setFileError] = useState<string | null>(null);
+  const [fileError, setFileError] = useState<FileError | null>(null);
   const [upload, setUpload] = useState<Upload>({ status: "idle" });
   const abortRef = useRef<(() => void) | null>(null);
 
@@ -93,7 +100,7 @@ export function AcademicDocumentUpload() {
     }
     const validation = validateDocument(selected);
     setFile(validation.ok ? selected : null);
-    setFileError(validation.ok ? null : validation.message);
+    setFileError(validation.ok ? null : validation);
   }
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -103,7 +110,7 @@ export function AcademicDocumentUpload() {
     }
     const validation = validateDocument(file);
     if (!validation.ok) {
-      setFileError(validation.message);
+      setFileError(validation);
       return;
     }
     setUpload({ status: "uploading", percent: 0 });
@@ -130,10 +137,7 @@ export function AcademicDocumentUpload() {
     } catch (error) {
       setUpload({
         status: "failed",
-        message:
-          error instanceof DocumentUploadError
-            ? error.message
-            : uploadErrorMessages.unknown,
+        kind: error instanceof DocumentUploadError ? error.kind : "unknown",
       });
     } finally {
       abortRef.current = null;
@@ -143,23 +147,23 @@ export function AcademicDocumentUpload() {
   if (account.status === "loading") {
     return (
       <p className="muted" role="status">
-        Nalaganje …
+        {t.loading}
       </p>
     );
   }
   if (account.status === "unconfigured" || account.status === "error") {
     return (
       <p className="error-message" role="alert">
-        Nalaganje dokumentov trenutno ni na voljo. Poskusi znova kasneje.
+        {t.unavailable}
       </p>
     );
   }
   if (account.status === "signed-out") {
     return (
       <div className="upload-card">
-        <p>Za nalaganje potrdila o vpisu se moraš prijaviti.</p>
+        <p>{t.signedOut}</p>
         <Link className="button" href="/login">
-          Prijava
+          {t.signIn}
         </Link>
       </div>
     );
@@ -171,12 +175,11 @@ export function AcademicDocumentUpload() {
     <form className="upload-card" onSubmit={onSubmit} noValidate>
       {account.existing && upload.status !== "done" && (
         <p className="success-message" role="status">
-          Potrdilo je že naloženo in čaka na preverjanje. Novo datoteko lahko
-          naložiš, da zamenjaš obstoječo.
+          {t.existing}
         </p>
       )}
       <label className="upload-picker">
-        <span>Izberi datoteko (PDF, JPG ali PNG, največ 10 MB)</span>
+        <span>{t.pick}</span>
         <input
           type="file"
           name="document"
@@ -188,23 +191,28 @@ export function AcademicDocumentUpload() {
         />
       </label>
       <small className="field-hint" id="document-help">
-        Dokument vidiš samo ti in skrbniki, ki preverijo tvoj status.
+        {t.help}
       </small>
       {fileError && (
         <p className="error-message" id="document-error" role="alert">
-          {fileError}
+          {fileError.error === "too_large"
+            ? format(t.validation.too_large, {
+                size: formatFileSize(fileError.size, locale),
+                max: formatFileSize(MAX_DOCUMENT_BYTES, locale),
+              })
+            : t.validation[fileError.error]}
         </p>
       )}
       {file && !fileError && (
         <p className="upload-file">
-          {file.name} · {formatFileSize(file.size)}
+          {file.name} · {formatFileSize(file.size, locale)}
         </p>
       )}
       {uploading && (
         <div
           className="progress upload-progress"
           role="progressbar"
-          aria-label="Napredek nalaganja"
+          aria-label={t.progress}
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={upload.percent}
@@ -214,12 +222,12 @@ export function AcademicDocumentUpload() {
       )}
       {upload.status === "done" && (
         <p className="success-message" role="status">
-          Naloženo: {upload.fileName}. Potrdilo čaka na preverjanje skrbnika.
+          {format(t.done, { fileName: upload.fileName })}
         </p>
       )}
       {upload.status === "failed" && (
         <p className="error-message" role="alert">
-          {upload.message}
+          {t.uploadErrors[upload.kind]}
         </p>
       )}
       <div className="upload-actions">
@@ -229,7 +237,7 @@ export function AcademicDocumentUpload() {
             type="button"
             onClick={() => abortRef.current?.()}
           >
-            Prekliči ({upload.percent} %)
+            {format(t.cancel, { percent: upload.percent })}
           </button>
         ) : (
           <button
@@ -237,13 +245,11 @@ export function AcademicDocumentUpload() {
             type="submit"
             disabled={!file || Boolean(fileError)}
           >
-            {upload.status === "failed"
-              ? "Poskusi znova"
-              : "Pošlji v preverjanje"}
+            {upload.status === "failed" ? t.retry : t.submit}
           </button>
         )}
         <Link className="text-link" href="/profile">
-          {upload.status === "done" ? "Nadaljuj" : "Preskoči za zdaj"}
+          {upload.status === "done" ? t.continue : t.skip}
         </Link>
       </div>
     </form>

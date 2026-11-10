@@ -44,27 +44,18 @@ export type SendMessageClient = {
   };
 };
 
-export const sendMessageCopy = {
-  failed: "Sporočila ni bilo mogoče poslati.",
-  offline: "Ni povezave. Sporočilo ni bilo poslano.",
-  signedOut: "Za pošiljanje sporočil se moraš prijaviti.",
-  notAllowed: "V ta pogovor ne moreš pisati.",
-  alreadySent: "Sporočilo je že bilo poslano.",
-  tooLong: `Sporočilo je lahko dolgo največ ${MAX_MESSAGE_LENGTH} znakov.`,
-} as const;
+export type SendMessageErrorKind =
+  | "signed-out"
+  | "not-allowed"
+  | "too-long"
+  | "offline"
+  | "failed"
+  | "already-sent";
 
+/** The kind is also the key of its text in `chat.composer.errors`. */
 export class SendMessageError extends Error {
-  constructor(
-    public readonly kind:
-      | "signed-out"
-      | "not-allowed"
-      | "too-long"
-      | "offline"
-      | "failed"
-      | "already-sent",
-    message: string,
-  ) {
-    super(message);
+  constructor(public readonly kind: SendMessageErrorKind) {
+    super(kind);
     this.name = "SendMessageError";
   }
 }
@@ -85,14 +76,13 @@ export async function sendMessage(
   const validation = validateDraft(draft);
   if (!validation.ok) {
     throw validation.reason === "too-long"
-      ? new SendMessageError("too-long", sendMessageCopy.tooLong)
-      : new SendMessageError("failed", sendMessageCopy.failed);
+      ? new SendMessageError("too-long")
+      : new SendMessageError("failed");
   }
   try {
     const { data: userData } = await client.auth.getUser();
     const senderId = userData.user?.id;
-    if (!senderId)
-      throw new SendMessageError("signed-out", sendMessageCopy.signedOut);
+    if (!senderId) throw new SendMessageError("signed-out");
     const { data, error } = await client
       .from("messages")
       .insert({
@@ -106,21 +96,21 @@ export async function sendMessage(
     if (error) {
       // A retry of a message that was already stored hits the primary key.
       if (id && error.code === "23505") {
-        throw new SendMessageError("already-sent", sendMessageCopy.alreadySent);
+        throw new SendMessageError("already-sent");
       }
       if (error.code === "42501" || error.status === 403) {
-        throw new SendMessageError("not-allowed", sendMessageCopy.notAllowed);
+        throw new SendMessageError("not-allowed");
       }
       throw error;
     }
-    if (!data) throw new SendMessageError("failed", sendMessageCopy.failed);
+    if (!data) throw new SendMessageError("failed");
     return mapMessage(data);
   } catch (error) {
     if (error instanceof SendMessageError) throw error;
     const message = (error as { message?: string } | null)?.message ?? "";
     throw error instanceof TypeError || /fetch|network/i.test(message)
-      ? new SendMessageError("offline", sendMessageCopy.offline)
-      : new SendMessageError("failed", sendMessageCopy.failed);
+      ? new SendMessageError("offline")
+      : new SendMessageError("failed");
   }
 }
 

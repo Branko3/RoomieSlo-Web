@@ -46,6 +46,23 @@ for (const path of PAGES) {
   });
 }
 
+test("/login in English has no WCAG A/AA violations", async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  await context.addCookies([
+    { name: "roomieslo-locale", value: "en", url: baseURL ?? "" },
+  ]);
+  await page.goto("/login");
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await page.getByRole("heading", { level: 1 }).first().waitFor();
+  const results = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+    .analyze();
+  expect(results.violations.map((v) => `${v.id} (${v.impact})`)).toEqual([]);
+});
+
 test("the document language is Slovenian", async ({ page }) => {
   await page.goto("/login");
   await expect(page.locator("html")).toHaveAttribute("lang", "sl");

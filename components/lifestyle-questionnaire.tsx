@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { getSupabaseConfig } from "../lib/config";
+import { useI18n } from "../lib/i18n/provider";
+import type { Messages } from "../lib/i18n/types";
 import {
   expressedCount,
   isExpressed,
@@ -16,9 +18,9 @@ import {
   destinationAfterSave,
   loadMyAnswers,
   QuestionnaireError,
-  questionnaireErrorMessages,
   saveMyAnswers,
   type QuestionnaireClient,
+  type QuestionnaireErrorKind,
 } from "../lib/questionnaire/persistence";
 import { createSupabaseBrowserClient } from "../lib/supabase/browser";
 
@@ -27,7 +29,11 @@ type Load =
   | { status: "ready"; userId: string }
   | { status: "failed"; error: QuestionnaireError };
 
+type StatementId = keyof Messages["questionnaire"]["statements"];
+
 export function LifestyleQuestionnaire() {
+  const { m, format } = useI18n();
+  const t = m.questionnaire;
   const router = useRouter();
   const from = useSearchParams().get("from");
   const configured = getSupabaseConfig().configured;
@@ -41,7 +47,9 @@ export function LifestyleQuestionnaire() {
   const [load, setLoad] = useState<Load>({ status: "loading" });
   const [answers, setAnswers] = useState<Answers>({});
   const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<QuestionnaireErrorKind | null>(
+    null,
+  );
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
@@ -74,9 +82,7 @@ export function LifestyleQuestionnaire() {
       router.push(destinationAfterSave(from));
     } catch (error) {
       setSaveError(
-        error instanceof QuestionnaireError
-          ? error.message
-          : questionnaireErrorMessages.unknown,
+        error instanceof QuestionnaireError ? error.kind : "unknown",
       );
       setSaving(false);
     }
@@ -85,10 +91,13 @@ export function LifestyleQuestionnaire() {
   const header = (
     <header className="topbar">
       <div>
-        <h1>Vprašalnik o življenjskem slogu</h1>
+        <h1>{t.title}</h1>
         {load.status === "ready" && (
           <p className="muted" aria-live="polite">
-            Izpolnjenih {expressedCount(answers)} od {STATEMENTS.length} trditev
+            {format(t.progress, {
+              answered: expressedCount(answers),
+              total: STATEMENTS.length,
+            })}
           </p>
         )}
       </div>
@@ -99,7 +108,7 @@ export function LifestyleQuestionnaire() {
           onClick={save}
           disabled={saving}
         >
-          Preskoči
+          {t.skip}
         </button>
       )}
     </header>
@@ -109,7 +118,7 @@ export function LifestyleQuestionnaire() {
     return (
       <div className="content-wrap narrow-content">
         {header}
-        <p role="status">Nalaganje vprašalnika …</p>
+        <p role="status">{t.loading}</p>
       </div>
     );
   }
@@ -121,20 +130,16 @@ export function LifestyleQuestionnaire() {
         {header}
         <div className="profile-card" role="alert">
           <div>
-            <b>
-              {signedOut
-                ? "Nisi prijavljen"
-                : "Vprašalnika ni bilo mogoče naložiti"}
-            </b>
+            <b>{signedOut ? t.signedOutTitle : t.loadFailedTitle}</b>
             <p>
               {configured || signedOut
-                ? load.error.message
-                : "Vprašalnik trenutno ni na voljo."}
+                ? t.errors[load.error.kind]
+                : t.unavailable}
             </p>
           </div>
           {signedOut ? (
             <Link className="button" href="/login">
-              Prijava
+              {t.signIn}
             </Link>
           ) : (
             configured && (
@@ -143,7 +148,7 @@ export function LifestyleQuestionnaire() {
                 type="button"
                 onClick={() => setAttempt((value) => value + 1)}
               >
-                Poskusi znova
+                {t.retry}
               </button>
             )
           )}
@@ -155,10 +160,7 @@ export function LifestyleQuestionnaire() {
   return (
     <div className="content-wrap narrow-content">
       {header}
-      <p className="muted questionnaire-intro">
-        Označi, koliko se strinjaš s trditvami. Vprašalnik lahko kadar koli
-        preskočiš; neodgovorjene trditve ne vplivajo na ujemanje.
-      </p>
+      <p className="muted questionnaire-intro">{t.intro}</p>
       <form
         className="questionnaire-form"
         onSubmit={(event) => {
@@ -170,7 +172,7 @@ export function LifestyleQuestionnaire() {
           <fieldset className="likert" key={statement.id} disabled={saving}>
             <legend>
               <span className="likert-number">{index + 1}.</span>{" "}
-              {statement.text}
+              {t.statements[statement.id as StatementId]}
             </legend>
             {LIKERT.map((level) => (
               <label
@@ -189,18 +191,18 @@ export function LifestyleQuestionnaire() {
                     }))
                   }
                 />
-                {level.label}
+                {t.likert[level.key]}
               </label>
             ))}
           </fieldset>
         ))}
         {saveError && (
           <p className="error-message" role="alert">
-            {saveError}
+            {t.errors[saveError]}
           </p>
         )}
         <button className="button full-button" type="submit" disabled={saving}>
-          {saving ? "Shranjujem …" : "Shrani in nadaljuj"}
+          {saving ? t.saving : t.save}
         </button>
       </form>
     </div>

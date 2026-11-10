@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
+import { catalogs } from "../lib/i18n/messages";
 import {
   addFavorite,
   FAVORITE_WITH_LISTING,
-  favoriteErrorMessages,
   fetchFavoriteIds,
   fetchFavoriteListings,
   removeFavorite,
@@ -181,9 +181,10 @@ describe("favorites API (Android FavoriteRepository parity)", () => {
   ])("maps %o to %s", (error, kind) => {
     const mapped = toFavoriteError(error);
     expect(mapped.kind).toBe(kind);
-    expect(mapped.message).toBe(
-      favoriteErrorMessages[kind as keyof typeof favoriteErrorMessages],
-    );
+    // The UI shows the catalog text for the kind; the error carries no copy.
+    expect(catalogs.sl.favorites.errors).toHaveProperty(kind);
+    expect(catalogs.en.favorites.errors).toHaveProperty(kind);
+    expect(mapped.message).not.toMatch(/[čšž]/);
   });
 
   it("surfaces mapped errors from the API calls", async () => {

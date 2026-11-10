@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ListingCard } from "../../components/listing-card";
-import { listingCountLabel } from "../../lib/listings/result-label";
+import { useI18n } from "../../lib/i18n/provider";
 import { useListingPages } from "../../lib/listings/use-listing-pages";
 import { useCachedListingsFallback } from "../../lib/listings/use-offline-listings";
 import { CacheNotice } from "../../components/cache-notice";
@@ -14,19 +14,23 @@ import {
   ListingGridSkeleton,
   useOnlineStatus,
 } from "../../components/data-states";
-import { formatPrice } from "../../lib/listings/format";
 
-const OFFLINE_ERROR = new Error("Brez povezave");
+// DataState shows the offline state by connectivity, not by this message.
+const OFFLINE_ERROR = new Error("Offline");
 
-/** What the current sort does, said under the result count. */
-const SORT_NOTE: Record<string, string> = {
-  relevance: "Razvrščeno po združljivosti",
-  newest: "Najprej najnovejši",
-  "price-asc": "Od najcenejšega",
-  "price-desc": "Od najdražjega",
-};
+const SORTS = ["relevance", "newest", "price-asc", "price-desc"] as const;
+type Sort = (typeof SORTS)[number];
+
+/** The URL's sort, or relevance for anything unknown. */
+function knownSort(sort: string): Sort {
+  return (SORTS as readonly string[]).includes(sort)
+    ? (sort as Sort)
+    : "relevance";
+}
 
 export default function SearchPage() {
+  const { m, format, plural, formatters } = useI18n();
+  const text = m.search;
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -98,26 +102,25 @@ export default function SearchPage() {
             : 0,
     );
   }, [cachedListings, listings, location, maxPrice, sort]);
-  const resultLabel = listingCountLabel(results.length);
   return (
     <div className="content-wrap">
       <header className="topbar">
         <div>
-          <h1>Iskanje sobe</h1>
+          <h1>{text.title}</h1>
         </div>
       </header>
       {/* Filtering is live; the form only lets the keyboard's search key close the keyboard. */}
       <form
         role="search"
         className={`filter-panel ${filtersOpen ? "is-open" : ""}`}
-        aria-label="Filtri"
+        aria-label={text.filters}
         onSubmit={(event) => {
           event.preventDefault();
           (document.activeElement as HTMLElement | null)?.blur();
         }}
       >
         <div className="field">
-          <label htmlFor="location">Lokacija</label>
+          <label htmlFor="location">{text.location}</label>
           <input
             id="location"
             value={location}
@@ -125,14 +128,14 @@ export default function SearchPage() {
               setLocation(event.target.value);
               updateUrl({ location: event.target.value });
             }}
-            placeholder="npr. Ljubljana"
+            placeholder={text.locationPlaceholder}
             autoComplete="off"
             enterKeyHint="search"
           />
         </div>
         <div className="field range-field" id="search-more-filters">
           <label htmlFor="price">
-            Največji proračun <b>{formatPrice(maxPrice)}</b>
+            {text.maxBudget} <b>{formatters.currency(maxPrice)}</b>
           </label>
           <input
             id="price"
@@ -151,10 +154,8 @@ export default function SearchPage() {
       </form>
       <div className="results-bar">
         <div>
-          <h2 aria-live="polite">
-            {results.length} {resultLabel} zate
-          </h2>
-          <p className="muted">{SORT_NOTE[sort] ?? SORT_NOTE.relevance}</p>
+          <h2 aria-live="polite">{plural(text.results, results.length)}</h2>
+          <p className="muted">{text.sortNotes[knownSort(sort)]}</p>
         </div>
         <div className="results-bar-actions">
           <button
@@ -175,10 +176,12 @@ export default function SearchPage() {
             }}
           >
             <FiltersIcon size={18} />
-            Filtri{maxPrice < 600 ? " (1)" : ""}
+            {maxPrice < 600
+              ? format(text.filtersActive, { count: 1 })
+              : text.filters}
           </button>
           <label className="sort-control">
-            Razvrsti:
+            {text.sortLabel}
             <select
               value={sort}
               onChange={(event) => {
@@ -186,10 +189,11 @@ export default function SearchPage() {
                 updateUrl({ sort: event.target.value });
               }}
             >
-              <option value="relevance">Najbolj ustrezni</option>
-              <option value="newest">Najnovejši</option>
-              <option value="price-asc">Cena naraščajoče</option>
-              <option value="price-desc">Cena padajoče</option>
+              {SORTS.map((value) => (
+                <option key={value} value={value}>
+                  {text.sortOptions[value]}
+                </option>
+              ))}
             </select>
           </label>
         </div>
@@ -199,7 +203,7 @@ export default function SearchPage() {
           {location && (
             <button
               type="button"
-              aria-label={`Odstrani filter: ${location}`}
+              aria-label={format(text.removeFilter, { filter: location })}
               onClick={() => {
                 setLocation("");
                 updateUrl({ location: "" });
@@ -212,13 +216,17 @@ export default function SearchPage() {
           {maxPrice < 600 && (
             <button
               type="button"
-              aria-label={`Odstrani filter: do ${formatPrice(maxPrice)}`}
+              aria-label={format(text.removeFilter, {
+                filter: format(text.upTo, {
+                  price: formatters.currency(maxPrice),
+                }),
+              })}
               onClick={() => {
                 setMaxPrice(600);
                 updateUrl({ maxPrice: 600 });
               }}
             >
-              do {formatPrice(maxPrice)}
+              {format(text.upTo, { price: formatters.currency(maxPrice) })}
               <CloseIcon size={16} />
             </button>
           )}
@@ -232,7 +240,7 @@ export default function SearchPage() {
               router.replace(pathname);
             }}
           >
-            Počisti filtre
+            {text.clearFilters}
           </button>
         </div>
       )}
@@ -257,7 +265,7 @@ export default function SearchPage() {
           <div className="load-more">
             {isFetchNextPageError && (
               <p className="error-message" role="alert">
-                Več oglasov ni bilo mogoče naložiti. Poskusi znova.
+                {text.loadMoreError}
               </p>
             )}
             <button
@@ -267,7 +275,7 @@ export default function SearchPage() {
               disabled={isFetchingNextPage}
               aria-busy={isFetchingNextPage || undefined}
             >
-              {isFetchingNextPage ? "Nalaganje …" : "Naloži več oglasov"}
+              {isFetchingNextPage ? text.loadingMore : text.loadMore}
             </button>
           </div>
         )}
@@ -275,10 +283,7 @@ export default function SearchPage() {
         !error &&
         results.length === 0 &&
         (cachedListings !== null || !hasNextPage) && (
-          <EmptyState
-            title="Ni zadetkov"
-            description="Poskusi razširiti lokacijo ali povečati proračun."
-          />
+          <EmptyState title={text.emptyTitle} description={text.emptyBody} />
         )}
     </div>
   );

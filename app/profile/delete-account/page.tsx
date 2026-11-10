@@ -5,24 +5,36 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useRef, useState } from "react";
 import { useAuth } from "../../../components/auth-provider";
 import {
-  DELETION_PHRASE,
+  CONFIRMATION_PHRASES,
   deleteOwnAccount,
   type DeleteAccountClient,
+  type DeleteAccountFailure,
 } from "../../../lib/account/deletion";
+import { useI18n } from "../../../lib/i18n/provider";
 import { privacyContact } from "../../../lib/privacy/controller";
 import { createSupabaseBrowserClient } from "../../../lib/supabase/browser";
 import { ChevronLeftIcon } from "../../../components/icons";
 
 const contact = privacyContact();
 
+/** Splits `template` at `{name}` so a React node can stand in its place. */
+function around(template: string, name: string): [string, string] {
+  const [before, after = ""] = template.split(`{${name}}`);
+  return [before, after];
+}
+
 /** Self-service account deletion (approved retention matrix, 2026-10-12). */
 export default function DeleteAccountPage() {
   const router = useRouter();
   const { signOut } = useAuth();
+  const { locale, m, format } = useI18n();
+  const t = m.account.deletion;
+  // English asks for "DELETE"; the function always receives the canonical phrase.
+  const phrase = CONFIRMATION_PHRASES[locale];
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<DeleteAccountFailure | null>(null);
   const errorRef = useRef<HTMLParagraphElement>(null);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -32,7 +44,7 @@ export default function DeleteAccountPage() {
     setError(null);
     const result = await deleteOwnAccount(
       createSupabaseBrowserClient() as unknown as DeleteAccountClient,
-      { password, confirm },
+      { password, confirm, locale },
     );
     if (result.ok) {
       // The account is gone; clear the session and every cached user datum.
@@ -40,77 +52,57 @@ export default function DeleteAccountPage() {
       router.replace("/login?deleted=1");
       return;
     }
-    setError(result.message);
+    setError(result.kind);
     setPending(false);
     requestAnimationFrame(() => errorRef.current?.focus());
   }
+
+  const [finalBefore, finalAfter] = around(t.final, "strong");
+  const [confirmBefore, confirmAfter] = around(t.confirmLabel, "phrase");
 
   return (
     <div className="content-wrap narrow-content delete-account">
       <Link className="back-link" href="/profile">
         <ChevronLeftIcon size={18} />
-        Nazaj na profil
+        {t.back}
       </Link>
-      <h1>Izbriši račun</h1>
+      <h1>{t.title}</h1>
       <p>
-        Izbris je <b>dokončen</b> in ga ni mogoče razveljaviti.
+        {finalBefore}
+        <b>{t.finalStrong}</b>
+        {finalAfter}
       </p>
 
       <section className="profile-card privacy-section">
         <div>
-          <b>Takoj izbrišemo</b>
+          <b>{t.removedTitle}</b>
           <ul>
-            <li>prijavo v račun (e-naslov in geslo),</li>
-            <li>
-              profil: ime, starost, fakulteto, opis, fotografijo in status
-              preverjanja,
-            </li>
-            <li>odgovore vprašalnika, priljubljene in tvoje oglase,</li>
-            <li>dokazilo o vpisu iz zasebne shrambe,</li>
-            <li>zahteve za ujemanje, na katere še ni odgovora,</li>
-            <li>ocene, ki so jih o tebi oddali sostanovalci.</li>
+            <li>{t.removed.login}</li>
+            <li>{t.removed.profile}</li>
+            <li>{t.removed.content}</li>
+            <li>{t.removed.document}</li>
+            <li>{t.removed.requests}</li>
+            <li>{t.removed.ratings}</li>
           </ul>
         </div>
       </section>
 
       <section className="profile-card privacy-section">
         <div>
-          <b>Ostane, brez tvojega imena</b>
+          <b>{t.keptTitle}</b>
           <ul>
-            <li>
-              sporočila v pogovorih ostanejo drugi osebi, podpisana kot
-              »Izbrisan uporabnik«; izbrišemo jih, ko svoj račun izbriše tudi
-              ona,
-            </li>
-            <li>
-              prijave zlorab, ki si jih oddal(a) ali so bile oddane zoper tebe,
-              do 12 mesecev po zaključku,
-            </li>
-            <li>
-              sobivanja ostanejo drugi osebi v njeni zgodovini: trenutno
-              sobivanje se zaključi s tem mesecem, nepotrjena izjava »Živiva
-              skupaj« pa se zapre kot nepotrjena. Izbrišemo jih, ko svoj račun
-              izbriše tudi druga oseba,
-            </li>
-            <li>
-              ocene, ki si jih dal(a), ostanejo v povzetku druge osebe brez
-              tvojega imena, največ 36 mesecev po koncu sobivanja,
-            </li>
-            <li>
-              tvoj e-naslov in ime v zaščitenem zapisu za varnostne primere: 30
-              dni oziroma do 12 mesecev po zaključku prijave zoper tebe; dostop
-              ima le upravljavec baze.
-            </li>
+            <li>{t.kept.messages}</li>
+            <li>{t.kept.reports}</li>
+            <li>{t.kept.cohabitations}</li>
+            <li>{t.kept.ratings}</li>
+            <li>{t.kept.safety}</li>
           </ul>
-          <p className="muted">
-            Varnostne kopije potečejo v 30 dneh; do takrat so izbrisani podatki
-            lahko še v njih.
-          </p>
+          <p className="muted">{t.backups}</p>
         </div>
       </section>
 
       <form className="profile-form" onSubmit={submit} noValidate>
-        <label htmlFor="delete-password">Geslo</label>
+        <label htmlFor="delete-password">{t.password}</label>
         <input
           id="delete-password"
           type="password"
@@ -120,7 +112,9 @@ export default function DeleteAccountPage() {
           disabled={pending}
         />
         <label htmlFor="delete-confirm">
-          Za potrditev vpiši <b>{DELETION_PHRASE}</b>
+          {confirmBefore}
+          <b>{phrase}</b>
+          {confirmAfter}
         </label>
         <input
           id="delete-confirm"
@@ -138,7 +132,7 @@ export default function DeleteAccountPage() {
             role="alert"
             tabIndex={-1}
           >
-            {error}
+            {format(t.errors[error], { phrase })}
             {contact && (
               <>
                 {" "}
@@ -149,7 +143,7 @@ export default function DeleteAccountPage() {
         )}
         <div className="profile-form-actions">
           <Link className="button button-outline" href="/profile">
-            Prekliči
+            {t.cancel}
           </Link>
           <button
             className="button button-danger"
@@ -157,7 +151,7 @@ export default function DeleteAccountPage() {
             disabled={pending}
             aria-busy={pending || undefined}
           >
-            {pending ? "Brisanje …" : "Trajno izbriši račun"}
+            {pending ? t.submitting : t.submit}
           </button>
         </div>
       </form>

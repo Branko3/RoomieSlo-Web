@@ -3,23 +3,25 @@ import {
   awaitingMyAnswer,
   chatCohabitationView,
   COHABITATION_COLUMNS,
-  cohabitationCopy,
   CohabitationError,
-  cohabitationMessages,
-  cohabitationStatusLabel,
+  cohabitationStatus,
+  COOLDOWN_DAYS,
   cooldownUntil,
   declareCohabitation,
   endCohabitation,
-  loadErrorMessage,
-  loadFailureMessage,
+  loadFailure,
   loadMatchCohabitations,
   loadMyCohabitations,
-  monthProblemMessages,
   parseCohabitation,
   respondCohabitation,
   toCohabitationError,
   type CohabitationClient,
 } from "../lib/cohabitation/cohabitation";
+import { monthLabel } from "../lib/cohabitation/months";
+import { createI18n } from "../lib/i18n/i18n";
+import { catalogs } from "../lib/i18n/messages";
+
+const sl = createI18n("sl", catalogs.sl);
 
 const ME = "11111111-1111-4111-8111-111111111111";
 const PEER = "22222222-2222-4222-8222-222222222222";
@@ -204,39 +206,25 @@ describe("toCohabitationError (error mapping)", () => {
   ])("maps %j to %s", (error, kind) => {
     const mapped = toCohabitationError(error);
     expect(mapped.kind).toBe(kind);
-    expect(mapped.message).toBe(
-      cohabitationMessages[kind as keyof typeof cohabitationMessages],
-    );
+    expect(Object.keys(catalogs.sl.cohabitation.errors)).toContain(kind);
+    expect(Object.keys(catalogs.en.cohabitation.errors)).toContain(kind);
+    expect(mapped.message).not.toMatch(/[čšž]/);
   });
 
   it("passes a CohabitationError through", () => {
-    const error = new CohabitationError("conflict", "x");
+    const error = new CohabitationError("conflict");
     expect(toCohabitationError(error)).toBe(error);
   });
 
   it("chooses a load message", () => {
-    expect(loadFailureMessage(new CohabitationError("offline"))).toBe(
-      cohabitationMessages.offline,
+    expect(loadFailure(new CohabitationError("offline"))).toBe("offline");
+    expect(loadFailure(new CohabitationError("signed-out"))).toBe("signed-out");
+    expect(loadFailure(new CohabitationError("permission"))).toBe("permission");
+    expect(loadFailure(new CohabitationError("unknown"))).toBe("unknown");
+    expect(loadFailure(new Error("x"))).toBe("unknown");
+    expect(sl.m.cohabitation.loadErrors.unknown).toBe(
+      "Podatkov o sobivanju ni bilo mogoče naložiti.",
     );
-    expect(loadFailureMessage(new CohabitationError("signed-out"))).toBe(
-      cohabitationMessages["signed-out"],
-    );
-    expect(loadFailureMessage(new CohabitationError("permission"))).toBe(
-      cohabitationMessages.permission,
-    );
-    expect(loadFailureMessage(new CohabitationError("unknown"))).toBe(
-      loadErrorMessage,
-    );
-    expect(loadFailureMessage(new Error("x"))).toBe(loadErrorMessage);
-  });
-
-  it("has copy for every month problem", () => {
-    expect(Object.keys(monthProblemMessages).sort()).toEqual([
-      "before-match",
-      "before-start",
-      "future",
-      "not-a-month",
-    ]);
   });
 });
 
@@ -313,7 +301,7 @@ describe("loading", () => {
     expect(cohabitations.map((c) => [c.id, c.peerId, c.peerName])).toEqual([
       ["c1", PEER, "Ana"],
       ["c2", PEER, "Ana"],
-      ["c3", "33333333-0000-4000-8000-000000000000", "Uporabnik"],
+      ["c3", "33333333-0000-4000-8000-000000000000", null],
     ]);
     expect(calls).toContainEqual([
       "profiles",
@@ -327,17 +315,17 @@ describe("loading", () => {
     const failed = await loadMyCohabitations(
       makeClient({ profiles: { data: null, error: { code: "XX000" } } }).client,
     );
-    expect(failed.cohabitations[0].peerName).toBe("Uporabnik");
+    expect(failed.cohabitations[0].peerName).toBe(null);
     const nullNames = await loadMyCohabitations(
       makeClient({
         profiles: { data: [{ id: PEER, display_name: null }], error: null },
       }).client,
     );
-    expect(nullNames.cohabitations[0].peerName).toBe("Uporabnik");
+    expect(nullNames.cohabitations[0].peerName).toBe(null);
     const noNames = await loadMyCohabitations(
       makeClient({ profiles: { data: null, error: null } }).client,
     );
-    expect(noNames.cohabitations[0].peerName).toBe("Uporabnik");
+    expect(noNames.cohabitations[0].peerName).toBe(null);
 
     const { client, calls } = makeClient({ list: { data: [], error: null } });
     await expect(loadMyCohabitations(client)).resolves.toEqual({
@@ -532,10 +520,14 @@ describe("cooldown", () => {
   });
 
   it("is shown with the date it ends", () => {
-    expect(cohabitationCopy.cooldown(new Date("2026-10-31T10:00:00Z"))).toBe(
-      "Znova lahko predlagaš od 31. 10. 2026 dalje.",
-    );
-    expect(cohabitationMessages.cooldown).toContain("30 dneh");
+    expect(
+      sl.format(sl.m.cohabitation.cooldown, {
+        date: sl.formatters.date(new Date("2026-10-31T10:00:00Z")),
+      }),
+    ).toBe("Znova lahko predlagaš od 31. 10. 2026 dalje.");
+    expect(
+      sl.format(sl.m.cohabitation.errors.cooldown, { days: COOLDOWN_DAYS }),
+    ).toContain("30 dneh");
   });
 });
 
@@ -600,35 +592,29 @@ describe("chat view", () => {
   });
 
   it("formats the banner, chip and waiting copy", () => {
-    expect(cohabitationCopy.banner("Ana", "2026-10-01")).toBe(
+    const vars = { name: "Ana", month: monthLabel("2026-10-01", "sl") };
+    expect(sl.format(sl.m.cohabitation.banner, vars)).toBe(
       "Ana pravi, da živita skupaj od okt. 2026.",
     );
-    expect(cohabitationCopy.active("2026-10-01")).toBe(
+    expect(sl.format(sl.m.cohabitation.active, vars)).toBe(
       "Živita skupaj od okt. 2026",
     );
-    expect(cohabitationCopy.awaitingPeer("Ana", "2026-10-01")).toBe(
+    expect(sl.format(sl.m.cohabitation.awaitingPeer, vars)).toBe(
       "Čakamo, da Ana potrdi, da živita skupaj od okt. 2026.",
     );
   });
 
   it("labels each state for the profile list", () => {
+    const label = (c: Parameters<typeof cohabitationStatus>[0], id: string) =>
+      sl.m.cohabitation.status[cohabitationStatus(c, id)];
+    expect(label(cohabitation({ status: "active" }), ME)).toBe("Živita skupaj");
     expect(
-      cohabitationStatusLabel(cohabitation({ status: "active" }), ME),
-    ).toBe("Živita skupaj");
-    expect(
-      cohabitationStatusLabel(
-        cohabitation({ status: "ended", ended_month: "2026-10-01" }),
-        ME,
-      ),
+      label(cohabitation({ status: "ended", ended_month: "2026-10-01" }), ME),
     ).toBe("Ne živita več skupaj");
-    expect(
-      cohabitationStatusLabel(cohabitation({ status: "declined" }), ME),
-    ).toBe("Ni potrjeno");
-    expect(cohabitationStatusLabel(cohabitation(), ME)).toBe(
-      "Čaka na potrditev",
-    );
-    expect(cohabitationStatusLabel(cohabitation(), PEER)).toBe(
-      "Čaka na tvoj odgovor",
-    );
+    expect(label(cohabitation({ status: "declined" }), ME)).toBe("Ni potrjeno");
+    expect(cohabitationStatus(cohabitation(), ME)).toBe("awaitingPeer");
+    expect(label(cohabitation(), ME)).toBe("Čaka na potrditev");
+    expect(cohabitationStatus(cohabitation(), PEER)).toBe("awaitingMe");
+    expect(label(cohabitation(), PEER)).toBe("Čaka na tvoj odgovor");
   });
 });

@@ -15,6 +15,7 @@ import { getSupabaseConfig } from "../lib/config";
 import {
   addFavorite,
   removeFavorite,
+  type FavoriteErrorKind,
   type FavoritesClient,
 } from "../lib/favorites/favorites-api";
 import {
@@ -25,6 +26,7 @@ import {
 } from "../lib/favorites/favorites-sync";
 import { createSupabaseBrowserClient } from "../lib/supabase/browser";
 import { CloseIcon } from "./icons";
+import { useI18n } from "../lib/i18n/provider";
 
 type FavoriteContextValue = {
   favorites: string[];
@@ -49,6 +51,9 @@ export function useFavorites() {
   return context;
 }
 
+/** Stands for `m.errors.favoritesLoad`, so the toast follows a language switch. */
+const FAVORITES_LOAD_FAILED = "favorites:load-failed";
+
 function browserStorage(): Storage | null {
   try {
     return window.localStorage;
@@ -58,6 +63,7 @@ function browserStorage(): Storage | null {
 }
 
 export function Providers({ children }: { children: React.ReactNode }) {
+  const { m } = useI18n();
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -115,9 +121,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         // Keep the user's local favorites visible instead of an empty list.
         setUserId(null);
         applyFavorites(readLocalFavorites(browserStorage()));
-        setFavoriteError(
-          "Priljubljenih ni bilo mogoče naložiti s strežnika. Prikazani so shranjeni v tem brskalniku.",
-        );
+        setFavoriteError(FAVORITES_LOAD_FAILED);
       }
       setFavoritesLoaded(true);
     };
@@ -173,11 +177,19 @@ export function Providers({ children }: { children: React.ReactNode }) {
             : removeFavorite(client, userId, id),
         () => favoritesRef.current,
       ).then((result) => {
-        if (!result.ok) setFavoriteError(result.error.message);
+        if (!result.ok) setFavoriteError(result.error.kind);
       });
     },
     [applyFavorites, userId],
   );
+
+  const favoriteMessage =
+    favoriteError === FAVORITES_LOAD_FAILED
+      ? m.errors.favoritesLoad
+      : favoriteError
+        ? (m.favorites.errors[favoriteError as FavoriteErrorKind] ??
+          m.favorites.errors.unknown)
+        : null;
 
   const favoriteValue = useMemo<FavoriteContextValue>(
     () => ({
@@ -187,24 +199,24 @@ export function Providers({ children }: { children: React.ReactNode }) {
       resetFavorites: () => applyFavorites([]),
       storage: userId ? "remote" : "local",
       userId,
-      favoriteError,
+      favoriteError: favoriteMessage,
       dismissFavoriteError: () => setFavoriteError(null),
     }),
-    [applyFavorites, favorites, favoriteError, toggleFavorite, userId],
+    [applyFavorites, favorites, favoriteMessage, toggleFavorite, userId],
   );
 
   return (
     <QueryClientProvider client={queryClient}>
       <FavoriteContext.Provider value={favoriteValue}>
         {children}
-        {favoriteError && (
+        {favoriteMessage && (
           <div className="favorite-toast" role="alert">
-            <span>{favoriteError}</span>
+            <span>{favoriteMessage}</span>
             <button
               type="button"
               className="text-link"
               onClick={() => setFavoriteError(null)}
-              aria-label="Zapri obvestilo"
+              aria-label={m.common.actions.closeNotice}
             >
               <CloseIcon />
             </button>

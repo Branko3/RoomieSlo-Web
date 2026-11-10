@@ -3,23 +3,20 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import {
-  adminCopy,
   AdminError,
   loadReportConversation,
   type AdminClient,
 } from "../lib/admin/reports";
+import { useI18n } from "../lib/i18n/provider";
 import { createSupabaseBrowserClient } from "../lib/supabase/browser";
 
-const timeFormat = new Intl.DateTimeFormat("sl-SI", {
-  dateStyle: "short",
-  timeStyle: "short",
-});
-
 /**
- * "Prikaži pogovor" for a report filed from a chat. Nothing is loaded until the
+ * "Show conversation" for a report filed from a chat. Nothing is loaded until the
  * admin asks, because every load is written to the audit log.
  */
 export function AdminReportConversation({ reportId }: { reportId: string }) {
+  const { m, formatters } = useI18n();
+  const copy = m.admin.conversation;
   const [open, setOpen] = useState(false);
   const query = useQuery({
     queryKey: ["admin", "report-conversation", reportId],
@@ -43,28 +40,28 @@ export function AdminReportConversation({ reportId }: { reportId: string }) {
         aria-controls={regionId}
         onClick={() => setOpen((value) => !value)}
       >
-        {open ? "Skrij pogovor" : "Prikaži pogovor"}
+        {open ? copy.hide : copy.show}
       </button>
-      {!open && <small className="muted">{adminCopy.conversationLogged}</small>}
+      {!open && <small className="muted">{copy.logged}</small>}
       {open && (
-        <section id={regionId} aria-label="Prijavljeni pogovor">
+        <section id={regionId} aria-label={copy.region}>
           {query.isPending ? (
-            <p role="status">Nalaganje pogovora …</p>
+            <p role="status">{copy.loading}</p>
           ) : query.isError ? (
             <p className="error-message" role="alert">
               {query.error instanceof AdminError
-                ? query.error.message
-                : adminCopy.conversationFailed}
+                ? m.admin.errors[query.error.code]
+                : m.admin.errors.conversationFailed}
             </p>
           ) : query.data.length === 0 ? (
-            <p className="muted">{adminCopy.conversationEmpty}</p>
+            <p className="muted">{copy.empty}</p>
           ) : (
             <ol className="admin-transcript">
               {query.data.map((entry) => (
                 <li key={entry.id} className={`admin-transcript-${entry.role}`}>
                   <small>
-                    <b>{entry.label}</b> ·{" "}
-                    {timeFormat.format(new Date(entry.sentAt))}
+                    <b>{copy.roles[entry.role]}</b> ·{" "}
+                    {formatters.dateTimeShort(entry.sentAt)}
                   </small>
                   <p>{entry.body}</p>
                 </li>

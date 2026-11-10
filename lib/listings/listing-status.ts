@@ -1,14 +1,5 @@
 type DbError = { code?: string; message?: string; status?: number } | null;
 
-/** Android detail-screen copy (`ListingScreens.kt`). */
-export function listingStatusLabel(isFilled: boolean): string {
-  return isFilled ? "Zapolnjeno" : "Na voljo";
-}
-
-export function filledToggleLabel(isFilled: boolean): string {
-  return isFilled ? "Označi kot na voljo" : "Označi kot zapolnjeno";
-}
-
 /** Match requests are only possible for available listings (Android disables the button). */
 export function canRequestMatch(isFilled: boolean): boolean {
   return !isFilled;
@@ -47,17 +38,10 @@ export type ListingStatusClient = {
 export type StatusErrorKind =
   "signed-out" | "gone" | "permission" | "offline" | "unknown";
 
-export const statusErrorMessages: Record<StatusErrorKind, string> = {
-  "signed-out": "Za spreminjanje stanja oglasa se moraš prijaviti.",
-  gone: "Stanja oglasa ni bilo mogoče spremeniti. Oglas ne obstaja več ali nisi njegov lastnik.",
-  permission: "Nimaš dovoljenja za spreminjanje tega oglasa.",
-  offline: "Ni povezave. Stanje oglasa ni bilo spremenjeno.",
-  unknown: "Stanja oglasa ni bilo mogoče spremeniti.",
-};
-
+/** Errors carry a kind; the UI shows `m.listings.statusErrors[kind]`. */
 export class ListingStatusError extends Error {
   constructor(public readonly kind: StatusErrorKind) {
-    super(statusErrorMessages[kind]);
+    super(`Listing status change failed: ${kind}`);
     this.name = "ListingStatusError";
   }
 }

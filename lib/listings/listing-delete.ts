@@ -30,17 +30,10 @@ export type ListingDeleteClient = {
 export type DeleteErrorKind =
   "signed-out" | "gone" | "permission" | "offline" | "unknown";
 
-export const deleteErrorMessages: Record<DeleteErrorKind, string> = {
-  "signed-out": "Za brisanje oglasa se moraš prijaviti.",
-  gone: "Oglasa ni bilo mogoče izbrisati. Ne obstaja več ali nisi njegov lastnik.",
-  permission: "Nimaš dovoljenja za brisanje tega oglasa.",
-  offline: "Ni povezave. Preveri internet in poskusi znova.",
-  unknown: "Oglasa ni bilo mogoče izbrisati.",
-};
-
+/** Errors carry a kind; the UI shows `m.listings.delete.errors[kind]`. */
 export class ListingDeleteError extends Error {
   constructor(public readonly kind: DeleteErrorKind) {
-    super(deleteErrorMessages[kind]);
+    super(`Listing deletion failed: ${kind}`);
     this.name = "ListingDeleteError";
   }
 }

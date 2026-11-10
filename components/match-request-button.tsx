@@ -5,10 +5,9 @@ import Link from "next/link";
 import { ChevronRightIcon } from "./icons";
 import { getSupabaseConfig } from "../lib/config";
 import {
-  existingRequestMessage,
+  existingRequestKey,
   loadRequestState,
   sendMatchRequest,
-  sendRequestMessages,
   SendRequestError,
   type RequestState,
   type SendRequestClient,
@@ -18,6 +17,7 @@ import {
   chatLinkFor,
   shouldWatchForAcceptance,
 } from "../lib/matching/chat-link";
+import { useI18n } from "../lib/i18n/provider";
 import { createSupabaseBrowserClient } from "../lib/supabase/browser";
 
 function client() {
@@ -25,7 +25,7 @@ function client() {
 }
 
 /**
- * "Pošlji zahtevo za ujemanje" for a listing owner. Shows an existing request
+ * "Send a match request" for a listing owner. Shows an existing request
  * instead of the button, so the same pair can never be asked twice.
  */
 export function MatchRequestButton({
@@ -35,6 +35,8 @@ export function MatchRequestButton({
   ownerId: string;
   disabled?: boolean;
 }) {
+  const { m } = useI18n();
+  const copy = m.matching.send;
   const configured = getSupabaseConfig().configured;
   const queryClient = useQueryClient();
   const key = ["match-request", ownerId] as const;
@@ -57,14 +59,12 @@ export function MatchRequestButton({
   });
 
   if (!configured) {
-    return (
-      <p className="field-hint">Pošiljanje zahtev trenutno ni na voljo.</p>
-    );
+    return <p className="field-hint">{copy.unavailable}</p>;
   }
   if (state.isPending) {
     return (
       <button className="button full-button" type="button" disabled>
-        Pošlji zahtevo za ujemanje
+        {copy.action}
       </button>
     );
   }
@@ -72,14 +72,14 @@ export function MatchRequestButton({
     return (
       <p className="error-message" role="alert">
         {state.error instanceof SendRequestError
-          ? state.error.message
-          : sendRequestMessages.failed}{" "}
+          ? copy.errors[state.error.kind]
+          : copy.errors.failed}{" "}
         <button
           className="text-link"
           type="button"
           onClick={() => state.refetch()}
         >
-          Poskusi znova
+          {m.common.actions.retry}
         </button>
       </p>
     );
@@ -87,12 +87,12 @@ export function MatchRequestButton({
 
   const current = state.data;
   if (current.kind === "own-listing") {
-    return <p className="field-hint">To je tvoj oglas.</p>;
+    return <p className="field-hint">{copy.ownListing}</p>;
   }
   if (current.kind === "signed-out") {
     return (
       <Link className="button full-button" href="/login">
-        Prijavi se za pošiljanje zahteve
+        {copy.signIn}
       </Link>
     );
   }
@@ -109,10 +109,10 @@ export function MatchRequestButton({
         aria-live="polite"
       >
         {justSent
-          ? "Zahteva je poslana."
-          : existingRequestMessage(current.request)}{" "}
+          ? copy.sent
+          : copy.existing[existingRequestKey(current.request)]}{" "}
         <Link className="link-chevron" href={link.href}>
-          {link.label}
+          {link.target === "chat" ? copy.openChat : copy.openChats}
           <ChevronRightIcon size={16} />
         </Link>
       </div>
@@ -128,13 +128,13 @@ export function MatchRequestButton({
         disabled={disabled || send.isPending}
         aria-busy={send.isPending || undefined}
       >
-        {send.isPending ? "Pošiljanje …" : "Pošlji zahtevo za ujemanje"}
+        {send.isPending ? copy.sending : copy.action}
       </button>
       {send.isError && (
         <p className="error-message" role="alert">
           {send.error instanceof SendRequestError
-            ? send.error.message
-            : sendRequestMessages.failed}
+            ? copy.errors[send.error.kind]
+            : copy.errors.failed}
         </p>
       )}
     </>

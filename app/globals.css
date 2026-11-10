@@ -1558,13 +1558,27 @@ button.text-link {
 .questionnaire {
   background: var(--color-surface);
 }
+.questionnaire > div:nth-child(2) {
+  flex: 1;
+}
 .progress-ring {
-  border: 5px solid var(--color-surface-accent);
-  border-top-color: var(--color-action);
+  /* Filled arc = --percent; the inner disc masks the centre into a 5px ring. */
+  --percent: 0;
+  background:
+    radial-gradient(
+      closest-side,
+      var(--color-surface) calc(100% - 5px),
+      transparent calc(100% - 5px)
+    ),
+    conic-gradient(
+      var(--color-action) calc(var(--percent) * 1%),
+      var(--color-surface-accent) 0
+    );
   border-radius: 50%;
   height: 57px;
   width: 57px;
-  flex: none;
+  aspect-ratio: 1;
+  flex: none !important;
   display: grid;
   place-items: center;
   font-weight: 700;
@@ -2553,6 +2567,55 @@ button.text-link {
   width: auto;
   min-height: 0;
   margin-top: 3px;
+}
+
+/* --- Language switcher (components/language-switcher.tsx) --- */
+.language-switcher {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+.language-switcher-label {
+  font-weight: 600;
+  margin-right: 4px;
+}
+.language-option {
+  min-height: var(--touch-min);
+  padding: 0 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+.language-option:hover {
+  background: var(--color-surface-hover);
+}
+.language-option[aria-pressed="true"] {
+  background: var(--color-surface-accent);
+  border-color: var(--color-action);
+  color: var(--color-text-accent);
+}
+/* Sits just above the profile row at the foot of the sidebar. */
+.sidebar-language {
+  margin: auto 4px 16px 8px;
+}
+.sidebar-language + .sidebar-bottom {
+  margin-top: 0;
+}
+.sidebar-language .language-switcher-label {
+  flex-basis: 100%;
+  font-size: var(--text-2xs);
+}
+.page-language {
+  justify-content: center;
+  margin-top: 24px;
 }
 
 /* ===================== 7. Responsive ===================== */

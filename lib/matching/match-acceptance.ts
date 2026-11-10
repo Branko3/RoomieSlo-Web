@@ -1,8 +1,8 @@
 import type { MatchStatus } from "../supabase/types";
 import {
   MATCH_COLUMNS,
-  matchMessages,
   MatchRequestError,
+  type MatchErrorCode,
   respondToMatch,
   type MatchClient,
   type MatchRecord,
@@ -36,16 +36,16 @@ type MatchReadClient = {
 };
 
 /** What the user is told after a conflict, based on the row's state now. */
-export function conflictMessage(current: MatchStatus | null): string {
+export function conflictCode(current: MatchStatus | null): MatchErrorCode {
   switch (current) {
     case "accepted":
-      return "Zahteva je že sprejeta.";
+      return "conflictAccepted";
     case "rejected":
-      return "Zahteva je bila medtem zavrnjena.";
+      return "conflictRejected";
     case null:
-      return "Zahteva ne obstaja več.";
+      return "conflictMissing";
     case "pending":
-      return "Te zahteve ne moreš sprejeti.";
+      return "conflictPending";
   }
 }
 
@@ -87,9 +87,9 @@ async function conflictFor(client: MatchAcceptanceClient, matchId: string) {
     current = await readMatchStatus(client, matchId);
   } catch {
     // Could not tell what happened; fall back to the Android wording.
-    return new MatchRequestError("conflict", matchMessages.alreadyHandled);
+    return new MatchRequestError("conflict", "alreadyHandled");
   }
-  return new MatchRequestError("conflict", conflictMessage(current));
+  return new MatchRequestError("conflict", conflictCode(current));
 }
 
 /**
@@ -116,8 +116,8 @@ export async function acceptMatchAtomically(
   } catch (error) {
     if (error instanceof MatchRequestError) throw error;
     throw isNetworkError(error)
-      ? new MatchRequestError("offline", matchMessages.offline)
-      : new MatchRequestError("failed", matchMessages.accept);
+      ? new MatchRequestError("offline", "offline")
+      : new MatchRequestError("failed", "accept");
   }
 }
 

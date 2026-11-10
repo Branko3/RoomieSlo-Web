@@ -4,7 +4,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 import {
-  blockCopy,
   BlockError,
   blockUser,
   hasBlocked,
@@ -12,6 +11,7 @@ import {
   unblockUser,
   type BlockClient,
 } from "../lib/chat/blocking";
+import { useI18n } from "../lib/i18n/provider";
 import { createSupabaseBrowserClient } from "../lib/supabase/browser";
 import { FlagIcon, MoreIcon } from "./icons";
 
@@ -21,6 +21,7 @@ function client() {
 
 /** Whether I blocked this person, with block/unblock actions. */
 export function useBlockState(peerId: string | null) {
+  const { m } = useI18n();
   const queryClient = useQueryClient();
   const key = ["block", peerId] as const;
   const query = useQuery({
@@ -42,9 +43,9 @@ export function useBlockState(peerId: string | null) {
     pending: mutation.isPending,
     error:
       mutation.error instanceof BlockError
-        ? mutation.error.message
+        ? m.chat.safety.errors[mutation.error.kind]
         : mutation.error
-          ? blockCopy.failed
+          ? m.chat.safety.errors.failed
           : null,
   };
 }
@@ -57,6 +58,7 @@ type BlockState = ReturnType<typeof useBlockState>;
  * exists.
  */
 export function ChatSafetyMenu({ children }: { children: React.ReactNode }) {
+  const { m } = useI18n();
   const [open, setOpen] = useState(false);
   const panelId = useId();
   const toggleRef = useRef<HTMLButtonElement>(null);
@@ -92,7 +94,7 @@ export function ChatSafetyMenu({ children }: { children: React.ReactNode }) {
         ref={toggleRef}
         type="button"
         className="icon-button"
-        aria-label="Varnost: prijavi ali blokiraj"
+        aria-label={m.chat.safety.menu}
         aria-expanded={open}
         aria-controls={panelId}
         onClick={() => setOpen((value) => !value)}
@@ -106,7 +108,7 @@ export function ChatSafetyMenu({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** "Prijavi": report this person, with the conversation attached. */
+/** "Report": report this person, with the conversation attached. */
 export function ReportPersonLink({
   peerId,
   matchId,
@@ -114,16 +116,19 @@ export function ReportPersonLink({
   peerId: string;
   matchId: string;
 }) {
+  const { m } = useI18n();
   return (
     <Link className="safety-item" href={reportHref(peerId, matchId)}>
       <FlagIcon size={18} />
-      Prijavi
+      {m.chat.safety.report}
     </Link>
   );
 }
 
-/** "Blokiraj" (with confirmation) or "Odblokiraj". */
+/** "Block" (with confirmation) or "Unblock". */
 export function BlockPersonControl({ state }: { state: BlockState }) {
+  const { m } = useI18n();
+  const copy = m.chat.safety;
   const [confirming, setConfirming] = useState(false);
   return (
     <>
@@ -134,7 +139,7 @@ export function BlockPersonControl({ state }: { state: BlockState }) {
           disabled={state.pending}
           onClick={() => state.setBlocked(false)}
         >
-          Odblokiraj
+          {copy.unblock}
         </button>
       ) : (
         <button
@@ -144,7 +149,7 @@ export function BlockPersonControl({ state }: { state: BlockState }) {
           onClick={() => setConfirming(true)}
           aria-expanded={confirming}
         >
-          Blokiraj
+          {copy.block}
         </button>
       )}
       {confirming && !state.blocked && (
@@ -153,14 +158,14 @@ export function BlockPersonControl({ state }: { state: BlockState }) {
           role="alertdialog"
           aria-labelledby="block-title"
         >
-          <p id="block-title">{blockCopy.confirm}</p>
+          <p id="block-title">{copy.confirm}</p>
           <div className="confirm-actions">
             <button
               type="button"
               className="button button-outline"
               onClick={() => setConfirming(false)}
             >
-              Prekliči
+              {copy.cancel}
             </button>
             <button
               type="button"
@@ -171,7 +176,7 @@ export function BlockPersonControl({ state }: { state: BlockState }) {
                 setConfirming(false);
               }}
             >
-              Blokiraj
+              {copy.block}
             </button>
           </div>
         </div>

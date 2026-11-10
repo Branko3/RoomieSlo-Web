@@ -34,8 +34,8 @@ export type ConversationRow = {
 
 export type TranscriptEntry = {
   id: string;
+  /** Shown as `admin.conversation.roles[role]`. */
   role: ConversationRow["sender_role"];
-  label: "Prijavitelj" | "Prijavljeni";
   body: string;
   sentAt: string;
 };
@@ -101,46 +101,25 @@ export const REPORT_STATUSES: readonly ReportStatus[] = [
   "dismissed",
 ];
 
-export const statusLabel: Record<ReportStatus, string> = {
-  open: "Odprto",
-  reviewed: "Rešeno",
-  dismissed: "Zavrnjeno",
-};
-
-/**
- * Who was reported, as the dashboard shows it. Deleted accounts only get a
- * label: their identity is kept in a record that only the database owner can read.
- */
-export function reportedLabel(report: AdminReport): string {
-  return report.reported_deleted
-    ? "Izbrisan uporabnik (identiteta hranjena za varnostne namene; za razkritje kontaktiraj upravljavca baze)"
-    : `uporabnik ${report.reported_id}`;
-}
-
-export const adminCopy = {
-  notAdmin: "Nimaš administratorskih pravic.",
-  signedOut: "Za administratorsko ploščo se moraš prijaviti.",
-  empty: "Ni prijav.",
-  emptyFilter: "Ni prijav s tem statusom.",
-  loadFailed: "Napaka pri nalaganju prijav.",
-  updateFailed: "Statusa prijave ni bilo mogoče spremeniti.",
-  conversationLogged:
-    "Vsak ogled pogovora se zabeleži (administrator, prijava, čas).",
-  conversationEmpty: "Pogovor ni več na voljo.",
-  conversationFailed: "Pogovora ni bilo mogoče naložiti.",
-  offline: "Ni povezave. Preveri internetno povezavo.",
-} as const;
+/** Text of each error code, in the `admin.errors` catalog section. */
+export type AdminErrorCode =
+  | "notAdmin"
+  | "signedOut"
+  | "loadFailed"
+  | "updateFailed"
+  | "conversationFailed"
+  | "offline";
 
 export type AdminErrorKind =
   "signed-out" | "not-admin" | "offline" | "load-failed" | "update-failed";
 
-/** Errors carry only safe copy; database messages and ids are never shown or logged. */
+/** Errors carry only a safe code; database messages and ids are never shown or logged. */
 export class AdminError extends Error {
   constructor(
     public readonly kind: AdminErrorKind,
-    message: string,
+    public readonly code: AdminErrorCode,
   ) {
-    super(message);
+    super(code);
     this.name = "AdminError";
   }
 }
@@ -152,19 +131,18 @@ function toAdminError(
   if (error instanceof AdminError) return error;
   const e = (error ?? {}) as { code?: string; message?: string };
   if (error instanceof TypeError || /fetch|network/i.test(e.message ?? ""))
-    return new AdminError("offline", adminCopy.offline);
-  if (e.code === "42501")
-    return new AdminError("not-admin", adminCopy.notAdmin);
+    return new AdminError("offline", "offline");
+  if (e.code === "42501") return new AdminError("not-admin", "notAdmin");
   return fallback === "load-failed"
-    ? new AdminError("load-failed", adminCopy.loadFailed)
-    : new AdminError("update-failed", adminCopy.updateFailed);
+    ? new AdminError("load-failed", "loadFailed")
+    : new AdminError("update-failed", "updateFailed");
 }
 
 /** Whether the current user has a row in `admins` (RLS `admins_self_select` shows only their own). */
 export async function isAdmin(client: AdminClient): Promise<boolean> {
   try {
     const { data: auth } = await client.auth.getUser();
-    if (!auth.user) throw new AdminError("signed-out", adminCopy.signedOut);
+    if (!auth.user) throw new AdminError("signed-out", "signedOut");
     const { data, error } = await client
       .from("admins")
       .select("user_id")
@@ -213,7 +191,7 @@ export async function setReportStatus(
       .select("id,status");
     if (error) throw error;
     const row = data?.[0];
-    if (!row) throw new AdminError("not-admin", adminCopy.updateFailed);
+    if (!row) throw new AdminError("not-admin", "updateFailed");
     return row.status;
   } catch (error) {
     throw toAdminError(error, "update-failed");
@@ -237,14 +215,13 @@ export async function loadReportConversation(
     return (data ?? []).map((row) => ({
       id: row.message_id,
       role: row.sender_role,
-      label: row.sender_role === "reporter" ? "Prijavitelj" : "Prijavljeni",
       body: row.body,
       sentAt: row.sent_at,
     }));
   } catch (error) {
     const mapped = toAdminError(error, "load-failed");
     throw mapped.kind === "load-failed"
-      ? new AdminError("load-failed", adminCopy.conversationFailed)
+      ? new AdminError("load-failed", "conversationFailed")
       : mapped;
   }
 }

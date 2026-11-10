@@ -216,10 +216,10 @@ describe("loadConversation", () => {
     expect(calls).toEqual([]);
   });
 
-  it("falls back to a neutral name and empty profile details", async () => {
+  it("leaves an unknown name empty (the UI shows a neutral label)", async () => {
     const { client } = makeClient({ peer: { data: null, error: null } });
     await expect(loadConversation(client, MATCH)).resolves.toMatchObject({
-      peer: { name: "Uporabnik", verified: false, faculty: "" },
+      peer: { name: "", verified: false, faculty: "" },
     });
   });
 
@@ -253,7 +253,7 @@ describe("loadConversation", () => {
       ),
     ).rejects.toMatchObject({
       kind: "offline",
-      message: "Ni povezave. Klepeta ni bilo mogoče odpreti.",
+      message: "offline",
     });
     await expect(
       loadConversation(
@@ -264,7 +264,7 @@ describe("loadConversation", () => {
       ),
     ).rejects.toMatchObject({
       kind: "failed",
-      message: "Klepeta ni bilo mogoče odpreti.",
+      message: "failed",
     });
     await expect(
       loadConversation(
@@ -292,17 +292,13 @@ describe("conversationNotice", () => {
   it("explains pending requests from both sides and rejected requests", () => {
     expect(
       conversationNotice({ ...base, status: "pending", iAmRecipient: false }),
-    ).toBe(
-      "Zahteva še čaka na odgovor. Pogovor se odpre, ko jo druga oseba sprejme.",
-    );
+    ).toBe("pendingOutgoing");
     expect(
       conversationNotice({ ...base, status: "pending", iAmRecipient: true }),
-    ).toBe(
-      "Ta oseba ti je poslala zahtevo za ujemanje. Sprejmi jo med klepeti, da odpreš pogovor.",
-    );
+    ).toBe("pendingIncoming");
     expect(
       conversationNotice({ ...base, status: "rejected", iAmRecipient: false }),
-    ).toBe("Zahteva za ujemanje je bila zavrnjena, zato pogovor ni na voljo.");
+    ).toBe("rejected");
   });
 
   it("has no notice for an open conversation or non-conversation states", () => {

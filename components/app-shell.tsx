@@ -6,6 +6,7 @@ import { useAuth } from "./auth-provider";
 import { useSession } from "./session-provider";
 import { profileSummary } from "../lib/auth/session";
 import { getRouteAccess, requiresSession } from "../lib/auth/routes";
+import { useI18n } from "../lib/i18n/provider";
 import {
   activeSection,
   NAV_ITEMS as navItems,
@@ -19,6 +20,7 @@ import {
   SearchIcon,
   UserIcon,
 } from "./icons";
+import { LanguageSwitcher } from "./language-switcher";
 
 const NAV_ICONS: Record<NavIcon, typeof HomeIcon> = {
   home: HomeIcon,
@@ -32,7 +34,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { signOut } = useAuth();
-  const profile = profileSummary(useSession());
+  const { m } = useI18n();
+  const profile = profileSummary(useSession(), m.auth.session.fallbackName);
   if (!requiresSession(getRouteAccess(pathname))) return <>{children}</>;
   const active = activeSection(pathname);
   // A conversation is a focused task: on phones the composer replaces the bottom bar.
@@ -41,7 +44,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className={`app-shell${focused ? " is-focused" : ""}`}>
       <a className="skip-link" href="#main-content">
-        Preskoči na vsebino
+        {m.shell.skipToContent}
       </a>
       <aside className="sidebar">
         <Link className="brand" href="/listings" translate="no">
@@ -52,9 +55,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             Roomie<span>Slo</span>
           </span>
         </Link>
-        <p className="sidebar-caption">Tvoj dom. Tvoja ekipa.</p>
-        <nav aria-label="Glavna navigacija">
-          {navItems.map(([route, icon, label]) => {
+        <p className="sidebar-caption">{m.shell.tagline}</p>
+        <nav aria-label={m.shell.mainNavigation}>
+          {navItems.map(([route, icon]) => {
             const Icon = NAV_ICONS[icon];
             return (
               <Link
@@ -64,11 +67,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 aria-current={active === route ? "page" : undefined}
               >
                 <Icon size={22} />
-                {label}
+                {m.shell.nav[route]}
               </Link>
             );
           })}
         </nav>
+        <LanguageSwitcher className="sidebar-language" />
         <div className="sidebar-bottom">
           <div className="mini-profile" aria-live="polite">
             {profile.kind === "signed-in" ? (
@@ -78,12 +82,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </span>
                 <span>
                   <b>{profile.name}</b>
-                  <small>Prijavljen</small>
+                  <small>{m.shell.signedIn}</small>
                 </span>
               </>
             ) : (
               <span role="status">
-                <small>Obnavljanje seje …</small>
+                <small>{m.shell.restoringSession}</small>
               </span>
             )}
           </div>
@@ -94,7 +98,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               const result = await signOut();
               if (result.ok) router.replace(result.redirectTo);
             }}
-            aria-label="Odjava"
+            aria-label={m.shell.signOut}
           >
             <LogOutIcon />
           </button>
@@ -103,8 +107,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <main id="main-content" className="main-content">
         {children}
       </main>
-      <nav className="mobile-nav" aria-label="Mobilna navigacija">
-        {navItems.map(([route, icon, label]) => {
+      <nav className="mobile-nav" aria-label={m.shell.mobileNavigation}>
+        {navItems.map(([route, icon]) => {
           const Icon = NAV_ICONS[icon];
           return (
             <Link
@@ -114,7 +118,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               aria-current={active === route ? "page" : undefined}
             >
               <Icon size={24} />
-              <span>{label}</span>
+              <span>{m.shell.nav[route]}</span>
             </Link>
           );
         })}

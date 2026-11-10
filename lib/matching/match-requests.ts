@@ -17,6 +17,7 @@ export type MatchRecord = {
 export type MatchRow = {
   match: MatchRecord;
   peerId: string;
+  /** Trimmed display name; empty when unknown (the UI shows a generic label). */
   peerName: string;
   /** The request was sent to me and still awaits my answer. */
   iAmRecipient: boolean;
@@ -74,21 +75,28 @@ export type MatchClient = {
   };
 };
 
-export const matchMessages = {
-  signedOut: "Za ogled zahtev za ujemanje se moraš prijaviti.",
-  load: "Zahtev za ujemanje ni bilo mogoče naložiti.",
-  offline: "Ni povezave. Preveri internet in poskusi znova.",
-  alreadyHandled: "Ta zahteva je bila že obravnavana.",
-  accept: "Zahteve ni bilo mogoče sprejeti.",
-  reject: "Zahteve ni bilo mogoče zavrniti.",
-} as const;
+/**
+ * What the user is told about a failed request action; the text lives in the
+ * `matching.requests.errors` catalog section.
+ */
+export type MatchErrorCode =
+  | "signedOut"
+  | "load"
+  | "offline"
+  | "alreadyHandled"
+  | "accept"
+  | "reject"
+  | "conflictAccepted"
+  | "conflictRejected"
+  | "conflictMissing"
+  | "conflictPending";
 
 export class MatchRequestError extends Error {
   constructor(
     public readonly kind: "signed-out" | "conflict" | "offline" | "failed",
-    message: string,
+    public readonly code: MatchErrorCode,
   ) {
-    super(message);
+    super(code);
     this.name = "MatchRequestError";
   }
 }
@@ -98,17 +106,20 @@ function isNetworkError(error: unknown): boolean {
   return error instanceof TypeError || /fetch|network/i.test(message);
 }
 
-/** Android chat list status line for a match row. */
-export function matchStatusLabel(
+export type MatchStatusKey =
+  "accepted" | "pendingIncoming" | "pendingOutgoing" | "rejected";
+
+/** Android chat list status line for a match row (`matching.requests.status`). */
+export function matchStatusKey(
   row: Pick<MatchRow, "match" | "iAmRecipient">,
-): string {
+): MatchStatusKey {
   switch (row.match.status) {
     case "accepted":
-      return "Sprejeto — odpri klepet";
+      return "accepted";
     case "pending":
-      return row.iAmRecipient ? "Nova zahteva za ujemanje" : "Čaka na odgovor";
+      return row.iAmRecipient ? "pendingIncoming" : "pendingOutgoing";
     case "rejected":
-      return "Zavrnjeno";
+      return "rejected";
   }
 }
 
@@ -124,7 +135,7 @@ export function toMatchRows(
     return {
       match,
       peerId,
-      peerName: names.get(peerId)?.trim() || "Uporabnik",
+      peerName: names.get(peerId)?.trim() ?? "",
       iAmRecipient: match.user_id_b === userId && match.status === "pending",
     };
   });
@@ -138,8 +149,7 @@ export async function loadMyMatches(client: MatchClient): Promise<MatchRow[]> {
   try {
     const { data: userData } = await client.auth.getUser();
     const userId = userData.user?.id;
-    if (!userId)
-      throw new MatchRequestError("signed-out", matchMessages.signedOut);
+    if (!userId) throw new MatchRequestError("signed-out", "signedOut");
 
     const { data, error } = await client
       .from("matches")
@@ -171,8 +181,8 @@ export async function loadMyMatches(client: MatchClient): Promise<MatchRow[]> {
   } catch (error) {
     if (error instanceof MatchRequestError) throw error;
     throw isNetworkError(error)
-      ? new MatchRequestError("offline", matchMessages.offline)
-      : new MatchRequestError("failed", matchMessages.load);
+      ? new MatchRequestError("offline", "offline")
+      : new MatchRequestError("failed", "load");
   }
 }
 
@@ -190,8 +200,7 @@ export async function respondToMatch(
   try {
     const { data: userData } = await client.auth.getUser();
     const userId = userData.user?.id;
-    if (!userId)
-      throw new MatchRequestError("signed-out", matchMessages.signedOut);
+    if (!userId) throw new MatchRequestError("signed-out", "signedOut");
 
     const { data, error } = await client
       .from("matches")
@@ -202,15 +211,15 @@ export async function respondToMatch(
       .select("id,status");
     if (error) throw error;
     if (!data || data.length === 0) {
-      throw new MatchRequestError("conflict", matchMessages.alreadyHandled);
+      throw new MatchRequestError("conflict", "alreadyHandled");
     }
   } catch (error) {
     if (error instanceof MatchRequestError) throw error;
     throw isNetworkError(error)
-      ? new MatchRequestError("offline", matchMessages.offline)
+      ? new MatchRequestError("offline", "offline")
       : new MatchRequestError(
           "failed",
-          decision === "accepted" ? matchMessages.accept : matchMessages.reject,
+          decision === "accepted" ? "accept" : "reject",
         );
   }
 }

@@ -33,7 +33,6 @@ import {
   VerifiedIcon,
 } from "../../../components/icons";
 import { MessageComposer } from "../../../components/message-composer";
-import { blockCopy } from "../../../lib/chat/blocking";
 import { MessageHistory } from "../../../components/message-history";
 import { useChatSender } from "../../../components/use-chat-sender";
 import {
@@ -44,10 +43,10 @@ import { getSupabaseConfig } from "../../../lib/config";
 import {
   ConversationError,
   conversationNotice,
-  deletedPeerNotice,
   loadConversation,
   type ConversationClient,
 } from "../../../lib/chat/conversation";
+import { useI18n } from "../../../lib/i18n/provider";
 import { createSupabaseBrowserClient } from "../../../lib/supabase/browser";
 
 function initials(name: string) {
@@ -66,6 +65,8 @@ export default function ConversationPage({
 }: {
   params: { matchId: string };
 }) {
+  const { m, format } = useI18n();
+  const copy = m.chat.conversation;
   const configured = getSupabaseConfig().configured;
   const query = useQuery({
     queryKey: ["conversation", params.matchId],
@@ -92,7 +93,7 @@ export default function ConversationPage({
   const back = (
     <Link className="back-link" href="/chats">
       <ChevronLeftIcon size={18} />
-      Nazaj na klepete
+      {copy.back}
     </Link>
   );
 
@@ -101,7 +102,7 @@ export default function ConversationPage({
       <div className="content-wrap narrow-content">
         {back}
         <p className="error-message" role="alert">
-          Klepet trenutno ni na voljo.
+          {copy.unavailable}
         </p>
       </div>
     );
@@ -111,7 +112,7 @@ export default function ConversationPage({
     return (
       <div className="content-wrap narrow-content">
         {back}
-        <p role="status">Odpiranje klepeta …</p>
+        <p role="status">{copy.opening}</p>
       </div>
     );
   }
@@ -121,18 +122,18 @@ export default function ConversationPage({
       <div className="content-wrap narrow-content">
         {back}
         <div className="page-state" role="alert">
-          <h1>Klepeta ni mogoče odpreti</h1>
+          <h1>{copy.failedTitle}</h1>
           <p>
             {query.error instanceof ConversationError
-              ? query.error.message
-              : "Klepeta ni bilo mogoče odpreti."}
+              ? copy.errors[query.error.kind]
+              : copy.errors.failed}
           </p>
           <button
             className="button"
             type="button"
             onClick={() => query.refetch()}
           >
-            Poskusi znova
+            {m.common.actions.retry}
           </button>
         </div>
       </div>
@@ -145,10 +146,10 @@ export default function ConversationPage({
       <div className="content-wrap narrow-content">
         {back}
         <div className="page-state">
-          <h1>Nisi prijavljen</h1>
-          <p>Za ogled klepeta se moraš prijaviti.</p>
+          <h1>{copy.signedOutTitle}</h1>
+          <p>{copy.signedOutBody}</p>
           <Link className="button" href="/login">
-            Prijava
+            {copy.signIn}
           </Link>
         </div>
       </div>
@@ -159,10 +160,10 @@ export default function ConversationPage({
       <div className="content-wrap narrow-content">
         {back}
         <div className="page-state">
-          <h1>Klepet ni na voljo</h1>
-          <p>Ta pogovor ne obstaja ali vanj nisi vključen.</p>
+          <h1>{copy.notFoundTitle}</h1>
+          <p>{copy.notFoundBody}</p>
           <Link className="button" href="/chats">
-            Na klepete
+            {copy.toChats}
           </Link>
         </div>
       </div>
@@ -171,22 +172,23 @@ export default function ConversationPage({
 
   const notice = conversationNotice(conversation);
   const { peer } = conversation;
+  const peerName = peer.name || copy.unknownUser;
 
   return (
     <div className="content-wrap narrow-content conversation">
       {back}
       <header className="conversation-header">
         <span className="avatar" aria-hidden="true">
-          {initials(peer.name)}
+          {initials(peerName)}
         </span>
         <div className="conversation-peer">
           <h1>
-            {peer.name}
+            {peerName}
             {peer.verified && (
               <VerifiedIcon
                 className="verified-icon"
                 size={20}
-                label="Preverjen študent"
+                label={copy.verified}
               />
             )}
           </h1>
@@ -201,16 +203,19 @@ export default function ConversationPage({
         <ChatCohabitation
           matchId={conversation.matchId}
           matchCreatedAt={conversation.matchCreatedAt}
-          peerName={peer.name}
+          peerName={peerName}
           canDeclare={!peer.deleted && !blockState.blocked}
         />
       )}
       {conversation.status === "accepted" && !peer.deleted && (
-        <ChatRating matchId={conversation.matchId} peerName={peer.name} />
+        <ChatRating matchId={conversation.matchId} peerName={peerName} />
       )}
 
       {conversation.peerListings.length > 0 && (
-        <section className="conversation-context" aria-label="Oglasi te osebe">
+        <section
+          className="conversation-context"
+          aria-label={copy.peerListings}
+        >
           {conversation.peerListings.map((listing) => (
             <Link
               key={listing.id}
@@ -219,7 +224,8 @@ export default function ConversationPage({
             >
               <b>{listing.title}</b>
               <small>
-                {listing.district} · {listing.price} € / mesec
+                {listing.district} ·{" "}
+                {format(copy.listingPrice, { price: listing.price })}
               </small>
             </Link>
           ))}
@@ -228,10 +234,10 @@ export default function ConversationPage({
 
       {notice ? (
         <p className="conversation-notice" role="status">
-          {notice}{" "}
+          {copy.notices[notice]}{" "}
           {conversation.status === "pending" && (
             <Link className="link-chevron" href="/chats">
-              Odpri zahteve
+              {copy.openRequests}
               <ChevronRightIcon size={16} />
             </Link>
           )}
@@ -240,28 +246,28 @@ export default function ConversationPage({
         <>
           <section
             className="conversation-body"
-            aria-label={`Pogovor z osebo ${peer.name}`}
+            aria-label={format(copy.region, { name: peerName })}
             data-match-id={conversation.matchId}
           >
             <MessageHistory
               matchId={conversation.matchId}
-              peerName={peer.name}
+              peerName={peerName}
               onRetry={sender.retry}
               onDiscard={sender.discard}
             />
           </section>
-          {liveNotice(liveStatus) && (
+          {liveNotice(liveStatus, m.chat.live) && (
             <p className="live-status" role="status">
-              {liveNotice(liveStatus)}
+              {liveNotice(liveStatus, m.chat.live)}
             </p>
           )}
           {peer.deleted ? (
             <p className="conversation-notice" role="status">
-              {deletedPeerNotice}
+              {copy.deletedPeer}
             </p>
           ) : blockState.blocked ? (
             <p className="conversation-notice" role="status">
-              {blockCopy.blocked}
+              {m.chat.safety.blocked}
             </p>
           ) : (
             <MessageComposer onSend={sender.send} error={sender.error} />

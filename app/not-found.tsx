@@ -1,10 +1,13 @@
-export default function NotFound() {
+import { getI18n } from "../lib/i18n/server";
+
+export default async function NotFound() {
+  const { m } = await getI18n();
   return (
     <div className="page-state">
-      <h1>Stran ne obstaja</h1>
-      <p>Preveri povezavo ali se vrni na oglase.</p>
+      <h1>{m.errors.notFound.title}</h1>
+      <p>{m.errors.notFound.body}</p>
       <a className="button" href="/listings">
-        Na oglase
+        {m.common.actions.toListings}
       </a>
     </div>
   );

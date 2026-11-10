@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { activeSection, NAV_ITEMS } from "../lib/navigation";
+import { catalogs } from "../lib/i18n/messages";
 
 describe("activeSection", () => {
   it("uses the first path segment", () => {
@@ -23,9 +24,11 @@ describe("NAV_ITEMS", () => {
       "favorites",
       "profile",
     ]);
-    for (const [, icon, label] of NAV_ITEMS) {
+    for (const [route, icon] of NAV_ITEMS) {
       expect(icon).not.toBe("");
-      expect(label).not.toBe("");
+      for (const messages of Object.values(catalogs)) {
+        expect(messages.shell.nav[route]).not.toBe("");
+      }
     }
   });
 });
