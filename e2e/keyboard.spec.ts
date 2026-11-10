@@ -78,6 +78,8 @@ test.describe("keyboard journey", () => {
     page,
   }) => {
     await page.goto("/listings");
+    // Tab before the session check has finished would find nothing to focus.
+    await page.waitForLoadState("networkidle");
     await page.keyboard.press("Tab");
     const skip = page.getByRole("link", { name: "Preskoči na vsebino" });
     await expect(skip).toBeFocused();
@@ -97,6 +99,7 @@ test.describe("keyboard journey", () => {
     page,
   }) => {
     await page.goto("/listings");
+    await page.waitForLoadState("networkidle");
     const order = (await tabOrder(page, 10)).map((item) => item.name);
     const nav = ["Oglasi", "Iskanje", "Klepeti", "Priljubljene", "Profil"];
     const positions = nav.map((label) =>
@@ -118,6 +121,7 @@ test.describe("keyboard journey", () => {
       page,
     }) => {
       await page.goto(path);
+      await page.waitForLoadState("networkidle");
       const stops = await tabOrder(page);
       expect(stops.length).toBeGreaterThan(0);
       for (const stop of stops) {

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { useAuth } from "../../components/auth-provider";
 import { LanguageSwitcher } from "../../components/language-switcher";
 import {
@@ -45,13 +46,15 @@ export default function LoginPage() {
     try {
       const result = await signIn(validation.email, password);
       if (result.error) {
-        setError(loginErrorCode(result.error.message));
+        const code = loginErrorCode(result.error.message);
+        // Render the alert first: it does not exist yet when focus moves to it.
+        flushSync(() => setError(code));
         errorRef.current?.focus();
       } else {
         router.replace(safeDestination(params.get("returnTo")));
       }
     } catch {
-      setError("unreachable");
+      flushSync(() => setError("unreachable"));
       errorRef.current?.focus();
     } finally {
       setPending(false);
