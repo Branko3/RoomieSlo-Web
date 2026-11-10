@@ -1,3 +1,80 @@
 import type { Messages } from "../../types";
 
-export const matching: Messages["matching"] = {};
+export const matching: Messages["matching"] = {
+  recommendations: {
+    title: "Recommended profiles",
+    subtitle: "Ranked by compatibility based on the lifestyle questionnaire.",
+    unavailable: "Recommendations aren't available right now.",
+    loading: "Loading recommendations …",
+    signedOutTitle: "You're not signed in",
+    failedTitle: "Couldn't load recommendations",
+    errors: {
+      "signed-out": "Sign in to see recommendations.",
+      offline: "No connection. Couldn't load recommendations.",
+      unknown: "Something went wrong while loading recommendations.",
+    },
+    signIn: "Sign in",
+    fillQuestionnaire: "Fill in the questionnaire",
+    emptyTitle: "No profiles to recommend yet.",
+    emptyBody:
+      "When other students are looking for a roommate, they'll show up here.",
+    compatibility: "Compatibility {percent}%",
+    noSharedAnswers: "Compatibility can't be calculated: no shared answers",
+    noSharedAnswersHint: "No shared questionnaire answers",
+    verified: "Verified student",
+    lookingForRoommate: "Looking for a roommate",
+  },
+  requests: {
+    title: "Match requests",
+    loading: "Loading requests …",
+    empty:
+      "You don't have any match requests yet. Send one from a listing or from your recommended profiles.",
+    signIn: "Sign in",
+    openChat: "Open chat",
+    accept: "Accept",
+    reject: "Decline",
+    unknownUser: "User",
+    status: {
+      accepted: "Accepted — open the chat",
+      pendingIncoming: "New match request",
+      pendingOutgoing: "Waiting for a reply",
+      rejected: "Declined",
+    },
+    errors: {
+      signedOut: "Sign in to see your match requests.",
+      load: "Couldn't load your match requests.",
+      offline: "No connection. Check your internet and try again.",
+      alreadyHandled: "This request has already been handled.",
+      accept: "Couldn't accept the request.",
+      reject: "Couldn't decline the request.",
+      conflictAccepted: "The request has already been accepted.",
+      conflictRejected: "The request was declined in the meantime.",
+      conflictMissing: "The request no longer exists.",
+      conflictPending: "You can't accept this request.",
+    },
+  },
+  send: {
+    unavailable: "Sending requests isn't available right now.",
+    action: "Send a match request",
+    sending: "Sending …",
+    ownListing: "This is your listing.",
+    signIn: "Sign in to send a request",
+    sent: "Request sent.",
+    openChat: "Open chat",
+    openChats: "Open chats",
+    errors: {
+      "signed-out": "Sign in to send a request.",
+      self: "You can't send a request to yourself.",
+      offline: "No connection. The request wasn't sent.",
+      failed: "Couldn't send the request.",
+    },
+    existing: {
+      accepted: "You're already connected. You'll find the chat in your chats.",
+      rejectedByPeer: "This person declined your request.",
+      rejectedByMe: "You've already declined this request.",
+      pendingMine: "You've already sent a request. Waiting for a reply.",
+      pendingTheirs:
+        "This person has already sent you a request. Reply to it in your chats.",
+    },
+  },
+};

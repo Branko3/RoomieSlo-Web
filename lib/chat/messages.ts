@@ -1,5 +1,6 @@
 import { mapMessage, type Message } from "../supabase/mappers";
 import type { Row } from "../supabase/types";
+import type { Formatters } from "../i18n/formatters";
 
 type DbError = { code?: string; message?: string; status?: number } | null;
 
@@ -30,15 +31,10 @@ export type MessagesClient = {
   };
 };
 
+/** The kind is also the key of its text in `chat.messages.errors`. */
 export class MessagesError extends Error {
   constructor(public readonly kind: "signed-out" | "offline" | "failed") {
-    super(
-      kind === "signed-out"
-        ? "Za ogled sporočil se moraš prijaviti."
-        : kind === "offline"
-          ? "Ni povezave. Sporočil ni bilo mogoče naložiti."
-          : "Napaka pri nalaganju sporočil.",
-    );
+    super(kind);
     this.name = "MessagesError";
   }
 }
@@ -89,22 +85,12 @@ export async function loadMessages(
 }
 
 const TIME_ZONE = "Europe/Ljubljana";
+// Internal key, not display text: en-CA formats as YYYY-MM-DD.
 const dayKeyFormat = new Intl.DateTimeFormat("en-CA", {
   timeZone: TIME_ZONE,
   year: "numeric",
   month: "2-digit",
   day: "2-digit",
-});
-const dayLabelFormat = new Intl.DateTimeFormat("sl-SI", {
-  timeZone: TIME_ZONE,
-  weekday: "long",
-  day: "numeric",
-  month: "long",
-});
-const timeFormat = new Intl.DateTimeFormat("sl-SI", {
-  timeZone: TIME_ZONE,
-  hour: "2-digit",
-  minute: "2-digit",
 });
 
 /** Calendar day in Ljubljana, `YYYY-MM-DD`. */
@@ -112,21 +98,33 @@ export function dayKey(iso: string): string {
   return dayKeyFormat.format(new Date(iso));
 }
 
-/** "Danes", "Včeraj", or a Slovenian date for older days. */
-export function dayLabel(key: string, now: Date = new Date()): string {
+/** How day headings are written: the catalog's relative words and the locale's formatters. */
+export type DayLabelText = {
+  today: string;
+  yesterday: string;
+  formatters: Formatters;
+};
+
+/** The catalog's "today" or "yesterday", or the long date for older days. */
+export function dayLabel(
+  key: string,
+  text: DayLabelText,
+  now: Date = new Date(),
+): string {
   const today = dayKey(now.toISOString());
   const yesterday = dayKey(
     new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString(),
   );
-  if (key === today) return "Danes";
-  if (key === yesterday) return "Včeraj";
+  if (key === today) return text.today;
+  if (key === yesterday) return text.yesterday;
   const [year, month, day] = key.split("-").map(Number);
-  return dayLabelFormat.format(new Date(Date.UTC(year, month - 1, day, 12)));
+  // Noon UTC is the same calendar day in Ljubljana all year round.
+  return text.formatters.dayLabel(Date.UTC(year, month - 1, day, 12));
 }
 
 /** "14:05" in Ljubljana time. */
-export function messageTime(iso: string): string {
-  return timeFormat.format(new Date(iso));
+export function messageTime(iso: string, formatters: Formatters): string {
+  return formatters.time(iso);
 }
 
 export type MessageDay = { key: string; label: string; messages: Message[] };
@@ -134,6 +132,7 @@ export type MessageDay = { key: string; label: string; messages: Message[] };
 /** Groups messages (already in time order) by Ljubljana calendar day. */
 export function groupByDay(
   messages: readonly Message[],
+  text: DayLabelText,
   now: Date = new Date(),
 ): MessageDay[] {
   const days: MessageDay[] = [];
@@ -141,7 +140,8 @@ export function groupByDay(
     const key = dayKey(message.sent_at);
     const last = days[days.length - 1];
     if (last && last.key === key) last.messages.push(message);
-    else days.push({ key, label: dayLabel(key, now), messages: [message] });
+    else
+      days.push({ key, label: dayLabel(key, text, now), messages: [message] });
   }
   return days;
 }

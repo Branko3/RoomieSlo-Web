@@ -3,6 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { MessageComposer } from "../../components/message-composer";
 import { MAX_MESSAGE_LENGTH } from "../../lib/chat/send-message";
+import { catalogs } from "../../lib/i18n/messages";
+import { I18nProvider } from "../../lib/i18n/provider";
 
 function setup(error: string | null = null) {
   const onSend = vi.fn();
@@ -54,5 +56,22 @@ describe("MessageComposer", () => {
     expect(screen.getByRole("alert")).toHaveTextContent(
       "Sporočila ni bilo mogoče poslati.",
     );
+  });
+
+  it("renders in English", async () => {
+    const onSend = vi.fn();
+    render(
+      <I18nProvider locale="en" messages={catalogs.en}>
+        <MessageComposer onSend={onSend} error="Couldn't send the message." />
+      </I18nProvider>,
+    );
+    const input = screen.getByLabelText("Message");
+    expect(input).toHaveAttribute("placeholder", "Write a message …");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Couldn't send the message.",
+    );
+    await userEvent.type(input, "Hi!{Enter}");
+    expect(onSend).toHaveBeenCalledWith("Hi!");
+    expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
   });
 });

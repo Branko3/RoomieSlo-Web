@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   applyReadLocally,
-  deliveryLabel,
   isAdvance,
   markAcceptedDelivered,
   markDelivered,
@@ -9,6 +8,7 @@ import {
   needsReadMarker,
   type DeliveryClient,
 } from "../lib/chat/delivery";
+import { catalogs } from "../lib/i18n/messages";
 
 const ME = "me";
 const PEER = "peer";
@@ -48,13 +48,14 @@ function makeClient({
   return { client: client as unknown as DeliveryClient, calls };
 }
 
-describe("deliveryLabel (Android besediloStanja)", () => {
+describe("delivery labels (Android besediloStanja)", () => {
   it.each([
-    ["sent", "Poslano"],
-    ["delivered", "Dostavljeno"],
-    ["read", "Prebrano"],
-  ] as const)("%s → %s", (status, label) => {
-    expect(deliveryLabel(status)).toBe(label);
+    ["sent", "Poslano", "Sent"],
+    ["delivered", "Dostavljeno", "Delivered"],
+    ["read", "Prebrano", "Read"],
+  ] as const)("%s → %s / %s", (status, sl, en) => {
+    expect(catalogs.sl.chat.messages.delivery[status]).toBe(sl);
+    expect(catalogs.en.chat.messages.delivery[status]).toBe(en);
   });
 });
 

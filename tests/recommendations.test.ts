@@ -392,7 +392,7 @@ describe("loadRecommendations", () => {
       ),
     ).rejects.toMatchObject({
       kind: "unknown",
-      message: "Napaka pri nalaganju priporočil.",
+      message: "unknown",
     });
   });
 

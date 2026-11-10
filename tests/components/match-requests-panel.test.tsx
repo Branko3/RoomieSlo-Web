@@ -2,6 +2,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { catalogs } from "../../lib/i18n/messages";
+import { I18nProvider } from "../../lib/i18n/provider";
 import type { MatchRecord } from "../../lib/matching/match-requests";
 
 const ME = "me";
@@ -87,14 +89,23 @@ function match(overrides: Partial<MatchRecord>): MatchRecord {
   };
 }
 
-function renderPanel() {
+function renderPanel(locale?: "en") {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  render(
+  const panel = (
     <QueryClientProvider client={client}>
       <MatchRequestsPanel />
-    </QueryClientProvider>,
+    </QueryClientProvider>
+  );
+  render(
+    locale ? (
+      <I18nProvider locale={locale} messages={catalogs[locale]}>
+        {panel}
+      </I18nProvider>
+    ) : (
+      panel
+    ),
   );
 }
 
@@ -239,5 +250,50 @@ describe("MatchRequestsPanel", () => {
     expect(
       await screen.findByText(/Še nimaš zahtev za ujemanje/),
     ).toBeInTheDocument();
+  });
+
+  it("renders in English", async () => {
+    fake.matches.push(
+      match({
+        id: "m-x",
+        user_id_a: ME,
+        user_id_b: "ghost",
+        status: "rejected",
+      }),
+    );
+    renderPanel("en");
+    await screen.findByText("Ana");
+    expect(
+      screen.getByRole("heading", { name: "Match requests" }),
+    ).toBeInTheDocument();
+    expect(within(row("Ana")).getByText("New match request"));
+    expect(
+      within(row("Ana")).getByRole("button", { name: "Accept" }),
+    ).toBeInTheDocument();
+    expect(
+      within(row("Ana")).getByRole("button", { name: "Decline" }),
+    ).toBeInTheDocument();
+    expect(within(row("Bor")).getByText("Waiting for a reply"));
+    expect(screen.getByRole("link", { name: "Open chat" })).toHaveAttribute(
+      "href",
+      "/chats/m-ok",
+    );
+    // A person without a display name gets the neutral English label.
+    expect(within(row("User")).getByText("Declined"));
+  });
+
+  it("shows a conflict in English", async () => {
+    fake.rpc.mockResolvedValue({
+      data: null,
+      error: { code: "P0001", message: "match is unavailable" },
+    });
+    renderPanel("en");
+    await screen.findByText("Ana");
+    await userEvent.click(
+      within(row("Ana")).getByRole("button", { name: "Accept" }),
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      /request|accept/i,
+    );
   });
 });

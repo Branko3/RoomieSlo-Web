@@ -27,14 +27,13 @@ type PeerRow = {
 
 export type ConversationPeer = {
   id: string;
+  /** Trimmed display name; empty when unknown (the UI shows a generic label). */
   name: string;
   verified: boolean;
   faculty: string;
   /** The other person deleted their account; history stays, nothing new can be sent. */
   deleted: boolean;
 };
-
-export const deletedPeerNotice = "Ta uporabnik je izbrisal račun.";
 
 export type Conversation =
   | { status: "signed-out" }
@@ -104,13 +103,10 @@ export type ConversationClient = {
 
 export const PEER_LISTING_LIMIT = 2;
 
+/** The kind is also the key of its text in `chat.conversation.errors`. */
 export class ConversationError extends Error {
   constructor(public readonly kind: "offline" | "failed") {
-    super(
-      kind === "offline"
-        ? "Ni povezave. Klepeta ni bilo mogoče odpreti."
-        : "Klepeta ni bilo mogoče odpreti.",
-    );
+    super(kind);
     this.name = "ConversationError";
   }
 }
@@ -174,7 +170,7 @@ export async function loadConversation(
       iAmRecipient: row.user_id_b === me,
       peer: {
         id: peerId,
-        name: peer.data?.display_name?.trim() || "Uporabnik",
+        name: peer.data?.display_name?.trim() ?? "",
         verified: peer.data?.academic_status_verified === true,
         faculty: peer.data?.faculty ?? "",
         deleted: Boolean(peer.data?.deleted_at),
@@ -192,15 +188,21 @@ export async function loadConversation(
   }
 }
 
-/** Copy for conversations that cannot be used for messaging yet (or anymore). */
-export function conversationNotice(conversation: Conversation): string | null {
+export type ConversationNotice =
+  "pendingIncoming" | "pendingOutgoing" | "rejected";
+
+/**
+ * Why a conversation cannot be used for messaging yet (or anymore), as a key of
+ * `chat.conversation.notices`; null when messaging is open.
+ */
+export function conversationNotice(
+  conversation: Conversation,
+): ConversationNotice | null {
   switch (conversation.status) {
     case "pending":
-      return conversation.iAmRecipient
-        ? "Ta oseba ti je poslala zahtevo za ujemanje. Sprejmi jo med klepeti, da odpreš pogovor."
-        : "Zahteva še čaka na odgovor. Pogovor se odpre, ko jo druga oseba sprejme.";
+      return conversation.iAmRecipient ? "pendingIncoming" : "pendingOutgoing";
     case "rejected":
-      return "Zahteva za ujemanje je bila zavrnjena, zato pogovor ni na voljo.";
+      return "rejected";
     default:
       return null;
   }

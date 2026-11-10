@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { liveNotice } from "../components/use-message-realtime";
+import { catalogs } from "../lib/i18n/messages";
 import type { RealtimeStatus } from "../lib/chat/realtime";
 import {
   backoffDelay,
@@ -197,18 +198,25 @@ describe("createReconnectingSubscription", () => {
 });
 
 describe("liveNotice", () => {
+  const sl = catalogs.sl.chat.live;
+  const en = catalogs.en.chat.live;
+
   it("tells the user when the next retry happens", () => {
-    expect(liveNotice({ state: "waiting", retryInMs: 4_000 })).toBe(
+    expect(liveNotice({ state: "waiting", retryInMs: 4_000 }, sl)).toBe(
       "Povezava v živo je prekinjena. Ponovni poskus čez 4 s.",
     );
-    expect(liveNotice({ state: "waiting", retryInMs: 200 })).toContain(
+    expect(liveNotice({ state: "waiting", retryInMs: 200 }, sl)).toContain(
       "čez 1 s",
+    );
+    expect(liveNotice({ state: "waiting", retryInMs: 4_000 }, en)).toBe(
+      "Live connection lost. Retrying in 4 s.",
     );
   });
 
   it("explains a paused connection and stays quiet otherwise", () => {
-    expect(liveNotice({ state: "disconnected" })).toContain("prekinjena");
-    expect(liveNotice({ state: "live" })).toBeNull();
-    expect(liveNotice({ state: "connecting" })).toBeNull();
+    expect(liveNotice({ state: "disconnected" }, sl)).toContain("prekinjena");
+    expect(liveNotice({ state: "disconnected" }, en)).toBe(en.disconnected);
+    expect(liveNotice({ state: "live" }, sl)).toBeNull();
+    expect(liveNotice({ state: "connecting" }, sl)).toBeNull();
   });
 });

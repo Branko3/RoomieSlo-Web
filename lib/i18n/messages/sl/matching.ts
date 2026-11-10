@@ -1,3 +1,80 @@
-// Slovenian "matching" namespace: the source of truth for the catalog shape.
-// Plural entries use pluralForms({ one, two, few, other }) from "../plural".
-export const matching = {};
+// Slovenian "matching" namespace: recommendations and match requests.
+export const matching = {
+  recommendations: {
+    title: "Priporočeni profili",
+    subtitle:
+      "Razvrščeni po združljivosti glede na vprašalnik o življenjskem slogu.",
+    unavailable: "Priporočila trenutno niso na voljo.",
+    loading: "Nalaganje priporočil …",
+    signedOutTitle: "Nisi prijavljen",
+    failedTitle: "Priporočil ni mogoče naložiti",
+    errors: {
+      "signed-out": "Za priporočila se moraš prijaviti.",
+      offline: "Ni povezave. Priporočil ni bilo mogoče naložiti.",
+      unknown: "Napaka pri nalaganju priporočil.",
+    },
+    signIn: "Prijava",
+    fillQuestionnaire: "Izpolni vprašalnik",
+    emptyTitle: "Ni razpoložljivih profilov za priporočilo.",
+    emptyBody:
+      "Ko bodo drugi študenti iskali sostanovalca, se bodo prikazali tukaj.",
+    compatibility: "Združljivost {percent} %",
+    noSharedAnswers: "Združljivosti ni mogoče izračunati: ni skupnih odgovorov",
+    noSharedAnswersHint: "Ni skupnih odgovorov na vprašalnik",
+    verified: "Preverjen študent",
+    lookingForRoommate: "Išče sostanovalca",
+  },
+  requests: {
+    title: "Zahteve za ujemanje",
+    loading: "Nalaganje zahtev …",
+    empty:
+      "Še nimaš zahtev za ujemanje. Pošlji jo iz oglasa ali med priporočenimi profili.",
+    signIn: "Prijava",
+    openChat: "Odpri klepet",
+    accept: "Sprejmi",
+    reject: "Zavrni",
+    unknownUser: "Uporabnik",
+    status: {
+      accepted: "Sprejeto — odpri klepet",
+      pendingIncoming: "Nova zahteva za ujemanje",
+      pendingOutgoing: "Čaka na odgovor",
+      rejected: "Zavrnjeno",
+    },
+    errors: {
+      signedOut: "Za ogled zahtev za ujemanje se moraš prijaviti.",
+      load: "Zahtev za ujemanje ni bilo mogoče naložiti.",
+      offline: "Ni povezave. Preveri internet in poskusi znova.",
+      alreadyHandled: "Ta zahteva je bila že obravnavana.",
+      accept: "Zahteve ni bilo mogoče sprejeti.",
+      reject: "Zahteve ni bilo mogoče zavrniti.",
+      conflictAccepted: "Zahteva je že sprejeta.",
+      conflictRejected: "Zahteva je bila medtem zavrnjena.",
+      conflictMissing: "Zahteva ne obstaja več.",
+      conflictPending: "Te zahteve ne moreš sprejeti.",
+    },
+  },
+  send: {
+    unavailable: "Pošiljanje zahtev trenutno ni na voljo.",
+    action: "Pošlji zahtevo za ujemanje",
+    sending: "Pošiljanje …",
+    ownListing: "To je tvoj oglas.",
+    signIn: "Prijavi se za pošiljanje zahteve",
+    sent: "Zahteva je poslana.",
+    openChat: "Odpri klepet",
+    openChats: "Odpri klepete",
+    errors: {
+      "signed-out": "Za pošiljanje zahteve se moraš prijaviti.",
+      self: "Zahteve ne moreš poslati samemu sebi.",
+      offline: "Ni povezave. Zahteva ni bila poslana.",
+      failed: "Zahteve ni bilo mogoče poslati.",
+    },
+    existing: {
+      accepted: "Že sta povezana. Klepet najdeš med klepeti.",
+      rejectedByPeer: "Ta oseba je tvojo zahtevo zavrnila.",
+      rejectedByMe: "To zahtevo si že zavrnil(a).",
+      pendingMine: "Zahtevo si že poslal(a). Čaka na odgovor.",
+      pendingTheirs:
+        "Ta oseba ti je že poslala zahtevo. Odgovori nanjo med klepeti.",
+    },
+  },
+};

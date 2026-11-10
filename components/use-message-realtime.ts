@@ -13,6 +13,8 @@ import {
   createReconnectingSubscription,
   type ReconnectState,
 } from "../lib/chat/reconnect";
+import { format } from "../lib/i18n/format";
+import type { Messages } from "../lib/i18n/types";
 import { createSupabaseBrowserClient } from "../lib/supabase/browser";
 import { messagesQueryKey } from "./message-history";
 
@@ -80,14 +82,18 @@ export function useMessageRealtime(
   return live;
 }
 
-/** User-facing notice for the live connection, or null when nothing needs saying. */
-export function liveNotice(live: LiveState): string | null {
+/**
+ * User-facing notice for the live connection (`chat.live` of the active
+ * catalog), or null when nothing needs saying.
+ */
+export function liveNotice(
+  live: LiveState,
+  text: Messages["chat"]["live"],
+): string | null {
   if (live.state === "waiting") {
     const seconds = Math.max(1, Math.round((live.retryInMs ?? 0) / 1000));
-    return `Povezava v živo je prekinjena. Ponovni poskus čez ${seconds} s.`;
+    return format(text.waiting, { seconds });
   }
-  if (live.state === "disconnected") {
-    return "Povezava v živo je prekinjena. Nova sporočila se prikažejo, ko se povezava obnovi.";
-  }
+  if (live.state === "disconnected") return text.disconnected;
   return null;
 }

@@ -2,18 +2,6 @@ import type { MessageDeliveryStatus } from "../supabase/types";
 
 type DbError = { code?: string; message?: string; status?: number } | null;
 
-/** Android `besediloStanja`: shown under the sender's own messages only. */
-export function deliveryLabel(status: MessageDeliveryStatus): string {
-  switch (status) {
-    case "sent":
-      return "Poslano";
-    case "delivered":
-      return "Dostavljeno";
-    case "read":
-      return "Prebrano";
-  }
-}
-
 const RANK: Record<MessageDeliveryStatus, number> = {
   sent: 0,
   delivered: 1,

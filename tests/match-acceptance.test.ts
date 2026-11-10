@@ -2,14 +2,13 @@ import { describe, expect, it, vi } from "vitest";
 import {
   acceptMatchAtomically,
   applyDecision,
-  conflictMessage,
+  conflictCode,
   isAcceptConflict,
   readMatchStatus,
   rejectMatchWithConflictCheck,
   type MatchAcceptanceClient,
 } from "../lib/matching/match-acceptance";
 import {
-  matchMessages,
   MatchRequestError,
   type MatchRecord,
 } from "../lib/matching/match-requests";
@@ -98,14 +97,14 @@ function fakeDatabase(
   };
 }
 
-describe("conflictMessage", () => {
+describe("conflictCode", () => {
   it.each([
-    ["accepted", "Zahteva je že sprejeta."],
-    ["rejected", "Zahteva je bila medtem zavrnjena."],
-    [null, "Zahteva ne obstaja več."],
-    ["pending", "Te zahteve ne moreš sprejeti."],
-  ] as const)("explains %s", (status, message) => {
-    expect(conflictMessage(status)).toBe(message);
+    ["accepted", "conflictAccepted"],
+    ["rejected", "conflictRejected"],
+    [null, "conflictMissing"],
+    ["pending", "conflictPending"],
+  ] as const)("explains %s", (status, code) => {
+    expect(conflictCode(status)).toBe(code);
   });
 });
 
@@ -148,7 +147,7 @@ describe("acceptMatchAtomically", () => {
     ) as PromiseRejectedResult;
     expect(failed.reason).toMatchObject({
       kind: "conflict",
-      message: "Zahteva je že sprejeta.",
+      code: "conflictAccepted",
     });
     expect(db.current()).toMatchObject({ status: "accepted", version: 2 });
   });
@@ -158,14 +157,14 @@ describe("acceptMatchAtomically", () => {
     await rejectMatchWithConflictCheck(db.client, "m1");
     await expect(acceptMatchAtomically(db.client, "m1")).rejects.toMatchObject({
       kind: "conflict",
-      message: "Zahteva je bila medtem zavrnjena.",
+      code: "conflictRejected",
     });
   });
 
   it("explains a request that no longer exists", async () => {
     const db = fakeDatabase(null);
     await expect(acceptMatchAtomically(db.client, "m1")).rejects.toMatchObject({
-      message: "Zahteva ne obstaja več.",
+      code: "conflictMissing",
     });
   });
 
@@ -175,7 +174,7 @@ describe("acceptMatchAtomically", () => {
     });
     await expect(acceptMatchAtomically(db.client, "m1")).rejects.toMatchObject({
       kind: "conflict",
-      message: matchMessages.alreadyHandled,
+      code: "alreadyHandled",
     });
   });
 
@@ -197,7 +196,7 @@ describe("acceptMatchAtomically", () => {
       ),
     ).rejects.toMatchObject({
       kind: "failed",
-      message: "Zahteve ni bilo mogoče sprejeti.",
+      code: "accept",
     });
   });
 });
@@ -218,7 +217,7 @@ describe("rejectMatchWithConflictCheck", () => {
     expect(error).toBeInstanceOf(MatchRequestError);
     expect(error).toMatchObject({
       kind: "conflict",
-      message: "Zahteva je že sprejeta.",
+      code: "conflictAccepted",
     });
     expect(db.current()?.status).toBe("accepted");
   });

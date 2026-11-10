@@ -4,7 +4,6 @@ import {
   appendMessage,
   MAX_MESSAGE_LENGTH,
   sendMessage,
-  sendMessageCopy,
   SendMessageError,
   validateDraft,
   type SendMessageClient,
@@ -104,7 +103,7 @@ describe("sendMessage (Android ChatRepository.sendMessage)", () => {
       sendMessage(client, "m1", "x".repeat(MAX_MESSAGE_LENGTH + 1)),
     ).rejects.toMatchObject({
       kind: "too-long",
-      message: sendMessageCopy.tooLong,
+      message: "too-long",
     });
     expect(insert).not.toHaveBeenCalled();
   });
@@ -123,7 +122,7 @@ describe("sendMessage (Android ChatRepository.sendMessage)", () => {
     });
     await expect(sendMessage(client, "m1", "Živjo")).rejects.toMatchObject({
       kind: "not-allowed",
-      message: "V ta pogovor ne moreš pisati.",
+      message: "not-allowed",
     });
   });
 
@@ -138,7 +137,7 @@ describe("sendMessage (Android ChatRepository.sendMessage)", () => {
       ),
     ).rejects.toMatchObject({
       kind: "failed",
-      message: "Sporočila ni bilo mogoče poslati.",
+      message: "failed",
     });
     await expect(
       sendMessage(

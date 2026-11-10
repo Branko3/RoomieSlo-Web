@@ -43,22 +43,12 @@ export type BlockClient = {
   };
 };
 
-export const blockCopy = {
-  blocked:
-    "Blokiral(a) si to osebo. Sporočil si ne moreta pošiljati, dokler je ne odblokiraš.",
-  confirm:
-    "Blokiraj to osebo? Ne bosta si mogla pošiljati sporočil ali novih zahtev za ujemanje.",
-  failed: "Dejanja ni bilo mogoče izvesti. Poskusi znova.",
-  offline: "Ni povezave. Poskusi znova.",
-  signedOut: "Za to dejanje se moraš prijaviti.",
-} as const;
+export type BlockErrorKind = "signed-out" | "self" | "offline" | "failed";
 
+/** The kind is also the key of its text in `chat.safety.errors`. */
 export class BlockError extends Error {
-  constructor(
-    public readonly kind: "signed-out" | "self" | "offline" | "failed",
-    message: string,
-  ) {
-    super(message);
+  constructor(public readonly kind: BlockErrorKind) {
+    super(kind);
     this.name = "BlockError";
   }
 }
@@ -67,13 +57,13 @@ function toBlockError(error: unknown): BlockError {
   if (error instanceof BlockError) return error;
   const message = (error as { message?: string } | null)?.message ?? "";
   return error instanceof TypeError || /fetch|network/i.test(message)
-    ? new BlockError("offline", blockCopy.offline)
-    : new BlockError("failed", blockCopy.failed);
+    ? new BlockError("offline")
+    : new BlockError("failed");
 }
 
 async function me(client: BlockClient): Promise<string> {
   const { data } = await client.auth.getUser();
-  if (!data.user) throw new BlockError("signed-out", blockCopy.signedOut);
+  if (!data.user) throw new BlockError("signed-out");
   return data.user.id;
 }
 
@@ -104,7 +94,7 @@ export async function blockUser(
 ): Promise<void> {
   try {
     const myId = await me(client);
-    if (myId === peerId) throw new BlockError("self", blockCopy.failed);
+    if (myId === peerId) throw new BlockError("self");
     const { error } = await client
       .from("blocks")
       .insert({ blocker_id: myId, blocked_id: peerId });

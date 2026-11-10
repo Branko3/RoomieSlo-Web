@@ -4,7 +4,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import {
   applyReadLocally,
-  deliveryLabel,
   markRead,
   needsReadMarker,
   type DeliveryClient,
@@ -19,6 +18,7 @@ import {
   type MessagesClient,
 } from "../lib/chat/messages";
 import { isLocal } from "../lib/chat/local-messages";
+import { useI18n } from "../lib/i18n/provider";
 import { createSupabaseBrowserClient } from "../lib/supabase/browser";
 
 export const messagesQueryKey = (matchId: string) =>
@@ -36,6 +36,8 @@ export function MessageHistory({
   onRetry?: (localId: string) => void;
   onDiscard?: (localId: string) => void;
 }) {
+  const { m, format, formatters } = useI18n();
+  const copy = m.chat.messages;
   const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: messagesQueryKey(matchId),
@@ -84,7 +86,7 @@ export function MessageHistory({
   if (query.isPending) {
     return (
       <p className="message-state" role="status">
-        Nalaganje sporočil …
+        {copy.loading}
       </p>
     );
   }
@@ -93,15 +95,15 @@ export function MessageHistory({
       <div className="message-state" role="alert">
         <p>
           {query.error instanceof MessagesError
-            ? query.error.message
-            : "Napaka pri nalaganju sporočil."}
+            ? copy.errors[query.error.kind]
+            : copy.errors.failed}
         </p>
         <button
           className="button button-outline"
           type="button"
           onClick={() => query.refetch()}
         >
-          Poskusi znova
+          {m.common.actions.retry}
         </button>
       </div>
     );
@@ -110,9 +112,7 @@ export function MessageHistory({
   const { messages } = query.data;
   if (messages.length === 0) {
     return (
-      <p className="message-state">
-        Še ni sporočil. Pozdravi osebo {peerName}.
-      </p>
+      <p className="message-state">{format(copy.empty, { name: peerName })}</p>
     );
   }
 
@@ -121,9 +121,13 @@ export function MessageHistory({
       className="message-log"
       role="log"
       aria-live="polite"
-      aria-label={`Sporočila z osebo ${peerName}`}
+      aria-label={format(copy.log, { name: peerName })}
     >
-      {groupByDay(messages).map((day) => (
+      {groupByDay(messages, {
+        today: copy.today,
+        yesterday: copy.yesterday,
+        formatters,
+      }).map((day) => (
         <section key={day.key} aria-label={day.label}>
           <p className="message-day">{day.label}</p>
           <ul>
@@ -138,41 +142,43 @@ export function MessageHistory({
                     local ? ` message-${local.localState}` : ""
                   }`}
                 >
-                  <span className="sr-only">{mine ? "Ti" : peerName}: </span>
+                  <span className="sr-only">
+                    {mine ? copy.you : peerName}:{" "}
+                  </span>
                   <span className="message-body">{message.body}</span>
                   {local?.localState === "sending" && (
-                    <small className="message-status">Pošiljanje …</small>
+                    <small className="message-status">{copy.sending}</small>
                   )}
                   {local?.localState === "failed" && (
                     <span className="message-failed-actions">
-                      <small className="message-status">Ni poslano</small>
+                      <small className="message-status">{copy.notSent}</small>
                       <button
                         type="button"
                         className="text-link"
                         onClick={() => onRetry(local.localId)}
                       >
-                        Poskusi znova
+                        {m.common.actions.retry}
                       </button>
                       <button
                         type="button"
                         className="text-link"
                         onClick={() => onDiscard(local.localId)}
                       >
-                        Zavrzi
+                        {copy.discard}
                       </button>
                     </span>
                   )}
                   {!local && (
                     <span className="message-meta">
                       <time dateTime={message.sent_at}>
-                        {messageTime(message.sent_at)}
+                        {messageTime(message.sent_at, formatters)}
                       </time>
                       {mine && (
                         <span
                           className={`message-delivery delivery-${message.delivery_status}`}
                         >
                           {" · "}
-                          {deliveryLabel(message.delivery_status)}
+                          {copy.delivery[message.delivery_status]}
                         </span>
                       )}
                     </span>

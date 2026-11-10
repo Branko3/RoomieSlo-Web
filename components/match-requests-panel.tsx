@@ -4,7 +4,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import {
   awaitingMyAnswer,
-  cohabitationCopy,
   loadMyCohabitations,
 } from "../lib/cohabitation/cohabitation";
 import {
@@ -20,13 +19,13 @@ import {
 } from "../lib/matching/match-acceptance";
 import {
   loadMyMatches,
-  matchMessages,
   MatchRequestError,
-  matchStatusLabel,
+  matchStatusKey,
   type Decision,
   type MatchClient,
   type MatchRow,
 } from "../lib/matching/match-requests";
+import { useI18n } from "../lib/i18n/provider";
 import { createSupabaseBrowserClient } from "../lib/supabase/browser";
 import {
   cohabitationClient,
@@ -56,6 +55,8 @@ function initials(name: string) {
 
 /** Match requests and their states (Android chat list, F15). */
 export function MatchRequestsPanel() {
+  const { m } = useI18n();
+  const copy = m.matching.requests;
   const configured = getSupabaseConfig().configured;
   const queryClient = useQueryClient();
   const query = useQuery({
@@ -113,7 +114,7 @@ export function MatchRequestsPanel() {
 
   let content: React.ReactNode;
   if (query.isPending) {
-    content = <p role="status">Nalaganje zahtev …</p>;
+    content = <p role="status">{copy.loading}</p>;
   } else if (query.isError) {
     const error = query.error;
     const signedOut =
@@ -122,12 +123,12 @@ export function MatchRequestsPanel() {
       <div className="page-state" role="alert">
         <p>
           {error instanceof MatchRequestError
-            ? error.message
-            : matchMessages.load}
+            ? copy.errors[error.code]
+            : copy.errors.load}
         </p>
         {signedOut ? (
           <Link className="button" href="/login">
-            Prijava
+            {copy.signIn}
           </Link>
         ) : (
           <button
@@ -135,23 +136,19 @@ export function MatchRequestsPanel() {
             type="button"
             onClick={() => query.refetch()}
           >
-            Poskusi znova
+            {m.common.actions.retry}
           </button>
         )}
       </div>
     );
   } else if (query.data.length === 0) {
-    content = (
-      <p className="muted">
-        Še nimaš zahtev za ujemanje. Pošlji jo iz oglasa ali med priporočenimi
-        profili.
-      </p>
-    );
+    content = <p className="muted">{copy.empty}</p>;
   } else {
     content = (
       <ul className="match-request-list">
         {query.data.map((row) => {
-          const label = matchStatusLabel(row);
+          const label = copy.status[matchStatusKey(row)];
+          const peerName = row.peerName || copy.unknownUser;
           const busy =
             respond.isPending && respond.variables?.matchId === row.match.id;
           return (
@@ -160,16 +157,16 @@ export function MatchRequestsPanel() {
               className={`match-request match-${row.match.status}`}
             >
               <span className="avatar avatar-small" aria-hidden="true">
-                {initials(row.peerName)}
+                {initials(peerName)}
               </span>
               <span className="match-request-text">
-                <b>{row.peerName}</b>
+                <b>{peerName}</b>
                 <small>{label}</small>
                 {row.match.status === "accepted" &&
                   awaiting.has(row.match.id) && (
                     <span className="attention-mark">
                       <span className="attention-dot" aria-hidden="true" />
-                      {cohabitationCopy.attention}
+                      {m.cohabitation.attention}
                     </span>
                   )}
               </span>
@@ -178,7 +175,7 @@ export function MatchRequestsPanel() {
                   className="text-link"
                   href={`/chats/${encodeURIComponent(row.match.id)}`}
                 >
-                  Odpri klepet
+                  {copy.openChat}
                 </Link>
               )}
               {row.iAmRecipient && (
@@ -195,7 +192,7 @@ export function MatchRequestsPanel() {
                       })
                     }
                   >
-                    Sprejmi
+                    {copy.accept}
                   </button>
                   <button
                     className="button button-outline"
@@ -208,7 +205,7 @@ export function MatchRequestsPanel() {
                       })
                     }
                   >
-                    Zavrni
+                    {copy.reject}
                   </button>
                 </span>
               )}
@@ -221,12 +218,12 @@ export function MatchRequestsPanel() {
 
   return (
     <section className="match-requests" aria-labelledby="match-requests-title">
-      <h2 id="match-requests-title">Zahteve za ujemanje</h2>
+      <h2 id="match-requests-title">{copy.title}</h2>
       {respond.isError && (
         <p className="error-message" role="alert">
           {respond.error instanceof MatchRequestError
-            ? respond.error.message
-            : matchMessages.accept}
+            ? copy.errors[respond.error.code]
+            : copy.errors.accept}
         </p>
       )}
       {content}

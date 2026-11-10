@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { MAX_MESSAGE_LENGTH, validateDraft } from "../lib/chat/send-message";
+import { useI18n } from "../lib/i18n/provider";
 import { SendIcon } from "./icons";
 
 /**
@@ -17,6 +18,8 @@ export function MessageComposer({
   onSend: (body: string) => void;
   error: string | null;
 }) {
+  const { m } = useI18n();
+  const copy = m.chat.composer;
   const [draft, setDraft] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -45,14 +48,14 @@ export function MessageComposer({
       )}
       <div className="composer-row">
         <label className="sr-only" htmlFor="message-input">
-          Sporočilo
+          {copy.label}
         </label>
         <textarea
           id="message-input"
           ref={inputRef}
           value={draft}
           rows={1}
-          placeholder="Napiši sporočilo …"
+          placeholder={copy.placeholder}
           aria-invalid={tooLong || undefined}
           aria-describedby={tooLong ? "message-length" : undefined}
           onChange={(event) => setDraft(event.target.value)}
@@ -73,7 +76,7 @@ export function MessageComposer({
           disabled={!validation.ok}
         >
           <SendIcon size={18} />
-          Pošlji
+          {copy.send}
         </button>
       </div>
       {draft.length > MAX_MESSAGE_LENGTH * 0.9 && (
